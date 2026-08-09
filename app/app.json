@@ -10,7 +10,9 @@
       "resizeMode": "contain",
       "backgroundColor": "#0F766E"
     },
-    "assetBundlePatterns": ["**/*"],
+    "assetBundlePatterns": [
+      "**/*"
+    ],
     "ios": {
       "supportsTablet": false,
       "bundleIdentifier": "lat.tappt.scan",
@@ -22,7 +24,10 @@
     "android": {
       "package": "lat.tappt.scan",
       "versionCode": 1,
-      "permissions": ["CAMERA", "READ_EXTERNAL_STORAGE"]
+      "permissions": [
+        "CAMERA",
+        "READ_EXTERNAL_STORAGE"
+      ]
     },
     "plugins": [
       [
@@ -39,6 +44,14 @@
       ],
       "expo-document-picker",
       "expo-localization"
-    ]
+    ],
+    "web": {
+      "bundler": "metro",
+      "name": "TapptScan",
+      "shortName": "TapptScan",
+      "themeColor": "#0F766E",
+      "backgroundColor": "#F8FAFC",
+      "display": "standalone"
+    }
   }
 }

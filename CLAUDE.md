@@ -183,10 +183,16 @@ conectado → Onboarding; todo listo → tabs.
 `EXPO_PUBLIC_SUPABASE_ANON_KEY`, `EXPO_PUBLIC_API_URL` (el backend
 desplegado, nunca `localhost`: el teléfono de un tester no ve tu máquina).
 
+**Web app espejo:** el mismo código corre en el navegador con React Native
+Web (`npm run web`). Dos piezas tienen variante `.web.js` porque no existen
+fuera del móvil: `FirmaPad.web.js` (canvas directo en vez de WebView) e
+`importar.web.js` (`FileReader` en vez de `expo-file-system`). Al agregar
+código que use APIs nativas, revisar si necesita su variante web.
+
 **Probar y repartir la app:** todo lo que usa está en Expo Go, así que
 `cd app && npm start` y escanear el QR basta para probarla sin compilar.
-Para beta con usuarios reales, ver `docs/DISTRIBUCION.md` (EAS Build,
-TestFlight y Play Internal Testing).
+Para beta con usuarios reales, ver `docs/DISTRIBUCION.md` (web app, EAS
+Build, TestFlight y Play Internal Testing).
 
 ## Modelo de negocio (referencia)
 
