@@ -5,20 +5,40 @@
     "version": "0.1.0",
     "orientation": "portrait",
     "userInterfaceStyle": "light",
+    "primaryColor": "#0F766E",
     "splash": {
       "resizeMode": "contain",
       "backgroundColor": "#0F766E"
     },
+    "assetBundlePatterns": ["**/*"],
     "ios": {
       "supportsTablet": false,
       "bundleIdentifier": "lat.tappt.scan",
+      "buildNumber": "1",
       "infoPlist": {
-        "NSCameraUsageDescription": "TapptScan usa la cámara para escanear tus documentos."
+        "ITSAppUsesNonExemptEncryption": false
       }
     },
     "android": {
       "package": "lat.tappt.scan",
-      "permissions": ["CAMERA"]
-    }
+      "versionCode": 1,
+      "permissions": ["CAMERA", "READ_EXTERNAL_STORAGE"]
+    },
+    "plugins": [
+      [
+        "expo-camera",
+        {
+          "cameraPermission": "TapptScan usa la cámara para escanear tus documentos."
+        }
+      ],
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "TapptScan accede a tus fotos para que puedas importar documentos que ya tienes."
+        }
+      ],
+      "expo-document-picker",
+      "expo-localization"
+    ]
   }
 }

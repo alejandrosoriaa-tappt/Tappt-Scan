@@ -180,7 +180,13 @@ App nativa (`app/`, Expo / React Native, JS sin TypeScript):
 conectado → Onboarding; todo listo → tabs.
 
 **Variables de la app** (`app/.env.example`): `EXPO_PUBLIC_SUPABASE_URL`,
-`EXPO_PUBLIC_SUPABASE_ANON_KEY`, `EXPO_PUBLIC_API_URL`.
+`EXPO_PUBLIC_SUPABASE_ANON_KEY`, `EXPO_PUBLIC_API_URL` (el backend
+desplegado, nunca `localhost`: el teléfono de un tester no ve tu máquina).
+
+**Probar y repartir la app:** todo lo que usa está en Expo Go, así que
+`cd app && npm start` y escanear el QR basta para probarla sin compilar.
+Para beta con usuarios reales, ver `docs/DISTRIBUCION.md` (EAS Build,
+TestFlight y Play Internal Testing).
 
 ## Modelo de negocio (referencia)
 
