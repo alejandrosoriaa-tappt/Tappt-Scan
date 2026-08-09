@@ -2,8 +2,49 @@
 
 _Última actualización: 2026-08-09_
 
-Tres niveles, de menos a más ceremonia. El primero se puede hacer hoy sin
-pagar nada ni abrir cuentas de tienda.
+Cuatro caminos, de menos a más ceremonia. Los dos primeros se pueden hacer
+hoy sin pagar nada ni abrir cuentas de tienda.
+
+## Nivel 0 · La web app espejo
+
+La app corre también en el navegador con **React Native Web**, desde el
+mismo código:
+
+```bash
+cd app && npm run web        # desarrollo
+npx expo export --platform web --output-dir dist   # build estático
+```
+
+Sale un sitio estático (`dist/`) que se publica en cualquier lado: Railway,
+Vercel, Netlify o el hosting que ya uses. Está declarada como PWA
+(`display: standalone`), así que desde el navegador se puede "agregar a la
+pantalla de inicio" y se comporta como app.
+
+**Sirve para dos cosas concretas:**
+
+1. Repartir la beta a quien sea, sin tiendas, sin cuentas, sin Expo Go —
+   solo un link.
+2. Es el camino natural para el caso de **"escanear desde la Mac o la PC"**:
+   arrastras el PDF que te llegó por correo y lo importas ahí mismo.
+
+### Lo que cambia en web
+
+El código es el mismo salvo dos piezas que no existen en el navegador. Se
+resuelven con la convención `.web.js` de React Native, que sustituye el
+archivo automáticamente al compilar para web:
+
+| Pieza | Móvil | Web |
+|---|---|---|
+| Firma | `FirmaPad.js` — canvas dentro de un WebView | `FirmaPad.web.js` — canvas directo, Pointer Events (mouse, dedo y lápiz) |
+| Leer archivos | `importar.js` — `expo-file-system` | `importar.web.js` — `<input type=file>` y `FileReader` |
+
+Verificado: en el bundle web no queda rastro de `react-native-webview` ni
+de `expo-file-system`.
+
+**Diferencia real que no se puede tapar:** la cámara en el navegador usa
+`getUserMedia`, sin el control de enfoque ni la calidad de la cámara
+nativa. Para escanear con el teléfono, la app nativa siempre va a dar mejor
+foto. En la web el camino natural es importar un archivo, no fotografiar.
 
 ## Nivel 1 · Expo Go — hoy, gratis, sin cuentas
 
@@ -76,47 +117,6 @@ cada plataforma. Es donde debe correr la beta.
   cuenta es de **organización**, ese requisito no aplica. Conviene abrirla
   como organización desde el principio.
 
-## Nivel 0 · La web app espejo
-
-La app corre también en el navegador con **React Native Web**, desde el
-mismo código:
-
-```bash
-cd app && npm run web        # desarrollo
-npx expo export --platform web --output-dir dist   # build estático
-```
-
-Sale un sitio estático (`dist/`) que se publica en cualquier lado: Railway,
-Vercel, Netlify o el hosting que ya uses. Está declarada como PWA
-(`display: standalone`), así que desde el navegador se puede "agregar a la
-pantalla de inicio" y se comporta como app.
-
-**Sirve para dos cosas concretas:**
-
-1. Repartir la beta a quien sea, sin tiendas, sin cuentas, sin Expo Go —
-   solo un link.
-2. Es el camino natural para el caso de **"escanear desde la Mac o la PC"**:
-   arrastras el PDF que te llegó por correo y lo importas ahí mismo.
-
-### Lo que cambia en web
-
-El código es el mismo salvo dos piezas que no existen en el navegador. Se
-resuelven con la convención `.web.js` de React Native, que sustituye el
-archivo automáticamente al compilar para web:
-
-| Pieza | Móvil | Web |
-|---|---|---|
-| Firma | `FirmaPad.js` — canvas dentro de un WebView | `FirmaPad.web.js` — canvas directo, Pointer Events (mouse, dedo y lápiz) |
-| Leer archivos | `importar.js` — `expo-file-system` | `importar.web.js` — `<input type=file>` y `FileReader` |
-
-Verificado: en el bundle web no queda rastro de `react-native-webview` ni
-de `expo-file-system`.
-
-**Diferencia real que no se puede tapar:** la cámara en el navegador usa
-`getUserMedia`, sin el control de enfoque ni la calidad de la cámara
-nativa. Para escanear con el teléfono, la app nativa siempre va a dar mejor
-foto. En la web el camino natural es importar un archivo, no fotografiar.
-
 ## Cuidado con esto en la beta
 
 Dos cosas van a morder si se saltan, y ninguna es de la app:
@@ -134,9 +134,11 @@ no a `localhost`: el teléfono de un tester no ve tu máquina.
 
 ## Orden recomendado
 
-1. Expo Go para afinar el producto contigo y con quien tengas cerca.
-2. Publicar la app de Google Cloud a producción (antes de meter testers).
-3. APK por EAS para los beta testers de Android — es el camino más corto a
-   manos ajenas.
-4. Cuenta de Apple + TestFlight cuando el flujo ya esté estable, porque ahí
+1. **Expo Go** para afinar el producto contigo y con quien tengas cerca.
+2. Publicar la app de Google Cloud a producción — antes de meter testers, o
+   se les desconectará el Drive cada semana.
+3. **Web app** desplegada: es el link que puedes mandarle a cualquiera, sin
+   cuentas ni instalaciones. La beta más barata que existe.
+4. **APK por EAS** para los beta testers de Android que quieran la app real.
+5. **Cuenta de Apple + TestFlight** cuando el flujo ya esté estable: ahí
    empieza el reloj de los 99 USD y la revisión.
