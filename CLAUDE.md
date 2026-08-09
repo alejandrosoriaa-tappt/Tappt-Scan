@@ -48,8 +48,8 @@ organizar) se hace en la app.
 ## Stack
 
 - Runtime: Node ≥ 18, Express 4 (CommonJS).
-- Datos: Supabase (Postgres) propio, vía `services/supabase.js`
-  (service-role key, sin RLS por usuario). Tablas en `scan_schema.sql`.
+- Datos: Supabase (Postgres) **solo como base de datos**, vía
+  `services/supabase.js`. La autenticación es propia, por WhatsApp.
 - IA: Anthropic (Claude, visión) para clasificar/extraer — `services/vision.js`.
 - Mensajería: WhatsApp Cloud API (Meta Graph v19) — `services/whatsapp.js`.
 - Almacenamiento: Google Drive del usuario vía OAuth — `services/drive.js`.
@@ -89,8 +89,9 @@ credenciales con otra vertical).
 - `routes/webhook.js` — verificación + recepción de eventos de WhatsApp
   Cloud API (imagen, texto, botones). Aplica el límite del plan antes de
   procesar y atiende "quiero personal/negocio" mandando el link de pago.
-- `routes/cuenta.js` — perfil y consumo, generación del código para vincular
-  WhatsApp, y alta de pago para subir de plan.
+- `routes/auth.js` — acceso por WhatsApp: pide el código y consulta si ya
+  llegó el mensaje. Sin autenticación, a propósito: es el paso previo.
+- `routes/cuenta.js` — perfil, consumo, preferencias y alta de pago.
 - `routes/documentos.js` — lista, gastos del mes, borrado, escaneo desde
   la cámara, importación de archivos, páginas rasterizadas para el editor
   y horneado de anotaciones.
@@ -143,16 +144,16 @@ credenciales con otra vertical).
   Google y atrasa el lanzamiento meses), crea rutas anidadas bajo
   `TapptScan/` (`ensureRuta`), lista carpetas para el explorador y sube o
   baja archivos. Las carpetas **no son fijas**: las crea el clasificador.
-- `services/linking.js` — código de un solo uso que amarra
-  número de WhatsApp ↔ cuenta ↔ carpeta de Drive.
 - `services/supabase.js` — cliente Supabase (service-role).
-- `scan_schema.sql` — tablas `scan_users`, `scan_documents`, `scan_links`.
+- `scan_schema.sql` — esquema completo: `scan_users`, `scan_documents`,
+  `scan_sesiones`, `scan_payments`.
 
 App nativa (`app/`, Expo / React Native, JS sin TypeScript):
 
 - `App.js` — providers (navegación, safe area) y arranque.
-- `src/navigation/RootNavigator.js` — stack raíz + tabs
-  (Inicio · Escanear · Drive · Ajustes); `Documento` se abre como stack.
+- `src/navigation/RootNavigator.js` — stack raíz + cinco elementos
+  (Inicio · Documentos · botón central · Gastos · Carpetas). La barra es
+  propia porque el botón central va elevado sobre ella.
 - `src/screens/DashboardScreen.js` — saludo, stats (documentos, gasto del
   mes), banner de upgrade y lista de recientes.
 - `src/screens/EscanearScreen.js` — cámara de respaldo. Obligatoria por la
@@ -162,12 +163,13 @@ App nativa (`app/`, Expo / React Native, JS sin TypeScript):
 - `src/screens/DocumentoScreen.js` — detalle, datos extraídos y acciones
   (editar PDF, firmar, abrir en Drive).
 - `src/screens/AjustesScreen.js` — cuenta, conexiones, plan y upgrade.
-- `src/screens/LoginScreen.js` — correo + contraseña contra Supabase Auth.
-- `src/screens/OnboardingScreen.js` — los dos pasos previos a escanear:
-  código para vincular WhatsApp y conexión de Google Drive.
+- `src/screens/LoginScreen.js` — un botón: abre WhatsApp con el código ya
+  escrito y espera a que el backend confirme.
+- `src/screens/OnboardingScreen.js` — único paso previo: conectar Drive.
+  El número ya quedó verificado al entrar.
 - `src/context/SesionContext.js` — sesión de Supabase + datos de la cuenta.
-- `src/lib/supabase.js`, `src/lib/api.js` — cliente de auth y del backend
-  (toda llamada va firmada con el JWT).
+- `src/lib/sesion.js`, `src/lib/api.js` — token guardado y cliente del
+  backend (toda llamada va firmada con él).
 - `src/screens/RecorteScreen.js` — recorte con cuatro esquinas
   arrastrables, pre-colocadas por el detector del servidor. Toda foto de la
   cámara pasa por aquí antes de subirse.
@@ -183,6 +185,9 @@ App nativa (`app/`, Expo / React Native, JS sin TypeScript):
 
 **Navegación:** tres puertas — sin sesión → Login; con sesión pero sin Drive
 conectado → Onboarding; todo listo → tabs.
+
+**Autenticación:** no hay Supabase Auth. La identidad es el número de
+WhatsApp; el backend firma su propio token. Ver `services/sesiones.js`.
 
 **Variables de la app** (`app/.env.example`): `EXPO_PUBLIC_SUPABASE_URL`,
 `EXPO_PUBLIC_SUPABASE_ANON_KEY`, `EXPO_PUBLIC_API_URL` (el backend
