@@ -28,6 +28,8 @@ const MENSAJES = {
     planActivo:
       'Tu plan {plan} quedó activo. Ya tienes escaneos ilimitados y edición de PDF.',
     verApp: 'Ábrelo en la app de TapptScan para verlo, editarlo o firmarlo.',
+    gastosEsNegocio:
+      'Esa pregunta la contesto con el plan Negocio: llevo tus gastos en una hoja dentro de tu Drive y te respondo aquí mismo. Escríbeme "quiero negocio" y te mando el link.',
     otraCosa: 'Ok, dime qué tipo de documento es o mándame otra foto.',
     botonGuardar: 'Guardar',
     botonApp: 'Editar en la app',
@@ -52,6 +54,8 @@ const MENSAJES = {
     planActivo:
       'Your {plan} plan is active. You now have unlimited scans and PDF editing.',
     verApp: 'Open it in the TapptScan app to view, edit or sign it.',
+    gastosEsNegocio:
+      'That one comes with the Business plan: I keep your expenses in a sheet inside your Drive and answer right here. Reply "I want business" and I\'ll send you the link.',
     otraCosa: "Okay — tell me what kind of document it is, or send me another photo.",
     botonGuardar: 'Save',
     botonApp: 'Edit in app',

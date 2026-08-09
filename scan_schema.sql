@@ -86,3 +86,15 @@ alter table scan_documents add column if not exists seccion text;
 alter table scan_documents add column if not exists subcarpeta text;
 alter table scan_documents drop column if exists ambito;
 alter table scan_documents drop column if exists categoria;
+
+-- Control de gastos / TapptMoney (agosto 2026): eje de gasto independiente
+-- del árbol de carpetas, más la hoja de cálculo en el Drive del usuario.
+alter table scan_documents add column if not exists es_gasto boolean not null default false;
+alter table scan_documents add column if not exists categoria_gasto text;
+alter table scan_documents add column if not exists concepto text;
+alter table scan_documents add column if not exists proyecto text;
+
+alter table scan_users add column if not exists gastos_sheet_id text;
+
+create index if not exists idx_scan_documents_gastos
+  on scan_documents(user_id, es_gasto, fecha desc);

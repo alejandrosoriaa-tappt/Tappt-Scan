@@ -49,4 +49,17 @@ async function puedeEscanear(usuario) {
   return { permitido: usados < limite, usados, limite };
 }
 
-module.exports = { LIMITES, PRECIOS, limiteDe, puedeEscanear, escaneosDelMes };
+// El control de gastos (hoja de cálculo y preguntas por chat) es el
+// beneficio que justifica el plan Negocio.
+function tieneControlDeGastos(usuario) {
+  return usuario?.plan === 'negocio';
+}
+
+module.exports = {
+  LIMITES,
+  PRECIOS,
+  limiteDe,
+  puedeEscanear,
+  escaneosDelMes,
+  tieneControlDeGastos,
+};

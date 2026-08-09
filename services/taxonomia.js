@@ -95,6 +95,36 @@ const ESTRUCTURA = [
 
 const POR_REVISAR = ESTRUCTURA.find((s) => s.clave === 'por_revisar');
 
+/**
+ * Segundo eje, independiente del árbol de carpetas.
+ *
+ * La carpeta dice DÓNDE vive el documento; la categoría de gasto dice EN QUÉ
+ * se fue el dinero. Un ticket de gasolina vive en `07 · Vehículos/Servicios`
+ * pero se contabiliza como `gasolina`. Sin este eje no se puede responder
+ * "¿cuánto gasté en restaurantes el mes pasado?".
+ */
+const CATEGORIAS_GASTO = [
+  'restaurantes',
+  'supermercado',
+  'gasolina',
+  'transporte',
+  'servicios',
+  'salud',
+  'hogar',
+  'entretenimiento',
+  'ropa',
+  'educacion',
+  'seguros',
+  'impuestos',
+  'trabajo',
+  'otros',
+];
+
+function categoriaGastoValida(valor) {
+  const normalizado = normalizar(valor);
+  return CATEGORIAS_GASTO.includes(normalizado) ? normalizado : null;
+}
+
 // Todas las rutas del andamiaje, para crearlas de golpe en el onboarding.
 // `99 · Por revisar` no tiene subcarpetas: es un buzón plano.
 function rutasDelAndamiaje() {
@@ -140,6 +170,8 @@ function catalogoParaPrompt() {
 
 module.exports = {
   ESTRUCTURA,
+  CATEGORIAS_GASTO,
+  categoriaGastoValida,
   POR_REVISAR,
   rutasDelAndamiaje,
   carpetasDe,

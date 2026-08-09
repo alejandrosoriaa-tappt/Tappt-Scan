@@ -6,6 +6,7 @@ const procesarDocumento = require('../services/procesarDocumento');
 const linking = require('../services/linking');
 const planes = require('../services/planes');
 const stripe = require('../services/stripe');
+const consultas = require('../services/consultas');
 const supabase = require('../services/supabase');
 const { t, detectarIdioma } = require('../services/i18n');
 
@@ -145,6 +146,21 @@ async function handleText(from, text) {
     const link = await stripe.crearLinkDePago(user, plan);
     await whatsapp.sendText(from, t(idioma, 'linkPago', { plan, link }));
     return;
+  }
+
+  // Preguntas de gasto: "¿cuánto gasté el mes pasado en restaurantes?"
+  if (user && consultas.pareceConsulta(limpio)) {
+    if (!planes.tieneControlDeGastos(user)) {
+      await whatsapp.sendText(from, t(idioma, 'gastosEsNegocio'));
+      return;
+    }
+
+    const respuesta = await consultas.responder(user, limpio);
+    if (respuesta) {
+      await whatsapp.sendText(from, respuesta);
+      return;
+    }
+    // Si no la entendió como pregunta de gastos, sigue al flujo normal.
   }
 
   if (/^\d{6}$/.test(limpio)) {

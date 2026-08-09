@@ -3,6 +3,9 @@ const naming = require('./naming');
 const drive = require('./drive');
 const pdf = require('./pdf');
 const supabase = require('./supabase');
+const taxonomia = require('./taxonomia');
+const sheets = require('./sheets');
+const planes = require('./planes');
 
 /**
  * Tubería compartida por los tres caminos de entrada: webhook de WhatsApp
@@ -55,6 +58,9 @@ async function procesarArchivo(usuario, buffer, mimeType = 'image/jpeg', nombreO
       tipo: extraido.tipo || 'otro',
       seccion: extraido.seccion || null,
       subcarpeta: extraido.subcarpeta || null,
+      es_gasto: Boolean(extraido.es_gasto) && extraido.monto != null,
+      categoria_gasto: taxonomia.categoriaGastoValida(extraido.categoria_gasto),
+      concepto: extraido.concepto || null,
       emisor: extraido.emisor || null,
       fecha: extraido.fecha || null,
       monto: extraido.monto ?? null,
@@ -71,6 +77,12 @@ async function procesarArchivo(usuario, buffer, mimeType = 'image/jpeg', nombreO
     .select()
     .single();
   if (error) throw error;
+
+  // El control de gastos es del plan Negocio. Se lanza sin await: si la
+  // hoja falla, el documento ya quedó guardado igual.
+  if (planes.tieneControlDeGastos(usuario)) {
+    sheets.registrarGasto(usuario, documento).catch(() => {});
+  }
 
   return {
     documento,

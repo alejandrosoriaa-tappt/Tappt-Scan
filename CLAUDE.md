@@ -115,10 +115,20 @@ credenciales con otra vertical).
   `docs/EDITOR-PDF.md` y `assets/README.md`.
 - `services/whatsapp.js` — mandar texto/botones, resolver y descargar media.
 - `services/vision.js` — llamada a Claude vision, clasifica y extrae JSON.
+- `services/gastos.js` — agregaciones de gasto. **El modelo nunca toca la
+  base**: manda filtros, aquí se validan campo por campo y se ejecutan.
+- `services/consultas.js` — preguntas de gasto en lenguaje natural por
+  WhatsApp. Dos pasos: Claude traduce la pregunta a filtros, nosotros
+  calculamos, Claude redacta los números que le damos.
+- `services/sheets.js` — hoja de gastos en el Drive del usuario (plan
+  Negocio). Usa el mismo scope `drive.file`.
 - `services/taxonomia.js` — **fuente única del árbol de carpetas**. De aquí
   salen las tres cosas a la vez: las carpetas que se crean en el onboarding,
   el catálogo que se le inyecta al prompt del clasificador, y la validación
-  de su respuesta. Cambiar el árbol aquí las cambia todas.
+  de su respuesta. Cambiar el árbol aquí las cambia todas. También define `CATEGORIAS_GASTO`,
+  un **eje independiente**: la carpeta dice dónde vive el documento, la
+  categoría de gasto dice en qué se fue el dinero (un ticket de gasolina
+  vive en Vehículos pero cuenta como `gasolina`).
 - `services/naming.js` — convierte el JSON extraído en la ruta
   (`sección/subcarpeta/emisor/año`) y el nombre
   (`CFE_Agosto_2026_$1,847.pdf`). Limpia razones sociales y manda a
@@ -218,9 +228,11 @@ Pendientes de código:
   `scan_schema.sql` como `alter table` — hay que correrlas.
 - **Fuente Unicode** (`assets/fuente-unicode.ttf`) — sin ella se omiten los
   caracteres fuera de WinAnsi. Ver `assets/README.md`.
-- **Pestaña de Gastos** del plan Negocio — el endpoint
-  `/api/documentos/gastos` ya existe; falta la pantalla y el Google Sheet
-  en la carpeta del usuario.
+- **Pestaña de Gastos en la app** — el backend ya responde preguntas por
+  WhatsApp y escribe la hoja; falta la pantalla nativa.
+- **Proyectos** (`scan_documents.proyecto`) — la columna y el filtro
+  existen, pero nada lo llena todavía: falta que el usuario pueda etiquetar
+  un documento como parte de un proyecto.
 - Refrescar el token de Google cuando expire (hoy se guarda tal cual).
 - **Idioma:** solo es/en. Para agregar otro, añadir su clave a
   `services/i18n.js` y `app/src/i18n/textos.js` — lo que falte cae al

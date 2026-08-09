@@ -12,6 +12,9 @@ documento y devuelves SOLO un JSON, sin texto adicional ni bloques de código.
   "seccion": "clave de sección del catálogo, o null",
   "subcarpeta": "clave de subcarpeta de ESA sección, o null",
   "tipo": "identificacion|recibo|factura|contrato|estado_cuenta|receta|poliza|otro",
+  "es_gasto": true si el documento representa dinero que el usuario pagó,
+  "categoria_gasto": "clave de categoría de gasto, o null si no es un gasto",
+  "concepto": "qué se compró o pagó, en 3-6 palabras (ej. \"comida en restaurante\", \"gasolina Magna 40L\") o null",
   "emisor": "nombre corto y reconocible de quien emite (ej. CFE, Telmex, IMSS) o null",
   "fecha": "YYYY-MM-DD del documento, o null",
   "periodo_mes": 1-12 del periodo que cubre el documento, o null,
@@ -23,6 +26,9 @@ documento y devuelves SOLO un JSON, sin texto adicional ni bloques de código.
 
 Catálogo de carpetas (sección: subcarpetas válidas):
 ${taxonomia.catalogoParaPrompt()}
+
+Categorías de gasto (eje aparte del de carpetas):
+${taxonomia.CATEGORIAS_GASTO.join(', ')}
 
 Reglas:
 - "seccion" y "subcarpeta" deben salir EXACTAMENTE del catálogo. La
@@ -36,6 +42,12 @@ Reglas:
   casa/servicios. Un ticket de compra o gasto suelto va en dinero/recibos.
 - Si el documento cubre un periodo (un mes de consumo), usa ese periodo en
   "periodo_mes"/"periodo_anio", no la fecha de impresión.
+- "categoria_gasto" es un eje INDEPENDIENTE de la carpeta: describe en qué
+  se fue el dinero, no dónde se archiva. Un ticket de gasolina va en la
+  carpeta de vehículos pero su categoría de gasto es "gasolina"; una comida
+  es "restaurantes"; material de una remodelación es "hogar".
+- "es_gasto" es false para identificaciones, actas, contratos sin pago,
+  recetas y estudios: esos no suman al control de gastos.
 - No inventes datos: lo que no puedas leer con confianza va en null.`;
 
 async function classifyAndExtract(imageBuffer, mimeType) {
