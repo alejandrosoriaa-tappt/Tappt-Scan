@@ -1,5 +1,6 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { View, Text, ScrollView, TouchableOpacity, StyleSheet, Alert, Linking } from 'react-native';
+import { api } from '../lib/api';
 import { colores, porTipo, espacio } from '../theme';
 
 function Campo({ etiqueta, valor }) {
@@ -11,12 +12,23 @@ function Campo({ etiqueta, valor }) {
   );
 }
 
-export default function DocumentoScreen({ route }) {
+export default function DocumentoScreen({ route, navigation }) {
   const { documento } = route.params;
   const meta = porTipo[documento.tipo] || porTipo.otro;
+  const [abriendo, setAbriendo] = useState(false);
 
-  const proximamente = (que) =>
-    Alert.alert(que, 'Función del plan Personal — pendiente de implementar.');
+  // El original vive en Drive, así que hay que bajarlo antes de editar.
+  const abrirEditor = async () => {
+    setAbriendo(true);
+    try {
+      const { imagen } = await api.imagenDocumento(documento.id);
+      navigation.navigate('Editor', { documento, imagenBase: imagen });
+    } catch (err) {
+      Alert.alert('No pudimos abrir el editor', err.message);
+    } finally {
+      setAbriendo(false);
+    }
+  };
 
   return (
     <ScrollView style={estilos.pantalla} contentContainerStyle={estilos.contenido}>
@@ -45,11 +57,10 @@ export default function DocumentoScreen({ route }) {
 
       <Text style={estilos.tituloSeccion}>Acciones</Text>
       <View style={estilos.acciones}>
-        <TouchableOpacity style={estilos.boton} onPress={() => proximamente('Editar PDF')}>
-          <Text style={estilos.botonTexto}>Editar PDF</Text>
-        </TouchableOpacity>
-        <TouchableOpacity style={estilos.boton} onPress={() => proximamente('Firmar')}>
-          <Text style={estilos.botonTexto}>Firmar</Text>
+        <TouchableOpacity style={estilos.boton} onPress={abrirEditor} disabled={abriendo}>
+          <Text style={estilos.botonTexto}>
+            {abriendo ? 'Abriendo…' : 'Editar y firmar'}
+          </Text>
         </TouchableOpacity>
         <TouchableOpacity
           style={[estilos.boton, estilos.botonPrimario]}

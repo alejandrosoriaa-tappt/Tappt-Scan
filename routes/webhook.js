@@ -2,9 +2,7 @@ const express = require('express');
 const router = express.Router();
 
 const whatsapp = require('../services/whatsapp');
-const vision = require('../services/vision');
-const naming = require('../services/naming');
-const drive = require('../services/drive');
+const procesarDocumento = require('../services/procesarDocumento');
 const linking = require('../services/linking');
 const planes = require('../services/planes');
 const mercadopago = require('../services/mercadopago');
@@ -75,30 +73,11 @@ async function handleImage(from, image) {
   const mediaUrl = await whatsapp.getMediaUrl(image.id);
   const buffer = await whatsapp.downloadMedia(mediaUrl);
 
-  const extracted = await vision.classifyAndExtract(buffer, image.mime_type || 'image/jpeg');
-
-  const folders = await drive.ensureFolderStructure(user.drive_tokens);
-  const folderName = naming.folderFor(extracted);
-  const fileName = naming.fileNameFor(extracted);
-
-  const uploaded = await drive.uploadFile(user.drive_tokens, {
-    folderId: folders[folderName],
-    name: fileName,
-    mimeType: image.mime_type || 'image/jpeg',
+  const { nombreArchivo: fileName, nombreCarpeta: folderName } = await procesarDocumento.procesarImagen(
+    user,
     buffer,
-  });
-
-  await supabase.from('scan_documents').insert({
-    user_id: user.id,
-    tipo: extracted.tipo,
-    emisor: extracted.emisor,
-    fecha: extracted.fecha,
-    monto: extracted.monto,
-    moneda: extracted.moneda,
-    nombre_archivo: fileName,
-    drive_file_id: uploaded.id,
-    drive_link: uploaded.webViewLink,
-  });
+    image.mime_type || 'image/jpeg'
+  );
 
   await whatsapp.sendButtons(from, `Guardé tu documento como "${fileName}" en ${folderName}. ¿Todo bien?`, [
     { id: 'ok', title: 'Guardar' },

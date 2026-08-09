@@ -78,4 +78,23 @@ async function uploadFile(tokens, { folderId, name, mimeType, buffer }) {
   return data;
 }
 
-module.exports = { authUrl, exchangeCode, ensureFolderStructure, uploadFile, ROOT_FOLDER_NAME, SUBFOLDERS };
+async function downloadFile(tokens, fileId) {
+  const auth = oauthClient(tokens);
+  const drive = google.drive({ version: 'v3', auth });
+
+  const { data } = await drive.files.get(
+    { fileId, alt: 'media' },
+    { responseType: 'arraybuffer' }
+  );
+  return Buffer.from(data);
+}
+
+module.exports = {
+  authUrl,
+  exchangeCode,
+  ensureFolderStructure,
+  uploadFile,
+  downloadFile,
+  ROOT_FOLDER_NAME,
+  SUBFOLDERS,
+};

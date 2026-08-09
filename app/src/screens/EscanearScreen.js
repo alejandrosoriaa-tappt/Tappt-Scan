@@ -2,13 +2,16 @@ import React, { useRef, useState } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, Alert, ActivityIndicator } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { CameraView, useCameraPermissions } from 'expo-camera';
+import { api } from '../lib/api';
+import { useSesion } from '../context/SesionContext';
 import { colores, espacio } from '../theme';
 
 // Cámara de respaldo: el camino principal sigue siendo WhatsApp, pero la app
 // debe poder escanear por sí sola (requisito de tiendas, guía 4.2 de Apple).
-export default function EscanearScreen() {
+export default function EscanearScreen({ navigation }) {
   const [permiso, pedirPermiso] = useCameraPermissions();
   const [capturando, setCapturando] = useState(false);
+  const { refrescarCuenta } = useSesion();
   const camara = useRef(null);
 
   if (!permiso) {
@@ -38,11 +41,22 @@ export default function EscanearScreen() {
 
     setCapturando(true);
     try {
-      const foto = await camara.current.takePictureAsync({ quality: 0.8 });
-      // TODO: recorte/enderezado y subida al backend para que Claude lo procese.
-      Alert.alert('Foto tomada', `Pendiente procesar y subir:\n${foto.uri}`);
+      const foto = await camara.current.takePictureAsync({ quality: 0.8, base64: true });
+      const documento = await api.escanear(foto.base64, 'image/jpeg');
+
+      refrescarCuenta();
+      navigation.navigate('Documento', { documento });
     } catch (err) {
-      Alert.alert('No se pudo capturar', err.message);
+      if (err.message === 'limite_alcanzado') {
+        Alert.alert(
+          'Llegaste a tu límite',
+          'Ya usaste tus escaneos gratis del mes. Pásate al plan Personal para seguir.'
+        );
+      } else if (err.message === 'drive_sin_conectar') {
+        Alert.alert('Falta tu Drive', 'Conecta tu Google Drive para poder guardar documentos.');
+      } else {
+        Alert.alert('No se pudo escanear', err.message);
+      }
     } finally {
       setCapturando(false);
     }
@@ -69,7 +83,9 @@ export default function EscanearScreen() {
             <View style={[estilos.obturadorInterior, capturando && estilos.obturadorActivo]} />
           </TouchableOpacity>
           <Text style={estilos.ayuda}>
-            También puedes mandarnos la foto por WhatsApp y la guardamos igual.
+            {capturando
+              ? 'Leyendo el documento…'
+              : 'También puedes mandarnos la foto por WhatsApp y la guardamos igual.'}
           </Text>
         </View>
       </SafeAreaView>

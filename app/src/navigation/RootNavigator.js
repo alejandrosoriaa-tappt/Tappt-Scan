@@ -8,6 +8,7 @@ import EscanearScreen from '../screens/EscanearScreen';
 import DriveScreen from '../screens/DriveScreen';
 import AjustesScreen from '../screens/AjustesScreen';
 import DocumentoScreen from '../screens/DocumentoScreen';
+import EditorScreen from '../screens/EditorScreen';
 import LoginScreen from '../screens/LoginScreen';
 import OnboardingScreen from '../screens/OnboardingScreen';
 import { useSesion } from '../context/SesionContext';
@@ -74,6 +75,11 @@ export default function RootNavigator() {
         name="Documento"
         component={DocumentoScreen}
         options={{ title: 'Documento', headerTintColor: colores.primario }}
+      />
+      <Stack.Screen
+        name="Editor"
+        component={EditorScreen}
+        options={{ title: 'Editar', headerTintColor: colores.primario }}
       />
     </Stack.Navigator>
   );

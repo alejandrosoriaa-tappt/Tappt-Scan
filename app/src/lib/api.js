@@ -32,6 +32,17 @@ export const api = {
     request('/api/cuenta/upgrade', { method: 'POST', body: JSON.stringify({ plan }) }),
 
   documentos: (tipo) => request(`/api/documentos${tipo ? `?tipo=${tipo}` : ''}`),
+  escanear: (imagen, mimeType = 'image/jpeg') =>
+    request('/api/documentos/escanear', {
+      method: 'POST',
+      body: JSON.stringify({ imagen, mimeType }),
+    }),
+  imagenDocumento: (id) => request(`/api/documentos/${id}/imagen`),
+  editar: (id, imagenBase, anotaciones, mimeType = 'image/jpeg') =>
+    request(`/api/documentos/${id}/editar`, {
+      method: 'POST',
+      body: JSON.stringify({ imagenBase, anotaciones, mimeType }),
+    }),
   gastos: () => request('/api/documentos/gastos'),
   borrarDocumento: (id) => request(`/api/documentos/${id}`, { method: 'DELETE' }),
 

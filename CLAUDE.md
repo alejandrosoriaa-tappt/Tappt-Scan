@@ -70,6 +70,11 @@ credenciales con otra vertical).
   la primera vez (`requireAuth` deja el usuario en `req.usuario`).
 - `services/planes.js` — límites por plan (gratis: 5/mes) y conteo mensual.
 - `services/mercadopago.js` — genera el link de pago y consulta el estado.
+- `services/procesarDocumento.js` — tubería compartida (visión → Drive →
+  DB) que usan tanto el webhook de WhatsApp como la cámara de la app.
+- `services/pdf.js` — arma el PDF desde la imagen y hornea las anotaciones
+  (texto, firma, imagen, emoji, tapar) con `pdf-lib`. Ver
+  `docs/EDITOR-PDF.md` y `assets/README.md`.
 - `services/whatsapp.js` — mandar texto/botones, resolver y descargar media.
 - `services/vision.js` — llamada a Claude vision, clasifica y extrae JSON.
 - `services/naming.js` — arma carpeta destino y nombre de archivo desde el
@@ -100,6 +105,9 @@ App nativa (`app/`, Expo / React Native, JS sin TypeScript):
 - `src/context/SesionContext.js` — sesión de Supabase + datos de la cuenta.
 - `src/lib/supabase.js`, `src/lib/api.js` — cliente de auth y del backend
   (toda llamada va firmada con el JWT).
+- `src/screens/EditorScreen.js` — editor: eliges herramienta y tocas el
+  documento para colocar texto, firma, emoji, imagen o un tapado.
+- `src/components/FirmaPad.js` — lienzo de firma en WebView; devuelve PNG.
 - `src/hooks/useCargar.js`, `src/components/DocumentoCard.js`, `src/theme.js`.
 
 **Navegación:** tres puertas — sin sesión → Login; con sesión pero sin Drive
@@ -142,11 +150,11 @@ Google OAuth y las de MercadoPago, y correr el flujo completo end-to-end.
 
 Pendientes de código:
 
-- **Editor de PDF y firmas** — sin empezar. Es lo más pesado del MVP y lo
-  que justifica el plan Personal.
-- **Captura desde la app** — la cámara ya toma la foto, pero falta el
-  recorte/enderezado y subirla al backend para que Claude la procese
-  (hoy solo muestra la URI; ver el TODO en `EscanearScreen.js`).
+- **Recorte y enderezado** de la foto capturada — hoy se sube tal cual.
+- **Editor**: falta arrastrar un elemento ya colocado y soportar PDFs de
+  varias páginas subidos por el usuario. Ver `docs/EDITOR-PDF.md`.
+- **Fuente Unicode** (`assets/fuente-unicode.ttf`) — sin ella se omiten los
+  caracteres fuera de WinAnsi. Ver `assets/README.md`.
 - **Pestaña de Gastos** del plan Negocio — el endpoint
   `/api/documentos/gastos` ya existe; falta la pantalla y el Google Sheet
   en la carpeta del usuario.
