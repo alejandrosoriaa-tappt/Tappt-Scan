@@ -35,6 +35,8 @@ router.post('/', async (req, res) => {
 
     if (msg.type === 'image') {
       await handleImage(from, msg.image);
+    } else if (msg.type === 'document') {
+      await handleDocument(from, msg.document);
     } else if (msg.type === 'text') {
       await handleText(from, msg.text.body);
     } else if (msg.type === 'interactive') {
@@ -45,7 +47,9 @@ router.post('/', async (req, res) => {
   }
 });
 
-async function handleImage(from, image) {
+// Fotos y PDFs reenviados comparten todo: mismas validaciones, misma
+// tubería. Solo cambia el tipo de medio que llega.
+async function recibirArchivo(from, medio, mimePorDefecto) {
   const { data: user } = await supabase
     .from('scan_users')
     .select('*')
@@ -70,20 +74,43 @@ async function handleImage(from, image) {
     return;
   }
 
-  const mediaUrl = await whatsapp.getMediaUrl(image.id);
+  const mediaUrl = await whatsapp.getMediaUrl(medio.id);
   const buffer = await whatsapp.downloadMedia(mediaUrl);
 
-  const { nombreArchivo: fileName, nombreCarpeta: folderName } = await procesarDocumento.procesarImagen(
+  const { nombreArchivo, nombreCarpeta, paginas } = await procesarDocumento.procesarArchivo(
     user,
     buffer,
-    image.mime_type || 'image/jpeg'
+    medio.mime_type || mimePorDefecto,
+    medio.filename || null
   );
 
-  await whatsapp.sendButtons(from, `Guardé tu documento como "${fileName}" en ${folderName}. ¿Todo bien?`, [
-    { id: 'ok', title: 'Guardar' },
-    { id: 'app', title: 'Ver en la app' },
-    { id: 'otra_cosa', title: 'Es otra cosa' },
-  ]);
+  const detallePaginas = paginas > 1 ? ` (${paginas} páginas)` : '';
+  await whatsapp.sendButtons(
+    from,
+    `Guardé "${nombreArchivo}"${detallePaginas} en ${nombreCarpeta}. ¿Todo bien?`,
+    [
+      { id: 'ok', title: 'Guardar' },
+      { id: 'app', title: 'Editar en la app' },
+      { id: 'otra_cosa', title: 'Es otra cosa' },
+    ]
+  );
+}
+
+const handleImage = (from, image) => recibirArchivo(from, image, 'image/jpeg');
+
+// PDF reenviado desde otro chat. WhatsApp manda cualquier adjunto como
+// `document`; solo aceptamos PDF e imágenes.
+async function handleDocument(from, documento) {
+  const mime = documento.mime_type || '';
+  if (!mime.includes('pdf') && !mime.startsWith('image/')) {
+    await whatsapp.sendText(
+      from,
+      'Por ahora solo puedo con PDF e imágenes. Reenvíame el documento en alguno de esos formatos.'
+    );
+    return;
+  }
+
+  await recibirArchivo(from, documento, 'application/pdf');
 }
 
 async function handleText(from, text) {

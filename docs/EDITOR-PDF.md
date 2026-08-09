@@ -31,19 +31,36 @@ es **OCR + tapar con blanco + redibujar encima**. El resultado depende de qué
 tan bien salió el OCR y de qué tan parecido sea el tipo de letra que se usa
 al redibujar. Es la razón de que a veces se note el parche.
 
-## Qué hace TapptScan
+## Cómo entra un documento
 
-En TapptScan casi todo nace de una **foto** por WhatsApp, así que el caso 2
-es el normal. El editor por lo tanto trabaja **sobre la imagen**, no sobre
-una capa de texto que no existe:
+Tres caminos, todos a la misma tubería (`services/procesarDocumento.js`):
 
-1. La app baja el original desde el Drive del usuario
-   (`GET /api/documentos/:id/imagen`) — el backend no guarda copia.
-2. El usuario coloca elementos tocando el documento. Todo se guarda en
-   **coordenadas fraccionarias (0-1) con origen arriba-izquierda**, así que
-   no depende del tamaño de pantalla.
-3. Al guardar, el backend hornea la imagen y las anotaciones en un PDF con
-   `pdf-lib` (`POST /api/documentos/:id/editar`) y lo sube al Drive.
+| Camino | Para qué | Formatos |
+|---|---|---|
+| Foto por WhatsApp | El atajo rápido: escanear al vuelo | imagen |
+| **PDF reenviado por WhatsApp** | Te llega un PDF en otro chat y lo reenvías a TapptScan para firmarlo | PDF |
+| **Importar desde la app** | Trabajo con calma: archivos del teléfono, iCloud, Drive, la galería | PDF e imagen |
+
+El archivo se sube a Drive **tal como llegó**: si es PDF se conserva el PDF,
+no se aplasta a imagen. Para clasificarlo con Claude se rasteriza la primera
+página, porque el modelo necesita ver algo.
+
+## Qué hace el editor
+
+1. La app pide una página al backend (`GET /api/documentos/:id/pagina/:n`).
+   Si el original es PDF, el backend lo rasteriza con `pdf.js` y devuelve un
+   PNG; si es imagen, la manda tal cual. El backend no guarda copia: baja de
+   Drive, convierte y responde.
+2. El usuario coloca elementos tocando el documento. Cada anotación guarda
+   su página y **coordenadas fraccionarias (0-1) con origen
+   arriba-izquierda**, así que no dependen del tamaño de pantalla.
+3. Al guardar (`POST /api/documentos/:id/editar`), el backend baja el
+   original otra vez y hornea las anotaciones **sobre el PDF original** con
+   `pdf-lib` — no sobre la imagen rasterizada. Eso conserva la calidad y la
+   capa de texto del documento. Si el original era imagen, se envuelve en un
+   PDF de una página. El resultado se sube al Drive del usuario.
+
+La rasterización es solo para *mostrar*. Lo que se firma es el original.
 
 ### Tipos de anotación
 
@@ -68,10 +85,14 @@ oculta lo viejo y se escribe encima.
   caracteres fuera de ese rango se **omiten** (no rompen el PDF) y vuelven
   en el campo `omitidas` de la respuesta para avisarle al usuario. Ver
   `assets/README.md`.
-- **PDFs de varias páginas subidos por el usuario.** Hoy el editor asume un
-  documento de una página que nació como imagen. Editar un PDF ajeno
-  requiere renderizar sus páginas para mostrarlas, que es trabajo aparte.
+- **Reemplazar texto existente de un PDF nativo.** No implementado. Se puede
+  tapar y escribir encima (`tapar` + `texto`), que es lo que hacen las apps
+  del mercado, pero no editar el texto en su sitio con su misma fuente —
+  por las razones de la sección anterior.
 - **Mover un elemento ya puesto.** Se coloca al tocar y se puede deshacer,
   pero todavía no se arrastra.
+- **Peso de los PDF grandes.** Las páginas viajan en base64 dentro de JSON
+  (límite de 25 MB en Express). Un PDF de muchas páginas o muy pesado puede
+  ir lento; falta paginar o pasar a subida binaria.
 - **Recorte y enderezado de la foto.** Sin implementar: la captura se sube
   tal cual sale de la cámara.

@@ -52,3 +52,9 @@ create index if not exists idx_scan_documents_user on scan_documents(user_id);
 create index if not exists idx_scan_documents_creado on scan_documents(user_id, created_at desc);
 create index if not exists idx_scan_links_code on scan_links(code);
 create index if not exists idx_scan_payments_user on scan_payments(user_id);
+
+-- Importación de archivos y PDFs (agosto 2026): el original puede ser PDF
+-- de varias páginas, no solo una foto.
+alter table scan_documents add column if not exists mime_type text default 'image/jpeg';
+alter table scan_documents add column if not exists paginas integer not null default 1;
+alter table scan_documents add column if not exists nombre_original text;

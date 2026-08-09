@@ -37,11 +37,16 @@ export const api = {
       method: 'POST',
       body: JSON.stringify({ imagen, mimeType }),
     }),
-  imagenDocumento: (id) => request(`/api/documentos/${id}/imagen`),
-  editar: (id, imagenBase, anotaciones, mimeType = 'image/jpeg') =>
+  importar: (archivo, mimeType, nombre) =>
+    request('/api/documentos/importar', {
+      method: 'POST',
+      body: JSON.stringify({ archivo, mimeType, nombre }),
+    }),
+  pagina: (id, n = 0) => request(`/api/documentos/${id}/pagina/${n}`),
+  editar: (id, anotaciones) =>
     request(`/api/documentos/${id}/editar`, {
       method: 'POST',
-      body: JSON.stringify({ imagenBase, anotaciones, mimeType }),
+      body: JSON.stringify({ anotaciones }),
     }),
   gastos: () => request('/api/documentos/gastos'),
   borrarDocumento: (id) => request(`/api/documentos/${id}`, { method: 'DELETE' }),

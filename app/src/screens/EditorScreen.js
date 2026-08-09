@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -31,12 +31,37 @@ const HERRAMIENTAS = [
 ];
 
 export default function EditorScreen({ route, navigation }) {
-  const { documento, imagenBase } = route.params;
+  const { documento, paginaInicial } = route.params;
 
   const [herramienta, setHerramienta] = useState('texto');
   const [anotaciones, setAnotaciones] = useState([]);
   const [lienzo, setLienzo] = useState({ ancho: 1, alto: 1 });
   const [guardando, setGuardando] = useState(false);
+
+  // Las páginas se piden al backend una por una: si el original es PDF las
+  // rasteriza, si es imagen la manda tal cual.
+  const [pagina, setPagina] = useState(paginaInicial?.pagina ?? 0);
+  const [vista, setVista] = useState(paginaInicial || null);
+  const [cargandoPagina, setCargandoPagina] = useState(false);
+
+  useEffect(() => {
+    if (vista && vista.pagina === pagina) return;
+
+    let cancelado = false;
+    setCargandoPagina(true);
+    api
+      .pagina(documento.id, pagina)
+      .then((datos) => !cancelado && setVista(datos))
+      .catch((err) => !cancelado && Alert.alert('No pudimos abrir la página', err.message))
+      .finally(() => !cancelado && setCargandoPagina(false));
+
+    return () => {
+      cancelado = true;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [pagina]);
+
+  const totalPaginas = vista?.paginas || documento.paginas || 1;
 
   const [firmaAbierta, setFirmaAbierta] = useState(false);
   const [emojisAbiertos, setEmojisAbiertos] = useState(false);
@@ -53,7 +78,9 @@ export default function EditorScreen({ route, navigation }) {
   const agregar = (anotacion) => setAnotaciones((previas) => [...previas, anotacion]);
 
   const tocarLienzo = async (evento) => {
-    const posicion = aFraccion(evento);
+    // Cada anotación recuerda en qué página se puso: el backend las aplica
+    // sobre la página correspondiente del PDF.
+    const posicion = { ...aFraccion(evento), pagina };
     setPosicionPendiente(posicion);
 
     if (herramienta === 'texto') {
@@ -89,11 +116,7 @@ export default function EditorScreen({ route, navigation }) {
 
     setGuardando(true);
     try {
-      const { nombre, driveLink, omitidas } = await api.editar(
-        documento.id,
-        imagenBase,
-        anotaciones
-      );
+      const { nombre, driveLink, omitidas } = await api.editar(documento.id, anotaciones);
 
       const aviso = omitidas?.length
         ? `\n\nOjo: ${omitidas.length} texto(s) no se pudieron dibujar porque la fuente no tiene esos caracteres.`
@@ -120,13 +143,23 @@ export default function EditorScreen({ route, navigation }) {
               setLienzo({ ancho: e.nativeEvent.layout.width, alto: e.nativeEvent.layout.height })
             }
           >
-            <Image
-              source={{ uri: `data:image/jpeg;base64,${imagenBase}` }}
-              style={estilos.imagen}
-              resizeMode="contain"
-            />
+            {vista ? (
+              <Image
+                source={{ uri: `data:${vista.mimeType};base64,${vista.imagen}` }}
+                style={estilos.imagen}
+                resizeMode="contain"
+              />
+            ) : null}
+
+            {cargandoPagina ? (
+              <View style={estilos.capaCargando}>
+                <ActivityIndicator color={colores.primario} />
+              </View>
+            ) : null}
 
             {anotaciones.map((anotacion, indice) => {
+              if ((anotacion.pagina || 0) !== pagina) return null;
+
               const posicion = {
                 left: anotacion.x * lienzo.ancho,
                 top: anotacion.y * lienzo.alto,
@@ -168,6 +201,28 @@ export default function EditorScreen({ route, navigation }) {
             })}
           </View>
         </TouchableWithoutFeedback>
+
+        {totalPaginas > 1 ? (
+          <View style={estilos.paginador}>
+            <TouchableOpacity
+              onPress={() => setPagina((p) => Math.max(0, p - 1))}
+              disabled={pagina === 0}
+            >
+              <Text style={[estilos.flecha, pagina === 0 && estilos.flechaInactiva]}>‹</Text>
+            </TouchableOpacity>
+            <Text style={estilos.paginaTexto}>
+              Página {pagina + 1} de {totalPaginas}
+            </Text>
+            <TouchableOpacity
+              onPress={() => setPagina((p) => Math.min(totalPaginas - 1, p + 1))}
+              disabled={pagina >= totalPaginas - 1}
+            >
+              <Text style={[estilos.flecha, pagina >= totalPaginas - 1 && estilos.flechaInactiva]}>
+                ›
+              </Text>
+            </TouchableOpacity>
+          </View>
+        ) : null}
 
         <Text style={estilos.pista}>
           Elige una herramienta y toca el documento donde quieras colocarla.
@@ -296,6 +351,22 @@ const estilos = StyleSheet.create({
     textAlign: 'center',
     marginTop: espacio.sm,
   },
+  capaCargando: {
+    ...StyleSheet.absoluteFillObject,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: 'rgba(255,255,255,0.7)',
+  },
+  paginador: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: espacio.lg,
+    marginTop: espacio.md,
+  },
+  flecha: { fontSize: 28, color: colores.primario, paddingHorizontal: espacio.md },
+  flechaInactiva: { color: colores.borde },
+  paginaTexto: { fontSize: 14, color: colores.texto, fontWeight: '500' },
   barra: {
     flexDirection: 'row',
     justifyContent: 'space-around',

@@ -8,52 +8,90 @@ const procesarDocumento = require('../services/procesarDocumento');
 const drive = require('../services/drive');
 const pdf = require('../services/pdf');
 
-// Escaneo desde la cámara de la app. Misma tubería que el webhook de
-// WhatsApp: la imagen llega en base64 y sale un documento en Drive.
+// Entrada desde la app: cámara (`/escanear`) o importación de un archivo
+// del dispositivo (`/importar`). Ambas comparten validaciones y tubería.
+async function recibirDesdeApp(req, res, mimePorDefecto) {
+  if (!req.usuario.drive_tokens) return res.status(409).json({ error: 'drive_sin_conectar' });
+
+  const cupo = await planes.puedeEscanear(req.usuario);
+  if (!cupo.permitido) return res.status(402).json({ error: 'limite_alcanzado', ...cupo });
+
+  const { archivo, imagen, mimeType, nombre } = req.body;
+  const contenido = archivo || imagen;
+  if (!contenido) return res.status(400).json({ error: 'falta_archivo' });
+
+  const buffer = Buffer.from(contenido.replace(/^data:[^;]+;base64,/, ''), 'base64');
+  const { documento } = await procesarDocumento.procesarArchivo(
+    req.usuario,
+    buffer,
+    mimeType || mimePorDefecto,
+    nombre || null
+  );
+
+  res.json(documento);
+}
+
 router.post('/escanear', requireAuth, async (req, res) => {
   try {
-    if (!req.usuario.drive_tokens) return res.status(409).json({ error: 'drive_sin_conectar' });
-
-    const cupo = await planes.puedeEscanear(req.usuario);
-    if (!cupo.permitido) {
-      return res.status(402).json({ error: 'limite_alcanzado', ...cupo });
-    }
-
-    const { imagen, mimeType } = req.body;
-    if (!imagen) return res.status(400).json({ error: 'falta_imagen' });
-
-    const buffer = Buffer.from(imagen.replace(/^data:image\/\w+;base64,/, ''), 'base64');
-    const { documento } = await procesarDocumento.procesarImagen(
-      req.usuario,
-      buffer,
-      mimeType || 'image/jpeg'
-    );
-
-    res.json(documento);
+    await recibirDesdeApp(req, res, 'image/jpeg');
   } catch (err) {
     console.error('[documentos] error escaneando', err);
     res.status(500).json({ error: 'error_escaneo' });
   }
 });
 
-// Baja el archivo original desde el Drive del usuario para poder editarlo
-// en la app (el backend no guarda ninguna copia).
-router.get('/:id/imagen', requireAuth, async (req, res) => {
+// Importar un archivo ya existente del teléfono o la computadora
+// (galería, Archivos, iCloud, Drive…). Acepta PDF e imágenes.
+router.post('/importar', requireAuth, async (req, res) => {
   try {
-    const { data: documento, error } = await supabase
-      .from('scan_documents')
-      .select('drive_file_id')
-      .eq('id', req.params.id)
-      .eq('user_id', req.usuario.id)
-      .maybeSingle();
-    if (error) throw error;
+    await recibirDesdeApp(req, res, 'application/pdf');
+  } catch (err) {
+    console.error('[documentos] error importando', err);
+    res.status(500).json({ error: 'error_importacion' });
+  }
+});
+
+async function traerDocumento(req) {
+  const { data, error } = await supabase
+    .from('scan_documents')
+    .select('*')
+    .eq('id', req.params.id)
+    .eq('user_id', req.usuario.id)
+    .maybeSingle();
+  if (error) throw error;
+  return data;
+}
+
+// Devuelve una página lista para mostrar y anotar en la app. Si el original
+// es PDF se rasteriza esa página; si es imagen, se manda tal cual. El
+// backend no guarda copia: baja de Drive, convierte y responde.
+router.get('/:id/pagina/:n', requireAuth, async (req, res) => {
+  try {
+    const documento = await traerDocumento(req);
     if (!documento) return res.status(404).json({ error: 'documento_no_encontrado' });
 
-    const buffer = await drive.downloadFile(req.usuario.drive_tokens, documento.drive_file_id);
-    res.json({ imagen: buffer.toString('base64') });
+    const original = await drive.downloadFile(req.usuario.drive_tokens, documento.drive_file_id);
+    const indice = Math.max(0, parseInt(req.params.n, 10) || 0);
+
+    if (pdf.esPdf(original)) {
+      const png = await pdf.renderizarPagina(original, indice);
+      return res.json({
+        imagen: png.toString('base64'),
+        mimeType: 'image/png',
+        paginas: documento.paginas || 1,
+        pagina: indice,
+      });
+    }
+
+    res.json({
+      imagen: original.toString('base64'),
+      mimeType: documento.mime_type || 'image/jpeg',
+      paginas: 1,
+      pagina: 0,
+    });
   } catch (err) {
-    console.error('[documentos] error bajando imagen', err);
-    res.status(500).json({ error: 'error_imagen' });
+    console.error('[documentos] error sirviendo página', err);
+    res.status(500).json({ error: 'error_pagina' });
   }
 });
 
@@ -61,21 +99,20 @@ router.get('/:id/imagen', requireAuth, async (req, res) => {
 // imagen del documento y sube el PDF resultante al Drive del usuario.
 router.post('/:id/editar', requireAuth, async (req, res) => {
   try {
-    const { data: documento, error } = await supabase
-      .from('scan_documents')
-      .select('*')
-      .eq('id', req.params.id)
-      .eq('user_id', req.usuario.id)
-      .maybeSingle();
-    if (error) throw error;
+    const documento = await traerDocumento(req);
     if (!documento) return res.status(404).json({ error: 'documento_no_encontrado' });
 
-    const { imagenBase, mimeType, anotaciones } = req.body;
-    if (!imagenBase) return res.status(400).json({ error: 'falta_imagen_base' });
+    const { anotaciones } = req.body;
 
-    const base = Buffer.from(imagenBase.replace(/^data:image\/\w+;base64,/, ''), 'base64');
-    const pdfPlano = await pdf.desdeImagen(base, mimeType || 'image/jpeg');
-    const { pdf: pdfFinal, omitidas } = await pdf.aplicarAnotaciones(pdfPlano, anotaciones || []);
+    // Se parte SIEMPRE del original en Drive. Si ya era PDF se anota
+    // encima (conserva calidad y su capa de texto); si era imagen, se
+    // envuelve en un PDF de una página.
+    const original = await drive.downloadFile(req.usuario.drive_tokens, documento.drive_file_id);
+    const base = pdf.esPdf(original)
+      ? original
+      : await pdf.desdeImagen(original, documento.mime_type || 'image/jpeg');
+
+    const { pdf: pdfFinal, omitidas } = await pdf.aplicarAnotaciones(base, anotaciones || []);
 
     const carpetas =
       req.usuario.drive_folders || (await drive.ensureFolderStructure(req.usuario.drive_tokens));

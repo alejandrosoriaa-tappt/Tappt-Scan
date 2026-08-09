@@ -11,13 +11,21 @@ credenciales ni tablas con `tappt-backend` o `tappt-broker`.
 
 ## Qué hace
 
-Escaneo de documentos por WhatsApp: el usuario manda una foto, Claude
-(visión) clasifica el documento y extrae datos clave (tipo, emisor, fecha,
-monto), se confirma por chat con botones, y el archivo se sube directo al
-Google Drive del propio usuario — no se persiste el archivo en nuestros
-servidores, solo la metadata en Supabase. Una app nativa (fuera de este
-repo) sirve de dashboard, editor de PDF/firmas, cámara de respaldo y
-explorador de Drive.
+Escaneo y firma de documentos. Claude (visión) clasifica el documento y
+extrae datos clave (tipo, emisor, fecha, monto), y el archivo se sube
+directo al Google Drive del propio usuario — no se persiste el archivo en
+nuestros servidores, solo la metadata en Supabase.
+
+**Tres caminos de entrada**, todos a la misma tubería:
+
+1. **Foto por WhatsApp** — el atajo rápido para escanear al vuelo.
+2. **PDF reenviado por WhatsApp** — te llega un PDF en otro chat, lo
+   reenvías a TapptScan y queda listo para editar o firmar.
+3. **Importar desde la app** — para trabajo con calma: archivos del
+   teléfono, iCloud, Drive o la galería.
+
+WhatsApp es el camino rápido; el trabajo detallado (editar, firmar,
+organizar) se hace en la app.
 
 ## Stack
 
@@ -62,7 +70,9 @@ credenciales con otra vertical).
   procesar y atiende "quiero personal/negocio" mandando el link de pago.
 - `routes/cuenta.js` — perfil y consumo, generación del código para vincular
   WhatsApp, y alta de pago para subir de plan.
-- `routes/documentos.js` — lista, resumen de gastos del mes y borrado.
+- `routes/documentos.js` — lista, gastos del mes, borrado, escaneo desde
+  la cámara, importación de archivos, páginas rasterizadas para el editor
+  y horneado de anotaciones.
 - `routes/drive.js` — inicio de OAuth, callback (guarda tokens y crea
   carpetas) y listado de carpetas para el explorador.
 - `routes/pagos.js` — webhook de MercadoPago; al aprobarse sube el plan.
@@ -72,8 +82,9 @@ credenciales con otra vertical).
 - `services/mercadopago.js` — genera el link de pago y consulta el estado.
 - `services/procesarDocumento.js` — tubería compartida (visión → Drive →
   DB) que usan tanto el webhook de WhatsApp como la cámara de la app.
-- `services/pdf.js` — arma el PDF desde la imagen y hornea las anotaciones
-  (texto, firma, imagen, emoji, tapar) con `pdf-lib`. Ver
+- `services/pdf.js` — arma el PDF desde la imagen, hornea las anotaciones
+  (texto, firma, imagen, emoji, tapar) con `pdf-lib`, y rasteriza páginas
+  con `pdf.js` + `@napi-rs/canvas` para poder mostrarlas en la app. Ver
   `docs/EDITOR-PDF.md` y `assets/README.md`.
 - `services/whatsapp.js` — mandar texto/botones, resolver y descargar media.
 - `services/vision.js` — llamada a Claude vision, clasifica y extrae JSON.
@@ -105,8 +116,10 @@ App nativa (`app/`, Expo / React Native, JS sin TypeScript):
 - `src/context/SesionContext.js` — sesión de Supabase + datos de la cuenta.
 - `src/lib/supabase.js`, `src/lib/api.js` — cliente de auth y del backend
   (toda llamada va firmada con el JWT).
-- `src/screens/EditorScreen.js` — editor: eliges herramienta y tocas el
-  documento para colocar texto, firma, emoji, imagen o un tapado.
+- `src/screens/EditorScreen.js` — editor multipágina: eliges herramienta y
+  tocas el documento para colocar texto, firma, emoji, imagen o un tapado.
+- `src/lib/importar.js` — importación desde archivos del dispositivo
+  (`expo-document-picker`) o desde la galería (`expo-image-picker`).
 - `src/components/FirmaPad.js` — lienzo de firma en WebView; devuelve PNG.
 - `src/hooks/useCargar.js`, `src/components/DocumentoCard.js`, `src/theme.js`.
 
@@ -151,8 +164,11 @@ Google OAuth y las de MercadoPago, y correr el flujo completo end-to-end.
 Pendientes de código:
 
 - **Recorte y enderezado** de la foto capturada — hoy se sube tal cual.
-- **Editor**: falta arrastrar un elemento ya colocado y soportar PDFs de
-  varias páginas subidos por el usuario. Ver `docs/EDITOR-PDF.md`.
+- **Editor**: falta arrastrar un elemento ya colocado y reemplazar texto de
+  un PDF nativo en su sitio. Ver `docs/EDITOR-PDF.md`.
+- **Migración pendiente en Supabase**: las columnas `mime_type`, `paginas`
+  y `nombre_original` de `scan_documents` están al final de
+  `scan_schema.sql` como `alter table` — hay que correrlas.
 - **Fuente Unicode** (`assets/fuente-unicode.ttf`) — sin ella se omiten los
   caracteres fuera de WinAnsi. Ver `assets/README.md`.
 - **Pestaña de Gastos** del plan Negocio — el endpoint

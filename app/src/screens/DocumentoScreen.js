@@ -17,12 +17,13 @@ export default function DocumentoScreen({ route, navigation }) {
   const meta = porTipo[documento.tipo] || porTipo.otro;
   const [abriendo, setAbriendo] = useState(false);
 
-  // El original vive en Drive, así que hay que bajarlo antes de editar.
+  // El original vive en Drive; el backend nos manda la primera página ya
+  // lista para mostrar (rasterizada si es PDF).
   const abrirEditor = async () => {
     setAbriendo(true);
     try {
-      const { imagen } = await api.imagenDocumento(documento.id);
-      navigation.navigate('Editor', { documento, imagenBase: imagen });
+      const paginaInicial = await api.pagina(documento.id, 0);
+      navigation.navigate('Editor', { documento, paginaInicial });
     } catch (err) {
       Alert.alert('No pudimos abrir el editor', err.message);
     } finally {
@@ -53,6 +54,14 @@ export default function DocumentoScreen({ route, navigation }) {
           }
         />
         <Campo etiqueta="Carpeta" valor={meta.carpeta} />
+        <Campo
+          etiqueta="Formato"
+          valor={
+            documento.mime_type === 'application/pdf'
+              ? `PDF · ${documento.paginas || 1} ${documento.paginas > 1 ? 'páginas' : 'página'}`
+              : 'Imagen'
+          }
+        />
       </View>
 
       <Text style={estilos.tituloSeccion}>Acciones</Text>

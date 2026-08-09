@@ -2,6 +2,62 @@ const fs = require('fs');
 const path = require('path');
 const { PDFDocument, StandardFonts, rgb, degrees } = require('pdf-lib');
 const fontkit = require('@pdf-lib/fontkit');
+const canvasLib = require('@napi-rs/canvas');
+
+// pdf.js espera APIs de navegador. @napi-rs/canvas las trae; sin esto
+// descarta glifos al rasterizar.
+globalThis.DOMMatrix = globalThis.DOMMatrix || canvasLib.DOMMatrix;
+globalThis.Path2D = globalThis.Path2D || canvasLib.Path2D;
+globalThis.ImageData = globalThis.ImageData || canvasLib.ImageData;
+
+const FUENTES_ESTANDAR =
+  path.join(require.resolve('pdfjs-dist/package.json'), '..', 'standard_fonts') + path.sep;
+
+// pdfjs-dist es ESM y el repo es CommonJS: se carga con import() dinámico y
+// se cachea porque es pesado.
+let pdfjsCache = null;
+async function cargarPdfjs() {
+  if (!pdfjsCache) pdfjsCache = await import('pdfjs-dist/legacy/build/pdf.mjs');
+  return pdfjsCache;
+}
+
+function esPdf(buffer) {
+  return buffer && buffer.subarray(0, 5).toString() === '%PDF-';
+}
+
+async function abrir(pdfBuffer) {
+  const pdfjs = await cargarPdfjs();
+  return pdfjs.getDocument({
+    data: new Uint8Array(pdfBuffer),
+    isEvalSupported: false,
+    standardFontDataUrl: FUENTES_ESTANDAR,
+  }).promise;
+}
+
+// Número de páginas y si trae capa de texto real (ver docs/EDITOR-PDF.md:
+// de eso depende que el texto sea reemplazable o solo pixeles).
+async function info(pdfBuffer) {
+  const documento = await abrir(pdfBuffer);
+  const primera = await documento.getPage(1);
+  const texto = await primera.getTextContent();
+
+  return {
+    paginas: documento.numPages,
+    tieneTexto: texto.items.some((i) => (i.str || '').trim().length > 0),
+  };
+}
+
+// Rasteriza una página a PNG para poder mostrarla y anotarla en la app.
+async function renderizarPagina(pdfBuffer, indice = 0, escala = 2) {
+  const documento = await abrir(pdfBuffer);
+  const pagina = await documento.getPage(indice + 1);
+  const vista = pagina.getViewport({ scale: escala });
+
+  const canvas = canvasLib.createCanvas(Math.ceil(vista.width), Math.ceil(vista.height));
+  await pagina.render({ canvasContext: canvas.getContext('2d'), viewport: vista }).promise;
+
+  return canvas.toBuffer('image/png');
+}
 
 // Fuente Unicode opcional para acentos y signos especiales. Las fuentes
 // estándar de PDF (Helvetica) son WinAnsi: no cubren buena parte de lo que
@@ -117,4 +173,11 @@ async function aplicarAnotaciones(pdfBuffer, anotaciones = []) {
   return { pdf: Buffer.from(await pdf.save()), omitidas };
 }
 
-module.exports = { desdeImagen, aplicarAnotaciones, RUTA_FUENTE };
+module.exports = {
+  desdeImagen,
+  aplicarAnotaciones,
+  esPdf,
+  info,
+  renderizarPagina,
+  RUTA_FUENTE,
+};

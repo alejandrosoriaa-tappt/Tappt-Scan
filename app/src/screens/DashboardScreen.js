@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import {
   View,
   Text,
@@ -7,11 +7,13 @@ import {
   TouchableOpacity,
   ActivityIndicator,
   RefreshControl,
+  Alert,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import DocumentoCard from '../components/DocumentoCard';
 import useCargar from '../hooks/useCargar';
 import { api } from '../lib/api';
+import { importarArchivo, importarDeGaleria } from '../lib/importar';
 import { useSesion } from '../context/SesionContext';
 import { colores, espacio } from '../theme';
 
@@ -19,6 +21,27 @@ export default function DashboardScreen({ navigation }) {
   const { cuenta, refrescarCuenta } = useSesion();
   const documentos = useCargar(() => api.documentos(), []);
   const gastos = useCargar(() => api.gastos(), []);
+  const [importando, setImportando] = useState(false);
+
+  const importar = async (elegir) => {
+    setImportando(true);
+    try {
+      const documento = await elegir();
+      if (!documento) return;
+
+      documentos.recargar();
+      refrescarCuenta();
+      navigation.navigate('Documento', { documento });
+    } catch (err) {
+      const mensajes = {
+        limite_alcanzado: 'Ya usaste tus escaneos gratis del mes.',
+        drive_sin_conectar: 'Conecta tu Google Drive para poder guardar documentos.',
+      };
+      Alert.alert('No se pudo importar', mensajes[err.message] || err.message);
+    } finally {
+      setImportando(false);
+    }
+  };
 
   const recargarTodo = () => {
     documentos.recargar();
@@ -79,6 +102,29 @@ export default function DashboardScreen({ navigation }) {
               </TouchableOpacity>
             ) : null}
 
+            <View style={estilos.filaImportar}>
+              <TouchableOpacity
+                style={estilos.botonImportar}
+                onPress={() => importar(importarArchivo)}
+                disabled={importando}
+                activeOpacity={0.8}
+              >
+                <Text style={estilos.importarIcono}>📄</Text>
+                <Text style={estilos.importarTexto}>
+                  {importando ? 'Subiendo…' : 'Importar archivo'}
+                </Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={estilos.botonImportar}
+                onPress={() => importar(importarDeGaleria)}
+                disabled={importando}
+                activeOpacity={0.8}
+              >
+                <Text style={estilos.importarIcono}>🖼️</Text>
+                <Text style={estilos.importarTexto}>Desde galería</Text>
+              </TouchableOpacity>
+            </View>
+
             <Text style={estilos.tituloSeccion}>Recientes</Text>
           </View>
         }
@@ -132,6 +178,21 @@ const estilos = StyleSheet.create({
     marginTop: espacio.lg,
     marginBottom: espacio.sm,
   },
+  filaImportar: { flexDirection: 'row', gap: espacio.sm, marginTop: espacio.md },
+  botonImportar: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: espacio.xs,
+    backgroundColor: colores.superficie,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: colores.borde,
+    paddingVertical: espacio.md,
+  },
+  importarIcono: { fontSize: 16 },
+  importarTexto: { fontSize: 13, fontWeight: '600', color: colores.texto },
   vacio: {
     fontSize: 14,
     color: colores.textoSuave,
