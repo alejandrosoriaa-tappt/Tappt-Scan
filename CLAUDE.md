@@ -11,10 +11,21 @@ credenciales ni tablas con `tappt-backend` o `tappt-broker`.
 
 ## Qué hace
 
-Escaneo y firma de documentos. Claude (visión) clasifica el documento y
-extrae datos clave (tipo, emisor, fecha, monto), y el archivo se sube
-directo al Google Drive del propio usuario — no se persiste el archivo en
-nuestros servidores, solo la metadata en Supabase.
+Escaneo, clasificación y firma de documentos. Claude (visión) lee el
+documento y deduce ámbito, categoría, emisor, periodo y monto; con eso se
+arma **el nombre y la ruta** y el archivo se sube al Google Drive del propio
+usuario. No se persiste el archivo en nuestros servidores, solo la metadata
+en Supabase.
+
+El momento que define el producto:
+
+```
+foto de un recibo de luz  →  CFE_Agosto_2026_$1,847.pdf
+                             en  TapptScan/Casa/Servicios/CFE/2026/
+```
+
+Todo se guarda como **PDF**, también las fotos: se abre igual en cualquier
+lado y el editor maneja un solo formato.
 
 **Tres caminos de entrada**, todos a la misma tubería:
 
@@ -97,10 +108,14 @@ credenciales con otra vertical).
   `docs/EDITOR-PDF.md` y `assets/README.md`.
 - `services/whatsapp.js` — mandar texto/botones, resolver y descargar media.
 - `services/vision.js` — llamada a Claude vision, clasifica y extrae JSON.
-- `services/naming.js` — arma carpeta destino y nombre de archivo desde el
-  JSON extraído.
-- `services/drive.js` — OAuth de Google, crea `TapptScan/` + subcarpetas
-  (`Identificaciones`, `Recibos`, `Contratos`, `Otros`), sube archivos.
+- `services/naming.js` — **el corazón de la magia**: convierte el JSON
+  extraído en la ruta (`ámbito/categoría/emisor/año`) y el nombre
+  (`CFE_Agosto_2026_$1,847.pdf`). Valida ámbito y categoría contra un
+  catálogo cerrado y limpia razones sociales, para que un modelo que
+  alucina no llene el Drive del usuario de carpetas basura.
+- `services/drive.js` — OAuth de Google, crea rutas anidadas bajo
+  `TapptScan/` (`ensureRuta`), lista carpetas para el explorador y sube o
+  baja archivos. Las carpetas **no son fijas**: las crea el clasificador.
 - `services/linking.js` — código de un solo uso que amarra
   número de WhatsApp ↔ cuenta ↔ carpeta de Drive.
 - `services/supabase.js` — cliente Supabase (service-role).
@@ -115,7 +130,8 @@ App nativa (`app/`, Expo / React Native, JS sin TypeScript):
   mes), banner de upgrade y lista de recientes.
 - `src/screens/EscanearScreen.js` — cámara de respaldo. Obligatoria por la
   guía 4.2 de Apple: la app no puede ser solo un puente a WhatsApp.
-- `src/screens/DriveScreen.js` — explorador de la carpeta `TapptScan/`.
+- `src/screens/DriveScreen.js` — explorador del árbol real de Drive, con
+  migas de pan. Los archivos propios abren el detalle; el resto va a Drive.
 - `src/screens/DocumentoScreen.js` — detalle, datos extraídos y acciones
   (editar PDF, firmar, abrir en Drive).
 - `src/screens/AjustesScreen.js` — cuenta, conexiones, plan y upgrade.

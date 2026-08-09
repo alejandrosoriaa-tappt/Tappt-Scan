@@ -5,22 +5,26 @@ const pdf = require('./pdf');
 const supabase = require('./supabase');
 
 /**
- * Pipeline compartido por los tres caminos de entrada: webhook de WhatsApp
+ * Tubería compartida por los tres caminos de entrada: webhook de WhatsApp
  * (foto o PDF reenviado), cámara de la app e importación desde el
  * dispositivo.
  *
- * El archivo se sube a Drive **tal como llegó** — si es un PDF se conserva
- * el PDF, no se aplasta a imagen. Para clasificarlo con Claude se rasteriza
- * la primera página, porque el modelo necesita ver algo.
+ * Lo que hace que se sienta mágico:
+ *   foto de un recibo  →  CFE_Agosto_2026_$1,847.pdf
+ *                         en  TapptScan/Casa/Servicios/CFE/2026/
+ *
+ * Todo termina en PDF —también las fotos— para que el archivo se abra
+ * igual en cualquier lado y el editor tenga un solo formato que manejar.
  */
 async function procesarArchivo(usuario, buffer, mimeType = 'image/jpeg', nombreOriginal = null) {
-  const esPdf = pdf.esPdf(buffer) || mimeType === 'application/pdf';
+  const entradaEsPdf = pdf.esPdf(buffer) || mimeType === 'application/pdf';
 
+  // Claude necesita ver algo: de un PDF se rasteriza la primera página.
   let paraVision = buffer;
   let mimeVision = mimeType;
   let paginas = 1;
 
-  if (esPdf) {
+  if (entradaEsPdf) {
     const datos = await pdf.info(buffer);
     paginas = datos.paginas;
     paraVision = await pdf.renderizarPagina(buffer, 0);
@@ -29,31 +33,37 @@ async function procesarArchivo(usuario, buffer, mimeType = 'image/jpeg', nombreO
 
   const extraido = await vision.classifyAndExtract(paraVision, mimeVision);
 
-  const carpetas =
-    usuario.drive_folders || (await drive.ensureFolderStructure(usuario.drive_tokens));
-  const nombreCarpeta = naming.folderFor(extraido);
-  const extension = esPdf ? 'pdf' : mimeType.includes('png') ? 'png' : 'jpg';
-  const nombreArchivo = naming.fileNameFor(extraido, extension);
+  // Las fotos se envuelven en un PDF; los PDF se conservan intactos.
+  const archivo = entradaEsPdf ? buffer : await pdf.desdeImagen(buffer, mimeType);
 
+  const idioma = usuario.idioma || 'es';
+  const tramos = naming.rutaPara(extraido);
+  const nombreArchivo = naming.nombreArchivo(extraido, idioma, 'pdf');
+
+  const carpetaId = await drive.ensureRuta(usuario.drive_tokens, tramos);
   const subido = await drive.uploadFile(usuario.drive_tokens, {
-    folderId: carpetas[nombreCarpeta],
+    folderId: carpetaId,
     name: nombreArchivo,
-    mimeType: esPdf ? 'application/pdf' : mimeType,
-    buffer,
+    mimeType: 'application/pdf',
+    buffer: archivo,
   });
 
   const { data: documento, error } = await supabase
     .from('scan_documents')
     .insert({
       user_id: usuario.id,
-      tipo: extraido.tipo,
-      emisor: extraido.emisor,
-      fecha: extraido.fecha,
-      monto: extraido.monto,
-      moneda: extraido.moneda,
+      tipo: extraido.tipo || 'otro',
+      ambito: extraido.ambito || null,
+      categoria: extraido.categoria || null,
+      emisor: extraido.emisor || null,
+      fecha: extraido.fecha || null,
+      monto: extraido.monto ?? null,
+      moneda: extraido.moneda || null,
       nombre_archivo: nombreArchivo,
       nombre_original: nombreOriginal,
-      mime_type: esPdf ? 'application/pdf' : mimeType,
+      ruta: naming.rutaLegible(tramos),
+      carpeta_id: carpetaId,
+      mime_type: 'application/pdf',
       paginas,
       drive_file_id: subido.id,
       drive_link: subido.webViewLink,
@@ -62,10 +72,13 @@ async function procesarArchivo(usuario, buffer, mimeType = 'image/jpeg', nombreO
     .single();
   if (error) throw error;
 
-  return { documento, extraido, nombreCarpeta, nombreArchivo, paginas };
+  return {
+    documento,
+    extraido,
+    nombreArchivo,
+    ruta: naming.rutaLegible(tramos),
+    paginas,
+  };
 }
 
-// Nombre viejo, se mantiene para no romper llamadas existentes.
-const procesarImagen = procesarArchivo;
-
-module.exports = { procesarArchivo, procesarImagen };
+module.exports = { procesarArchivo, procesarImagen: procesarArchivo };

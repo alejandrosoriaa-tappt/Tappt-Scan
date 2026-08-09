@@ -17,7 +17,7 @@ const MENSAJES = {
       'Todavía no tienes tu Google Drive conectado. Baja la app de TapptScan para conectarlo y guardar tus documentos automáticamente.',
     limite:
       'Ya usaste tus {limite} escaneos gratis de este mes. Pásate al plan Personal y escanea sin límite — escríbeme "quiero personal" y te mando el link.',
-    guardado: 'Guardé "{archivo}"{paginas} en {carpeta}. ¿Todo bien?',
+    guardado: 'Listo 📄\n\n*{archivo}*{paginas}\n📁 {ruta}\n\n¿Todo bien?',
     paginas: ' ({n} páginas)',
     formatoNoSoportado:
       'Por ahora solo puedo con PDF e imágenes. Reenvíame el documento en alguno de esos formatos.',
@@ -41,7 +41,7 @@ const MENSAJES = {
       "You haven't connected your Google Drive yet. Download the TapptScan app to connect it and save your documents automatically.",
     limite:
       'You\'ve used your {limite} free scans this month. Upgrade to Personal for unlimited scans — reply "I want personal" and I\'ll send you the link.',
-    guardado: 'Saved "{archivo}"{paginas} to {carpeta}. All good?',
+    guardado: 'Done 📄\n\n*{archivo}*{paginas}\n📁 {ruta}\n\nAll good?',
     paginas: ' ({n} pages)',
     formatoNoSoportado:
       "For now I can only handle PDFs and images. Please forward the document in one of those formats.",

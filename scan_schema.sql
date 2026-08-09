@@ -67,3 +67,15 @@ alter table scan_users add column if not exists moneda text;
 alter table scan_payments add column if not exists session_id text;
 alter table scan_payments add column if not exists moneda text not null default 'mxn';
 alter table scan_payments drop column if exists preference_id;
+
+-- Clasificación jerárquica (agosto 2026): el documento ya no cae en una de
+-- cuatro carpetas fijas, sino en una ruta que arma el clasificador
+-- (ámbito/categoría/emisor/año). Todo se guarda como PDF.
+alter table scan_documents add column if not exists ambito text;
+alter table scan_documents add column if not exists categoria text;
+alter table scan_documents add column if not exists ruta text;
+alter table scan_documents add column if not exists carpeta_id text;
+alter table scan_documents drop constraint if exists scan_documents_tipo_check;
+
+alter table scan_users add column if not exists drive_raiz_id text;
+alter table scan_users drop column if exists drive_folders;

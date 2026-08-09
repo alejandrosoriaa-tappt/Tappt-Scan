@@ -11,18 +11,18 @@ router.get('/conectar', requireAuth, (req, res) => {
   res.json({ url: drive.authUrl(req.usuario.id) });
 });
 
-// Callback de Google. Guarda los tokens y crea la estructura de carpetas.
+// Callback de Google. Guarda los tokens y crea la carpeta madre.
 router.get('/callback', async (req, res) => {
   try {
     const { code, state: userId } = req.query;
     if (!code || !userId) return res.status(400).send('Faltan parámetros.');
 
     const tokens = await drive.exchangeCode(code);
-    const carpetas = await drive.ensureFolderStructure(tokens);
+    const raizId = await drive.ensureRaiz(tokens);
 
     const { error } = await supabase
       .from('scan_users')
-      .update({ drive_tokens: tokens, drive_folders: carpetas })
+      .update({ drive_tokens: tokens, drive_raiz_id: raizId })
       .eq('id', userId);
     if (error) throw error;
 
@@ -37,29 +37,45 @@ router.get('/callback', async (req, res) => {
   }
 });
 
-// Estructura de carpetas para el explorador de la app.
+/**
+ * Explorador: contenido de una carpeta. Sin `carpeta` devuelve la raíz
+ * `TapptScan/`. Las carpetas ya no son fijas — las va creando el
+ * clasificador conforme llegan documentos, así que se leen del Drive real.
+ */
 router.get('/carpetas', requireAuth, async (req, res) => {
   if (!req.usuario.drive_tokens) return res.status(409).json({ error: 'drive_sin_conectar' });
 
   try {
-    const carpetas = req.usuario.drive_folders || (await drive.ensureFolderStructure(req.usuario.drive_tokens));
+    const carpetaId =
+      req.query.carpeta || req.usuario.drive_raiz_id || (await drive.ensureRaiz(req.usuario.drive_tokens));
 
-    const { data, error } = await supabase
-      .from('scan_documents')
-      .select('tipo')
-      .eq('user_id', req.usuario.id);
-    if (error) throw error;
+    const contenido = await drive.listarCarpeta(req.usuario.drive_tokens, carpetaId);
 
-    const porCarpeta = { Identificaciones: 'identificacion', Recibos: 'recibo', Contratos: 'contrato', Otros: 'otro' };
-    const resultado = drive.SUBFOLDERS.map((nombre) => ({
-      id: carpetas[nombre],
-      nombre,
-      cantidad: data.filter((d) => d.tipo === porCarpeta[nombre]).length,
-    }));
+    // Los archivos se cruzan con la base para poder abrirlos en el editor;
+    // lo que no reconocemos se muestra igual, solo sin acciones.
+    const ids = contenido.filter((c) => !c.esCarpeta).map((c) => c.id);
+    let porDriveId = {};
 
-    res.json(resultado);
+    if (ids.length) {
+      const { data } = await supabase
+        .from('scan_documents')
+        .select('*')
+        .eq('user_id', req.usuario.id)
+        .in('drive_file_id', ids);
+
+      porDriveId = Object.fromEntries((data || []).map((d) => [d.drive_file_id, d]));
+    }
+
+    res.json({
+      carpetaId,
+      esRaiz: !req.query.carpeta,
+      contenido: contenido.map((item) => ({
+        ...item,
+        documento: item.esCarpeta ? null : porDriveId[item.id] || null,
+      })),
+    });
   } catch (err) {
-    console.error('[drive] error listando carpetas', err);
+    console.error('[drive] error listando carpeta', err);
     res.status(500).json({ error: 'error_carpetas' });
   }
 });

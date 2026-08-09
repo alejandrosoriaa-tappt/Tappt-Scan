@@ -55,7 +55,7 @@ export default function DocumentoScreen({ route, navigation }) {
               : null
           }
         />
-        <Campo etiqueta={t('carpeta')} valor={meta.carpeta} />
+        <Campo etiqueta={t('carpeta')} valor={documento.ruta} />
         <Campo
           etiqueta={t('formato')}
           valor={

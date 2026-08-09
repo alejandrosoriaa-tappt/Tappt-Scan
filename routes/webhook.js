@@ -89,7 +89,7 @@ async function recibirArchivo(from, medio, mimePorDefecto) {
   const mediaUrl = await whatsapp.getMediaUrl(medio.id);
   const buffer = await whatsapp.downloadMedia(mediaUrl);
 
-  const { nombreArchivo, nombreCarpeta, paginas } = await procesarDocumento.procesarArchivo(
+  const { nombreArchivo, ruta, paginas } = await procesarDocumento.procesarArchivo(
     user,
     buffer,
     medio.mime_type || mimePorDefecto,
@@ -100,7 +100,7 @@ async function recibirArchivo(from, medio, mimePorDefecto) {
     from,
     t(idioma, 'guardado', {
       archivo: nombreArchivo,
-      carpeta: nombreCarpeta,
+      ruta,
       paginas: paginas > 1 ? t(idioma, 'paginas', { n: paginas }) : '',
     }),
     [

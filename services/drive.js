@@ -1,7 +1,6 @@
 const { google } = require('googleapis');
 
 const ROOT_FOLDER_NAME = 'TapptScan';
-const SUBFOLDERS = ['Identificaciones', 'Recibos', 'Contratos', 'Otros'];
 
 function oauthClient(tokens) {
   const client = new google.auth.OAuth2(
@@ -51,18 +50,52 @@ async function findOrCreateFolder(drive, name, parentId) {
   return created.id;
 }
 
-// Crea (o reutiliza) TapptScan/ y sus subcarpetas iniciales. Devuelve un mapa
-// { TapptScan: id, Identificaciones: id, ... }
-async function ensureFolderStructure(tokens) {
+// Carpeta madre TapptScan/ en la raíz del Drive del usuario.
+async function ensureRaiz(tokens) {
+  const auth = oauthClient(tokens);
+  const drive = google.drive({ version: 'v3', auth });
+  return findOrCreateFolder(drive, ROOT_FOLDER_NAME);
+}
+
+/**
+ * Crea (o reutiliza) una ruta anidada bajo TapptScan/ y devuelve el id de
+ * la última carpeta.
+ *
+ *   ensureRuta(tokens, ['Casa', 'Servicios', 'CFE', '2026'])
+ *   →  TapptScan/Casa/Servicios/CFE/2026
+ *
+ * Va nivel por nivel porque la API de Drive no crea rutas de un golpe.
+ */
+async function ensureRuta(tokens, tramos = []) {
   const auth = oauthClient(tokens);
   const drive = google.drive({ version: 'v3', auth });
 
-  const rootId = await findOrCreateFolder(drive, ROOT_FOLDER_NAME);
-  const ids = { [ROOT_FOLDER_NAME]: rootId };
-  for (const name of SUBFOLDERS) {
-    ids[name] = await findOrCreateFolder(drive, name, rootId);
+  let padreId = await findOrCreateFolder(drive, ROOT_FOLDER_NAME);
+  for (const tramo of tramos) {
+    padreId = await findOrCreateFolder(drive, tramo, padreId);
   }
-  return ids;
+  return padreId;
+}
+
+// Contenido de una carpeta: subcarpetas y archivos, para el explorador.
+async function listarCarpeta(tokens, carpetaId) {
+  const auth = oauthClient(tokens);
+  const drive = google.drive({ version: 'v3', auth });
+
+  const { data } = await drive.files.list({
+    q: `'${carpetaId}' in parents and trashed = false`,
+    fields: 'files(id, name, mimeType, modifiedTime, webViewLink)',
+    orderBy: 'folder,name',
+    pageSize: 200,
+  });
+
+  return (data.files || []).map((archivo) => ({
+    id: archivo.id,
+    nombre: archivo.name,
+    esCarpeta: archivo.mimeType === 'application/vnd.google-apps.folder',
+    modificado: archivo.modifiedTime,
+    link: archivo.webViewLink,
+  }));
 }
 
 async function uploadFile(tokens, { folderId, name, mimeType, buffer }) {
@@ -92,9 +125,10 @@ async function downloadFile(tokens, fileId) {
 module.exports = {
   authUrl,
   exchangeCode,
-  ensureFolderStructure,
+  ensureRaiz,
+  ensureRuta,
+  listarCarpeta,
   uploadFile,
   downloadFile,
   ROOT_FOLDER_NAME,
-  SUBFOLDERS,
 };

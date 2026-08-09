@@ -59,5 +59,6 @@ export const api = {
   borrarDocumento: (id) => request(`/api/documentos/${id}`, { method: 'DELETE' }),
 
   urlConectarDrive: () => request('/api/drive/conectar'),
-  carpetas: () => request('/api/drive/carpetas'),
+  carpetas: (carpeta) =>
+    request(`/api/drive/carpetas${carpeta ? `?carpeta=${carpeta}` : ''}`),
 };

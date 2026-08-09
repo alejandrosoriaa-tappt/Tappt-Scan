@@ -148,12 +148,13 @@ router.post('/:id/editar', requireAuth, async (req, res) => {
 
     const { pdf: pdfFinal, omitidas } = await pdf.aplicarAnotaciones(base, anotaciones || []);
 
-    const carpetas =
-      req.usuario.drive_folders || (await drive.ensureFolderStructure(req.usuario.drive_tokens));
-    const nombre = (documento.nombre_archivo || 'documento').replace(/\.\w+$/, '') + '_editado.pdf';
+    // El editado se guarda junto al original, no en una carpeta aparte.
+    const carpetaId =
+      documento.carpeta_id || (await drive.ensureRuta(req.usuario.drive_tokens, []));
+    const nombre = (documento.nombre_archivo || 'documento').replace(/\.\w+$/, '') + '_firmado.pdf';
 
     const subido = await drive.uploadFile(req.usuario.drive_tokens, {
-      folderId: carpetas.Otros,
+      folderId: carpetaId,
       name: nombre,
       mimeType: 'application/pdf',
       buffer: pdfFinal,

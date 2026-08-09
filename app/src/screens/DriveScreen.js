@@ -6,92 +6,88 @@ import {
   TouchableOpacity,
   StyleSheet,
   ActivityIndicator,
+  Linking,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import DocumentoCard from '../components/DocumentoCard';
 import useCargar from '../hooks/useCargar';
 import { api } from '../lib/api';
-import { colores, porTipo, espacio } from '../theme';
 import { useIdioma } from '../i18n';
+import { colores, espacio } from '../theme';
 
-const CARPETA_A_TIPO = {
-  Identificaciones: 'identificacion',
-  Recibos: 'recibo',
-  Contratos: 'contrato',
-  Otros: 'otro',
-};
-
-// Explorador de la carpeta TapptScan/ del Drive del usuario.
+/**
+ * Explorador del Drive real del usuario.
+ *
+ * Las carpetas ya no son fijas: el clasificador las va creando
+ * (`Casa/Servicios/CFE/2026`), así que se navega el árbol tal como está en
+ * Drive en lugar de asumir una estructura.
+ */
 export default function DriveScreen({ navigation }) {
   const { t } = useIdioma();
-  const [carpetaAbierta, setCarpetaAbierta] = useState(null);
-  const carpetas = useCargar(() => api.carpetas(), []);
-  const contenido = useCargar(
-    () => (carpetaAbierta ? api.documentos(CARPETA_A_TIPO[carpetaAbierta]) : Promise.resolve(null)),
-    [carpetaAbierta]
-  );
 
-  if (carpetaAbierta) {
-    return (
-      <SafeAreaView style={estilos.pantalla} edges={['top']}>
-        <View style={estilos.encabezado}>
-          <TouchableOpacity onPress={() => setCarpetaAbierta(null)}>
-            <Text style={estilos.volver}>‹ TapptScan</Text>
-          </TouchableOpacity>
-          <Text style={estilos.titulo}>{carpetaAbierta}</Text>
-        </View>
+  // Migas de pan: cada nivel guarda su id y su nombre para poder volver.
+  const [ruta, setRuta] = useState([{ id: null, nombre: 'TapptScan' }]);
+  const actual = ruta[ruta.length - 1];
 
-        <FlatList
-          data={contenido.datos || []}
-          keyExtractor={(d) => d.id}
-          contentContainerStyle={estilos.lista}
-          ListEmptyComponent={
-            contenido.cargando ? (
-              <ActivityIndicator color={colores.primario} style={{ marginTop: espacio.xl }} />
-            ) : (
-              <Text style={estilos.vacio}>{t('carpetaVacia')}</Text>
-            )
-          }
-          renderItem={({ item }) => (
-            <DocumentoCard
-              documento={item}
-              onPress={() => navigation.navigate('Documento', { documento: item })}
-            />
-          )}
-        />
-      </SafeAreaView>
-    );
-  }
+  const carpeta = useCargar(() => api.carpetas(actual.id), [actual.id]);
+
+  const entrar = (item) => setRuta((previa) => [...previa, { id: item.id, nombre: item.nombre }]);
+  const subir = () => setRuta((previa) => previa.slice(0, -1));
+
+  const abrir = (item) => {
+    if (item.esCarpeta) return entrar(item);
+
+    // Si el archivo es nuestro, se abre el detalle; si no, va a Drive.
+    if (item.documento) navigation.navigate('Documento', { documento: item.documento });
+    else if (item.link) Linking.openURL(item.link);
+  };
+
+  const contenido = carpeta.datos?.contenido || [];
 
   return (
     <SafeAreaView style={estilos.pantalla} edges={['top']}>
       <View style={estilos.encabezado}>
-        <Text style={estilos.titulo}>TapptScan</Text>
-        <Text style={estilos.subtitulo}>{t('enTuDrive')}</Text>
+        {ruta.length > 1 ? (
+          <TouchableOpacity onPress={subir}>
+            <Text style={estilos.volver}>‹ {ruta[ruta.length - 2].nombre}</Text>
+          </TouchableOpacity>
+        ) : null}
+
+        <Text style={estilos.titulo}>{actual.nombre}</Text>
+        <Text style={estilos.subtitulo}>
+          {ruta.length > 1 ? ruta.map((r) => r.nombre).join(' / ') : t('enTuDrive')}
+        </Text>
       </View>
 
       <FlatList
-        data={carpetas.datos || []}
-        keyExtractor={(c) => c.nombre}
+        data={contenido}
+        keyExtractor={(item) => item.id}
         contentContainerStyle={estilos.lista}
+        refreshing={carpeta.cargando}
+        onRefresh={carpeta.recargar}
         ListEmptyComponent={
-          carpetas.cargando ? (
+          carpeta.cargando ? (
             <ActivityIndicator color={colores.primario} style={{ marginTop: espacio.xl }} />
           ) : (
-            <Text style={estilos.vacio}>{carpetas.error || t('sinCarpetas')}</Text>
+            <Text style={estilos.vacio}>{carpeta.error || t('carpetaVacia')}</Text>
           )
         }
         renderItem={({ item }) => (
-          <TouchableOpacity
-            style={estilos.carpeta}
-            activeOpacity={0.7}
-            onPress={() => setCarpetaAbierta(item.nombre)}
-          >
-            <Text style={estilos.carpetaIcono}>
-              {porTipo[CARPETA_A_TIPO[item.nombre]]?.icono || '📁'}
-            </Text>
-            <Text style={estilos.carpetaNombre}>{item.nombre}</Text>
-            <Text style={estilos.carpetaCantidad}>{item.cantidad}</Text>
+          <TouchableOpacity style={estilos.fila} activeOpacity={0.7} onPress={() => abrir(item)}>
+            <Text style={estilos.icono}>{item.esCarpeta ? '📁' : '📄'}</Text>
+
+            <View style={estilos.centro}>
+              <Text style={estilos.nombre} numberOfLines={1}>
+                {item.nombre}
+              </Text>
+              {item.documento?.monto != null ? (
+                <Text style={estilos.detalle}>
+                  ${Number(item.documento.monto).toLocaleString('es-MX')}{' '}
+                  {item.documento.moneda || ''}
+                </Text>
+              ) : null}
+            </View>
+
+            {item.esCarpeta ? <Text style={estilos.flecha}>›</Text> : null}
           </TouchableOpacity>
         )}
       />
@@ -104,10 +100,10 @@ const estilos = StyleSheet.create({
   encabezado: { paddingHorizontal: espacio.md, paddingTop: espacio.sm, paddingBottom: espacio.xs },
   volver: { color: colores.primario, fontSize: 15, marginBottom: espacio.xs },
   titulo: { fontSize: 24, fontWeight: '700', color: colores.texto },
-  subtitulo: { fontSize: 13, color: colores.textoSuave, marginTop: 2 },
+  subtitulo: { fontSize: 12, color: colores.textoSuave, marginTop: 2 },
   lista: { padding: espacio.md },
   vacio: { color: colores.textoSuave, fontSize: 14, textAlign: 'center', marginTop: espacio.xl },
-  carpeta: {
+  fila: {
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: colores.superficie,
@@ -117,7 +113,9 @@ const estilos = StyleSheet.create({
     padding: espacio.md,
     marginBottom: espacio.sm,
   },
-  carpetaIcono: { fontSize: 20, marginRight: espacio.md },
-  carpetaNombre: { flex: 1, fontSize: 16, fontWeight: '500', color: colores.texto },
-  carpetaCantidad: { fontSize: 14, color: colores.textoSuave },
+  icono: { fontSize: 20, marginRight: espacio.md },
+  centro: { flex: 1 },
+  nombre: { fontSize: 15, fontWeight: '500', color: colores.texto },
+  detalle: { fontSize: 12, color: colores.textoSuave, marginTop: 2 },
+  flecha: { fontSize: 20, color: colores.textoSuave },
 });
