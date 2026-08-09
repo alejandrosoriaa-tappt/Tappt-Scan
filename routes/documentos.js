@@ -7,6 +7,31 @@ const planes = require('../services/planes');
 const procesarDocumento = require('../services/procesarDocumento');
 const drive = require('../services/drive');
 const pdf = require('../services/pdf');
+const imagenServicio = require('../services/imagen');
+
+// La app manda la foto recién tomada y le devolvemos las esquinas sugeridas
+// del documento, para pre-colocar el marco de recorte.
+router.post('/detectar-bordes', requireAuth, async (req, res) => {
+  try {
+    const { imagen } = req.body;
+    if (!imagen) return res.status(400).json({ error: 'falta_imagen' });
+
+    const buffer = Buffer.from(imagen.replace(/^data:[^;]+;base64,/, ''), 'base64');
+    res.json(await imagenServicio.detectarDocumento(buffer));
+  } catch (err) {
+    console.error('[documentos] error detectando bordes', err);
+    // Que falle la detección no debe frenar al usuario: marco completo.
+    res.json({
+      esquinas: [
+        { x: 0, y: 0 },
+        { x: 1, y: 0 },
+        { x: 1, y: 1 },
+        { x: 0, y: 1 },
+      ],
+      confiable: false,
+    });
+  }
+});
 
 // Entrada desde la app: cámara (`/escanear`) o importación de un archivo
 // del dispositivo (`/importar`). Ambas comparten validaciones y tubería.
@@ -16,15 +41,24 @@ async function recibirDesdeApp(req, res, mimePorDefecto) {
   const cupo = await planes.puedeEscanear(req.usuario);
   if (!cupo.permitido) return res.status(402).json({ error: 'limite_alcanzado', ...cupo });
 
-  const { archivo, imagen, mimeType, nombre } = req.body;
+  const { archivo, imagen, mimeType, nombre, esquinas } = req.body;
   const contenido = archivo || imagen;
   if (!contenido) return res.status(400).json({ error: 'falta_archivo' });
 
-  const buffer = Buffer.from(contenido.replace(/^data:[^;]+;base64,/, ''), 'base64');
+  let buffer = Buffer.from(contenido.replace(/^data:[^;]+;base64,/, ''), 'base64');
+  let mime = mimeType || mimePorDefecto;
+
+  // Recorte y enderezado: solo aplica a fotos, y solo si la app mandó las
+  // cuatro esquinas (confirmadas o ajustadas por el usuario).
+  if (esquinas?.length === 4 && !pdf.esPdf(buffer)) {
+    buffer = await imagenServicio.corregirPerspectiva(buffer, esquinas);
+    mime = 'image/png';
+  }
+
   const { documento } = await procesarDocumento.procesarArchivo(
     req.usuario,
     buffer,
-    mimeType || mimePorDefecto,
+    mime,
     nombre || null
   );
 

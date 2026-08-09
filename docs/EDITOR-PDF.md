@@ -45,6 +45,37 @@ El archivo se sube a Drive **tal como llegó**: si es PDF se conserva el PDF,
 no se aplasta a imagen. Para clasificarlo con Claude se rasteriza la primera
 página, porque el modelo necesita ver algo.
 
+## Recorte y enderezado (solo fotos)
+
+Al capturar con la cámara, la foto **no se sube directo**: pasa por la
+pantalla de recorte.
+
+1. La app manda la foto a `POST /api/documentos/detectar-bordes` y el
+   servidor sugiere las cuatro esquinas del documento.
+2. El usuario las ajusta arrastrando (siempre puede, la detección solo
+   pre-coloca el marco).
+3. Al confirmar, la foto va a `/escanear` con las esquinas. El servidor
+   aplica **corrección de perspectiva** y a partir de ahí sigue la tubería
+   normal.
+
+**Cómo detecta.** Es una heurística, no visión por computadora seria:
+reduce la imagen, la pasa a grises, separa claro/oscuro con el método de
+Otsu y toma los extremos de `x+y` y `x−y` sobre la región clara. Asume
+**papel claro sobre superficie más oscura**, que es el caso normal.
+
+**Cuándo se rinde** (devuelve el marco completo y `confiable: false`, y la
+app pide ajustar a mano):
+
+- la región clara ocupa menos del 15% o más del 97% de la foto;
+- el cuadrilátero detectado cubre más del 95% del área — señal de que
+  detectó el fondo, no el documento (pasa con documentos oscuros sobre
+  superficie clara).
+
+**Cómo endereza.** Calcula la homografía del rectángulo destino al
+cuadrilátero origen y hace **mapeo inverso**: para cada píxel del resultado
+busca de dónde viene en la foto y lo interpola bilinealmente. Se hace al
+revés (destino → origen) porque el mapeo directo deja huecos.
+
 ## Qué hace el editor
 
 1. La app pide una página al backend (`GET /api/documentos/:id/pagina/:n`).
@@ -94,5 +125,10 @@ oculta lo viejo y se escribe encima.
 - **Peso de los PDF grandes.** Las páginas viajan en base64 dentro de JSON
   (límite de 25 MB en Express). Un PDF de muchas páginas o muy pesado puede
   ir lento; falta paginar o pasar a subida binaria.
-- **Recorte y enderezado de la foto.** Sin implementar: la captura se sube
-  tal cual sale de la cámara.
+- **Detección de bordes con fondo difícil.** La heurística asume papel claro
+  sobre superficie oscura; fuera de ese caso se rinde y toca ajustar a mano.
+  Un detector de verdad (contornos + Hough) daría mucho mejor resultado.
+- **Recorte solo en la cámara.** Los archivos importados y los PDFs
+  reenviados no pasan por el recorte, se guardan tal cual.
+- **Mejora de imagen.** No hay realce de contraste ni blanco y negro
+  ("modo documento"), que es lo que hace ver limpio un escaneo.

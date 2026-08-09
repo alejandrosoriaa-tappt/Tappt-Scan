@@ -2,8 +2,6 @@ import React, { useRef, useState } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, Alert, ActivityIndicator } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { CameraView, useCameraPermissions } from 'expo-camera';
-import { api } from '../lib/api';
-import { useSesion } from '../context/SesionContext';
 import { colores, espacio } from '../theme';
 
 // Cámara de respaldo: el camino principal sigue siendo WhatsApp, pero la app
@@ -11,7 +9,6 @@ import { colores, espacio } from '../theme';
 export default function EscanearScreen({ navigation }) {
   const [permiso, pedirPermiso] = useCameraPermissions();
   const [capturando, setCapturando] = useState(false);
-  const { refrescarCuenta } = useSesion();
   const camara = useRef(null);
 
   if (!permiso) {
@@ -41,22 +38,12 @@ export default function EscanearScreen({ navigation }) {
 
     setCapturando(true);
     try {
+      // La foto no se sube aquí: primero pasa por el recorte, que es quien
+      // la manda ya enderezada.
       const foto = await camara.current.takePictureAsync({ quality: 0.8, base64: true });
-      const documento = await api.escanear(foto.base64, 'image/jpeg');
-
-      refrescarCuenta();
-      navigation.navigate('Documento', { documento });
+      navigation.navigate('Recorte', { fotoBase64: foto.base64 });
     } catch (err) {
-      if (err.message === 'limite_alcanzado') {
-        Alert.alert(
-          'Llegaste a tu límite',
-          'Ya usaste tus escaneos gratis del mes. Pásate al plan Personal para seguir.'
-        );
-      } else if (err.message === 'drive_sin_conectar') {
-        Alert.alert('Falta tu Drive', 'Conecta tu Google Drive para poder guardar documentos.');
-      } else {
-        Alert.alert('No se pudo escanear', err.message);
-      }
+      Alert.alert('No se pudo capturar', err.message);
     } finally {
       setCapturando(false);
     }
@@ -84,7 +71,7 @@ export default function EscanearScreen({ navigation }) {
           </TouchableOpacity>
           <Text style={estilos.ayuda}>
             {capturando
-              ? 'Leyendo el documento…'
+              ? 'Tomando la foto…'
               : 'También puedes mandarnos la foto por WhatsApp y la guardamos igual.'}
           </Text>
         </View>

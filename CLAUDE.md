@@ -81,7 +81,10 @@ credenciales con otra vertical).
 - `services/planes.js` — límites por plan (gratis: 5/mes) y conteo mensual.
 - `services/mercadopago.js` — genera el link de pago y consulta el estado.
 - `services/procesarDocumento.js` — tubería compartida (visión → Drive →
-  DB) que usan tanto el webhook de WhatsApp como la cámara de la app.
+  DB) que usan los tres caminos de entrada.
+- `services/imagen.js` — detección de las esquinas del documento (Otsu +
+  extremos) y corrección de perspectiva por mapeo inverso. Ver
+  `docs/EDITOR-PDF.md`.
 - `services/pdf.js` — arma el PDF desde la imagen, hornea las anotaciones
   (texto, firma, imagen, emoji, tapar) con `pdf-lib`, y rasteriza páginas
   con `pdf.js` + `@napi-rs/canvas` para poder mostrarlas en la app. Ver
@@ -116,6 +119,9 @@ App nativa (`app/`, Expo / React Native, JS sin TypeScript):
 - `src/context/SesionContext.js` — sesión de Supabase + datos de la cuenta.
 - `src/lib/supabase.js`, `src/lib/api.js` — cliente de auth y del backend
   (toda llamada va firmada con el JWT).
+- `src/screens/RecorteScreen.js` — recorte con cuatro esquinas
+  arrastrables, pre-colocadas por el detector del servidor. Toda foto de la
+  cámara pasa por aquí antes de subirse.
 - `src/screens/EditorScreen.js` — editor multipágina: eliges herramienta y
   tocas el documento para colocar texto, firma, emoji, imagen o un tapado.
 - `src/lib/importar.js` — importación desde archivos del dispositivo
@@ -163,7 +169,10 @@ Google OAuth y las de MercadoPago, y correr el flujo completo end-to-end.
 
 Pendientes de código:
 
-- **Recorte y enderezado** de la foto capturada — hoy se sube tal cual.
+- **Mejora de imagen** ("modo documento": contraste, blanco y negro) — es
+  lo que hace ver limpio un escaneo y no está.
+- **Detector de bordes** más robusto: la heurística actual asume papel claro
+  sobre fondo oscuro. Fuera de ese caso pide ajuste manual.
 - **Editor**: falta arrastrar un elemento ya colocado y reemplazar texto de
   un PDF nativo en su sitio. Ver `docs/EDITOR-PDF.md`.
 - **Migración pendiente en Supabase**: las columnas `mime_type`, `paginas`

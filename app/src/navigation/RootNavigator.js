@@ -9,6 +9,7 @@ import DriveScreen from '../screens/DriveScreen';
 import AjustesScreen from '../screens/AjustesScreen';
 import DocumentoScreen from '../screens/DocumentoScreen';
 import EditorScreen from '../screens/EditorScreen';
+import RecorteScreen from '../screens/RecorteScreen';
 import LoginScreen from '../screens/LoginScreen';
 import OnboardingScreen from '../screens/OnboardingScreen';
 import { useSesion } from '../context/SesionContext';
@@ -80,6 +81,11 @@ export default function RootNavigator() {
         name="Editor"
         component={EditorScreen}
         options={{ title: 'Editar', headerTintColor: colores.primario }}
+      />
+      <Stack.Screen
+        name="Recorte"
+        component={RecorteScreen}
+        options={{ title: 'Ajustar recorte', headerTintColor: colores.primario }}
       />
     </Stack.Navigator>
   );
