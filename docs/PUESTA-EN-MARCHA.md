@@ -87,6 +87,24 @@ Detalle y el porqué del scope en **`docs/GOOGLE-DRIVE.md`**. Resumen:
 
 Número **propio** de TapptScan, distinto al de Tappt y al del bróker.
 
+> ### ⚠️ Un número = un webhook = una app de Meta
+>
+> El webhook se configura **por app de Meta**, no por número. De ahí salen
+> dos trampas:
+>
+> 1. Apuntar a TapptScan un número que ya usa otra vertical **la deja sin
+>    recibir mensajes**, en silencio. No falla: simplemente dejan de llegar.
+> 2. Meter un número nuevo en la **misma app** de otra vertical hace que los
+>    eventos de ambos números caigan en la **misma URL**. Por eso cada
+>    vertical necesita su propia app de Meta, no solo su propio número.
+>
+> **Si se recicla un número de otra vertical** (por ejemplo el de Tania IA,
+> del bróker), hay que además:
+> - Confirmar que esa vertical ya no opera ahí.
+> - Cambiar el **perfil de empresa**: nombre visible, descripción, categoría
+>   y sitio web. Si no, quien escriba a TapptScan verá la marca anterior.
+> - Sacar el número de la app vieja y darlo de alta en la app de TapptScan.
+
 1. [developers.facebook.com](https://developers.facebook.com) → nueva app de
    tipo **Business** → agregar producto **WhatsApp**.
 2. De **API Setup**: `WHATSAPP_TOKEN` y `WHATSAPP_PHONE_NUMBER_ID`.
