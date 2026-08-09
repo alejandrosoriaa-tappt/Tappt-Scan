@@ -1,6 +1,10 @@
 require('dotenv').config();
 const express = require('express');
 const webhookRouter = require('./routes/webhook');
+const cuentaRouter = require('./routes/cuenta');
+const documentosRouter = require('./routes/documentos');
+const driveRouter = require('./routes/drive');
+const pagosRouter = require('./routes/pagos');
 
 // Guardrail de identidad: aborta si el número configurado no es el de
 // TapptScan. Evita procesar mensajes con las credenciales equivocadas
@@ -22,6 +26,10 @@ app.use(express.json());
 app.get('/health', (_req, res) => res.json({ ok: true, service: 'tappt-scan' }));
 
 app.use('/webhook', webhookRouter);
+app.use('/api/cuenta', cuentaRouter);
+app.use('/api/documentos', documentosRouter);
+app.use('/api/drive', driveRouter);
+app.use('/api/pagos', pagosRouter);
 
 const port = process.env.PORT || 3000;
 app.listen(port, () => console.log(`tappt-scan escuchando en :${port}`));

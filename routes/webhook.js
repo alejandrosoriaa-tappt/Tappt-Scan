@@ -6,6 +6,8 @@ const vision = require('../services/vision');
 const naming = require('../services/naming');
 const drive = require('../services/drive');
 const linking = require('../services/linking');
+const planes = require('../services/planes');
+const mercadopago = require('../services/mercadopago');
 const supabase = require('../services/supabase');
 
 // Verificación del webhook (Meta llama a esto al configurar la app).
@@ -60,6 +62,16 @@ async function handleImage(from, image) {
     return;
   }
 
+  const cupo = await planes.puedeEscanear(user);
+  if (!cupo.permitido) {
+    await whatsapp.sendText(
+      from,
+      `Ya usaste tus ${cupo.limite} escaneos gratis de este mes. Pásate al plan Personal ` +
+        `y escanea sin límite — escríbeme "quiero personal" y te mando el link.`
+    );
+    return;
+  }
+
   const mediaUrl = await whatsapp.getMediaUrl(image.id);
   const buffer = await whatsapp.downloadMedia(mediaUrl);
 
@@ -83,6 +95,7 @@ async function handleImage(from, image) {
     fecha: extracted.fecha,
     monto: extracted.monto,
     moneda: extracted.moneda,
+    nombre_archivo: fileName,
     drive_file_id: uploaded.id,
     drive_link: uploaded.webViewLink,
   });
@@ -95,7 +108,27 @@ async function handleImage(from, image) {
 }
 
 async function handleText(from, text) {
-  if (/^\d{6}$/.test(text.trim())) {
+  const limpio = text.trim();
+
+  if (/quiero (el plan )?(personal|negocio)/i.test(limpio)) {
+    const plan = /negocio/i.test(limpio) ? 'negocio' : 'personal';
+    const { data: user } = await supabase
+      .from('scan_users')
+      .select('*')
+      .eq('whatsapp_phone', from)
+      .maybeSingle();
+
+    if (!user) {
+      await whatsapp.sendText(from, 'Primero conecta tu cuenta desde la app de TapptScan.');
+      return;
+    }
+
+    const link = await mercadopago.crearLinkDePago(user, plan);
+    await whatsapp.sendText(from, `Aquí está tu link para activar el plan ${plan}:\n${link}`);
+    return;
+  }
+
+  if (/^\d{6}$/.test(limpio)) {
     const userId = await linking.redeemLinkCode(text.trim(), from);
     if (userId) {
       await whatsapp.sendText(from, 'Listo, tu WhatsApp quedó conectado a tu cuenta de TapptScan.');

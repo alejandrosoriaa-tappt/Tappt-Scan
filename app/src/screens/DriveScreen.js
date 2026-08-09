@@ -1,19 +1,35 @@
 import React, { useState } from 'react';
-import { View, Text, FlatList, TouchableOpacity, StyleSheet } from 'react-native';
+import {
+  View,
+  Text,
+  FlatList,
+  TouchableOpacity,
+  StyleSheet,
+  ActivityIndicator,
+} from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import DocumentoCard from '../components/DocumentoCard';
-import { carpetas, documentos } from '../data/mock';
+import useCargar from '../hooks/useCargar';
+import { api } from '../lib/api';
 import { colores, porTipo, espacio } from '../theme';
+
+const CARPETA_A_TIPO = {
+  Identificaciones: 'identificacion',
+  Recibos: 'recibo',
+  Contratos: 'contrato',
+  Otros: 'otro',
+};
 
 // Explorador de la carpeta TapptScan/ del Drive del usuario.
 export default function DriveScreen({ navigation }) {
   const [carpetaAbierta, setCarpetaAbierta] = useState(null);
+  const carpetas = useCargar(() => api.carpetas(), []);
+  const contenido = useCargar(
+    () => (carpetaAbierta ? api.documentos(CARPETA_A_TIPO[carpetaAbierta]) : Promise.resolve(null)),
+    [carpetaAbierta]
+  );
 
   if (carpetaAbierta) {
-    const contenido = documentos.filter(
-      (d) => (porTipo[d.tipo] || porTipo.otro).carpeta === carpetaAbierta
-    );
-
     return (
       <SafeAreaView style={estilos.pantalla} edges={['top']}>
         <View style={estilos.encabezado}>
@@ -24,10 +40,16 @@ export default function DriveScreen({ navigation }) {
         </View>
 
         <FlatList
-          data={contenido}
+          data={contenido.datos || []}
           keyExtractor={(d) => d.id}
           contentContainerStyle={estilos.lista}
-          ListEmptyComponent={<Text style={estilos.vacio}>Esta carpeta está vacía.</Text>}
+          ListEmptyComponent={
+            contenido.cargando ? (
+              <ActivityIndicator color={colores.primario} style={{ marginTop: espacio.xl }} />
+            ) : (
+              <Text style={estilos.vacio}>Esta carpeta está vacía.</Text>
+            )
+          }
           renderItem={({ item }) => (
             <DocumentoCard
               documento={item}
@@ -47,16 +69,25 @@ export default function DriveScreen({ navigation }) {
       </View>
 
       <FlatList
-        data={carpetas}
-        keyExtractor={(c) => c.id}
+        data={carpetas.datos || []}
+        keyExtractor={(c) => c.nombre}
         contentContainerStyle={estilos.lista}
+        ListEmptyComponent={
+          carpetas.cargando ? (
+            <ActivityIndicator color={colores.primario} style={{ marginTop: espacio.xl }} />
+          ) : (
+            <Text style={estilos.vacio}>{carpetas.error || 'Sin carpetas todavía.'}</Text>
+          )
+        }
         renderItem={({ item }) => (
           <TouchableOpacity
             style={estilos.carpeta}
             activeOpacity={0.7}
             onPress={() => setCarpetaAbierta(item.nombre)}
           >
-            <Text style={estilos.carpetaIcono}>📁</Text>
+            <Text style={estilos.carpetaIcono}>
+              {porTipo[CARPETA_A_TIPO[item.nombre]]?.icono || '📁'}
+            </Text>
             <Text style={estilos.carpetaNombre}>{item.nombre}</Text>
             <Text style={estilos.carpetaCantidad}>{item.cantidad}</Text>
           </TouchableOpacity>

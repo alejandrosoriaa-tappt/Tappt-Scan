@@ -4,7 +4,8 @@ import { colores, porTipo, espacio } from '../theme';
 
 function formatoMonto(monto, moneda) {
   if (monto == null) return null;
-  return `$${monto.toLocaleString('es-MX', { minimumFractionDigits: 2 })} ${moneda || ''}`.trim();
+  const numero = Number(monto).toLocaleString('es-MX', { minimumFractionDigits: 2 });
+  return `$${numero} ${moneda || ''}`.trim();
 }
 
 export default function DocumentoCard({ documento, onPress }) {

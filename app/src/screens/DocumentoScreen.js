@@ -22,7 +22,7 @@ export default function DocumentoScreen({ route }) {
     <ScrollView style={estilos.pantalla} contentContainerStyle={estilos.contenido}>
       <View style={[estilos.vistaPrevia, { backgroundColor: `${meta.color}14` }]}>
         <Text style={estilos.vistaPreviaIcono}>{meta.icono}</Text>
-        <Text style={estilos.nombreArchivo}>{documento.nombreArchivo}</Text>
+        <Text style={estilos.nombreArchivo}>{documento.nombre_archivo}</Text>
       </View>
 
       <Text style={estilos.tituloSeccion}>Datos extraídos</Text>
@@ -34,7 +34,9 @@ export default function DocumentoScreen({ route }) {
           etiqueta="Monto"
           valor={
             documento.monto != null
-              ? `$${documento.monto.toLocaleString('es-MX', { minimumFractionDigits: 2 })} ${documento.moneda}`
+              ? `$${Number(documento.monto).toLocaleString('es-MX', {
+                  minimumFractionDigits: 2,
+                })} ${documento.moneda || ''}`.trim()
               : null
           }
         />
@@ -51,7 +53,7 @@ export default function DocumentoScreen({ route }) {
         </TouchableOpacity>
         <TouchableOpacity
           style={[estilos.boton, estilos.botonPrimario]}
-          onPress={() => Linking.openURL(documento.driveLink)}
+          onPress={() => Linking.openURL(documento.drive_link)}
         >
           <Text style={[estilos.botonTexto, estilos.botonTextoPrimario]}>Abrir en Drive</Text>
         </TouchableOpacity>

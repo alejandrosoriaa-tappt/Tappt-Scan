@@ -1,46 +1,77 @@
 import React from 'react';
-import { View, Text, FlatList, StyleSheet, TouchableOpacity } from 'react-native';
+import {
+  View,
+  Text,
+  FlatList,
+  StyleSheet,
+  TouchableOpacity,
+  ActivityIndicator,
+  RefreshControl,
+} from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import DocumentoCard from '../components/DocumentoCard';
-import { documentos, usuario, gastoDelMes } from '../data/mock';
+import useCargar from '../hooks/useCargar';
+import { api } from '../lib/api';
+import { useSesion } from '../context/SesionContext';
 import { colores, espacio } from '../theme';
 
 export default function DashboardScreen({ navigation }) {
-  const gasto = gastoDelMes();
-  const restantes = usuario.escaneosLimite - usuario.escaneosUsados;
+  const { cuenta, refrescarCuenta } = useSesion();
+  const documentos = useCargar(() => api.documentos(), []);
+  const gastos = useCargar(() => api.gastos(), []);
+
+  const recargarTodo = () => {
+    documentos.recargar();
+    gastos.recargar();
+    refrescarCuenta();
+  };
+
+  const restantes =
+    cuenta?.escaneosLimite != null ? cuenta.escaneosLimite - cuenta.escaneosUsados : null;
+
+  if (documentos.cargando && !documentos.datos) {
+    return (
+      <SafeAreaView style={estilos.centrado}>
+        <ActivityIndicator color={colores.primario} />
+      </SafeAreaView>
+    );
+  }
 
   return (
     <SafeAreaView style={estilos.pantalla} edges={['top']}>
       <FlatList
-        data={documentos}
+        data={documentos.datos || []}
         keyExtractor={(d) => d.id}
         contentContainerStyle={estilos.lista}
+        refreshControl={
+          <RefreshControl refreshing={documentos.cargando} onRefresh={recargarTodo} />
+        }
         ListHeaderComponent={
           <View>
-            <Text style={estilos.saludo}>Hola, {usuario.nombre}</Text>
+            <Text style={estilos.saludo}>Hola</Text>
             <Text style={estilos.subSaludo}>Tus documentos, en tu propio Drive.</Text>
 
             <View style={estilos.filaStats}>
               <View style={estilos.stat}>
-                <Text style={estilos.statValor}>{documentos.length}</Text>
+                <Text style={estilos.statValor}>{documentos.datos?.length ?? 0}</Text>
                 <Text style={estilos.statEtiqueta}>Documentos</Text>
               </View>
               <View style={estilos.stat}>
                 <Text style={estilos.statValor}>
-                  ${gasto.toLocaleString('es-MX', { maximumFractionDigits: 0 })}
+                  ${(gastos.datos?.total ?? 0).toLocaleString('es-MX', { maximumFractionDigits: 0 })}
                 </Text>
                 <Text style={estilos.statEtiqueta}>Gasto del mes</Text>
               </View>
             </View>
 
-            {usuario.plan === 'gratis' ? (
+            {cuenta?.plan === 'gratis' && restantes != null ? (
               <TouchableOpacity
                 style={estilos.banner}
                 onPress={() => navigation.navigate('Ajustes')}
                 activeOpacity={0.8}
               >
                 <Text style={estilos.bannerTitulo}>
-                  Te quedan {restantes} escaneos este mes
+                  Te {restantes === 1 ? 'queda' : 'quedan'} {Math.max(restantes, 0)} escaneos este mes
                 </Text>
                 <Text style={estilos.bannerTexto}>
                   Pásate a Personal para escaneos ilimitados, edición de PDF y firmas.
@@ -50,6 +81,11 @@ export default function DashboardScreen({ navigation }) {
 
             <Text style={estilos.tituloSeccion}>Recientes</Text>
           </View>
+        }
+        ListEmptyComponent={
+          <Text style={estilos.vacio}>
+            Todavía no tienes documentos. Mándanos una foto por WhatsApp o usa la cámara.
+          </Text>
         }
         renderItem={({ item }) => (
           <DocumentoCard
@@ -64,6 +100,7 @@ export default function DashboardScreen({ navigation }) {
 
 const estilos = StyleSheet.create({
   pantalla: { flex: 1, backgroundColor: colores.fondo },
+  centrado: { flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: colores.fondo },
   lista: { padding: espacio.md, paddingBottom: espacio.xl },
   saludo: { fontSize: 26, fontWeight: '700', color: colores.texto },
   subSaludo: { fontSize: 14, color: colores.textoSuave, marginTop: 4 },
@@ -94,5 +131,12 @@ const estilos = StyleSheet.create({
     letterSpacing: 0.5,
     marginTop: espacio.lg,
     marginBottom: espacio.sm,
+  },
+  vacio: {
+    fontSize: 14,
+    color: colores.textoSuave,
+    textAlign: 'center',
+    lineHeight: 20,
+    marginTop: espacio.lg,
   },
 });

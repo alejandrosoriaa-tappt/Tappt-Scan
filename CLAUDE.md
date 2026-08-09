@@ -58,7 +58,18 @@ credenciales con otra vertical).
 
 - `server.js` — arranque, guardrail de identidad, montaje de rutas.
 - `routes/webhook.js` — verificación + recepción de eventos de WhatsApp
-  Cloud API (imagen, texto, botones interactivos).
+  Cloud API (imagen, texto, botones). Aplica el límite del plan antes de
+  procesar y atiende "quiero personal/negocio" mandando el link de pago.
+- `routes/cuenta.js` — perfil y consumo, generación del código para vincular
+  WhatsApp, y alta de pago para subir de plan.
+- `routes/documentos.js` — lista, resumen de gastos del mes y borrado.
+- `routes/drive.js` — inicio de OAuth, callback (guarda tokens y crea
+  carpetas) y listado de carpetas para el explorador.
+- `routes/pagos.js` — webhook de MercadoPago; al aprobarse sube el plan.
+- `services/auth.js` — valida el JWT de Supabase y da de alta al usuario
+  la primera vez (`requireAuth` deja el usuario en `req.usuario`).
+- `services/planes.js` — límites por plan (gratis: 5/mes) y conteo mensual.
+- `services/mercadopago.js` — genera el link de pago y consulta el estado.
 - `services/whatsapp.js` — mandar texto/botones, resolver y descargar media.
 - `services/vision.js` — llamada a Claude vision, clasifica y extrae JSON.
 - `services/naming.js` — arma carpeta destino y nombre de archivo desde el
@@ -83,10 +94,19 @@ App nativa (`app/`, Expo / React Native, JS sin TypeScript):
 - `src/screens/DocumentoScreen.js` — detalle, datos extraídos y acciones
   (editar PDF, firmar, abrir en Drive).
 - `src/screens/AjustesScreen.js` — cuenta, conexiones, plan y upgrade.
-- `src/components/DocumentoCard.js`, `src/theme.js`, `src/data/mock.js`.
+- `src/screens/LoginScreen.js` — correo + contraseña contra Supabase Auth.
+- `src/screens/OnboardingScreen.js` — los dos pasos previos a escanear:
+  código para vincular WhatsApp y conexión de Google Drive.
+- `src/context/SesionContext.js` — sesión de Supabase + datos de la cuenta.
+- `src/lib/supabase.js`, `src/lib/api.js` — cliente de auth y del backend
+  (toda llamada va firmada con el JWT).
+- `src/hooks/useCargar.js`, `src/components/DocumentoCard.js`, `src/theme.js`.
 
-**Estado de la app:** esqueleto navegable con datos de prueba
-(`src/data/mock.js`). Nada está conectado al backend todavía.
+**Navegación:** tres puertas — sin sesión → Login; con sesión pero sin Drive
+conectado → Onboarding; todo listo → tabs.
+
+**Variables de la app** (`app/.env.example`): `EXPO_PUBLIC_SUPABASE_URL`,
+`EXPO_PUBLIC_SUPABASE_ANON_KEY`, `EXPO_PUBLIC_API_URL`.
 
 ## Modelo de negocio (referencia)
 
@@ -116,12 +136,19 @@ pushear ahí. No abrir PR salvo que se pida explícitamente.
 
 ## Estado / pendientes
 
-- Esqueleto de backend recién creado — falta probar contra un número de
-  WhatsApp Cloud API real y un proyecto de Supabase propio.
-- `services/drive.js` usa OAuth de usuario final (no cuenta de servicio):
-  falta el flujo completo de conexión desde la app nativa (`authUrl` /
-  `exchangeCode` ya están, falta wiring del lado de la app).
-- App nativa: esqueleto navegable listo; falta cambiar `src/data/mock.js`
-  por datos reales, montar `expo-camera` con detección de bordes, el
-  editor de PDF/firmas y el login + onboarding (OTP y OAuth de Drive).
-- Integración MercadoPago (webhook + generación de link de pago) pendiente.
+Nada se ha probado todavía contra servicios reales — falta configurar el
+número de WhatsApp Cloud API, el proyecto de Supabase, las credenciales de
+Google OAuth y las de MercadoPago, y correr el flujo completo end-to-end.
+
+Pendientes de código:
+
+- **Editor de PDF y firmas** — sin empezar. Es lo más pesado del MVP y lo
+  que justifica el plan Personal.
+- **Captura desde la app** — la cámara ya toma la foto, pero falta el
+  recorte/enderezado y subirla al backend para que Claude la procese
+  (hoy solo muestra la URI; ver el TODO en `EscanearScreen.js`).
+- **Pestaña de Gastos** del plan Negocio — el endpoint
+  `/api/documentos/gastos` ya existe; falta la pantalla y el Google Sheet
+  en la carpeta del usuario.
+- Refrescar el token de Google cuando expire (hoy se guarda tal cual).
+- Recordatorios de vencimiento (plan Negocio) y multi-usuario.
