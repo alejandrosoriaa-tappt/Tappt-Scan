@@ -18,7 +18,9 @@ router.get('/callback', async (req, res) => {
     if (!code || !userId) return res.status(400).send('Faltan parámetros.');
 
     const tokens = await drive.exchangeCode(code);
-    const raizId = await drive.ensureRaiz(tokens);
+    // Se crea el árbol completo aquí para que el usuario abra su Drive y
+    // ya vea sus carpetas, en vez de una carpeta vacía.
+    const raizId = await drive.ensureEstructura(tokens);
 
     const { error } = await supabase
       .from('scan_users')
@@ -28,7 +30,7 @@ router.get('/callback', async (req, res) => {
 
     res.send(
       '<html><body style="font-family:sans-serif;text-align:center;padding:48px">' +
-        '<h2>Listo</h2><p>Tu Google Drive quedó conectado. Ya puedes volver a TapptScan.</p>' +
+        '<h2>Listo</h2><p>Tu Google Drive quedó conectado y tus carpetas ya están creadas.<br>Ya puedes volver a TapptScan.</p>' +
         '</body></html>'
     );
   } catch (err) {

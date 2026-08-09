@@ -1,4 +1,5 @@
 const { google } = require('googleapis');
+const taxonomia = require('./taxonomia');
 
 const ROOT_FOLDER_NAME = 'TapptScan';
 
@@ -55,6 +56,33 @@ async function ensureRaiz(tokens) {
   const auth = oauthClient(tokens);
   const drive = google.drive({ version: 'v3', auth });
   return findOrCreateFolder(drive, ROOT_FOLDER_NAME);
+}
+
+/**
+ * Crea el árbol completo de `services/taxonomia.js` al conectar Drive, para
+ * que el usuario vea sus carpetas listas desde el primer momento en lugar
+ * de una carpeta vacía que se va llenando sola.
+ *
+ * Las secciones se crean en paralelo, y las subcarpetas de cada sección
+ * también, pero las subcarpetas esperan a que exista su padre. Es
+ * idempotente: si el usuario ya tiene el árbol, no duplica nada.
+ */
+async function ensureEstructura(tokens) {
+  const auth = oauthClient(tokens);
+  const drive = google.drive({ version: 'v3', auth });
+
+  const raizId = await findOrCreateFolder(drive, ROOT_FOLDER_NAME);
+
+  await Promise.all(
+    taxonomia.ESTRUCTURA.map(async (seccion) => {
+      const seccionId = await findOrCreateFolder(drive, seccion.carpeta, raizId);
+      await Promise.all(
+        seccion.sub.map((sub) => findOrCreateFolder(drive, sub.carpeta, seccionId))
+      );
+    })
+  );
+
+  return raizId;
 }
 
 /**
@@ -126,6 +154,7 @@ module.exports = {
   authUrl,
   exchangeCode,
   ensureRaiz,
+  ensureEstructura,
   ensureRuta,
   listarCarpeta,
   uploadFile,

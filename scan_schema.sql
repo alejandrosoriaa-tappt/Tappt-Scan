@@ -79,3 +79,10 @@ alter table scan_documents drop constraint if exists scan_documents_tipo_check;
 
 alter table scan_users add column if not exists drive_raiz_id text;
 alter table scan_users drop column if exists drive_folders;
+
+-- Taxonomía fija (agosto 2026): el andamiaje de carpetas se crea completo al
+-- conectar Drive y el clasificador elige contra ese catálogo cerrado.
+alter table scan_documents add column if not exists seccion text;
+alter table scan_documents add column if not exists subcarpeta text;
+alter table scan_documents drop column if exists ambito;
+alter table scan_documents drop column if exists categoria;

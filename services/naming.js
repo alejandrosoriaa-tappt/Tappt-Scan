@@ -18,11 +18,7 @@ const MESES = {
   ],
 };
 
-const AMBITOS = ['Casa', 'Trabajo', 'Personal', 'Vehiculo'];
-const CATEGORIAS = [
-  'Servicios', 'Impuestos', 'Salud', 'Legal', 'Educacion',
-  'Compras', 'Banco', 'Seguros', 'Identificaciones', 'Otros',
-];
+const taxonomia = require('./taxonomia');
 
 // Al prompt se le pide la marca corta, pero si el modelo devuelve
 // "Office Depot México, S.A. de C.V." el nombre queda impresentable.
@@ -45,14 +41,6 @@ function limpiarSegmento(valor, maximo = 40) {
   return limpio || null;
 }
 
-// Solo se aceptan valores del catálogo: si el modelo inventa un ámbito, se
-// descarta en vez de crear carpetas basura en el Drive del usuario.
-function deCatalogo(valor, catalogo) {
-  if (!valor) return null;
-  const normalizado = String(valor).trim().toLowerCase();
-  return catalogo.find((v) => v.toLowerCase() === normalizado) || null;
-}
-
 function periodoDe(extraido) {
   const desdeFecha = extraido.fecha ? new Date(`${extraido.fecha}T00:00:00Z`) : null;
   const valida = desdeFecha && !Number.isNaN(desdeFecha.getTime());
@@ -68,22 +56,22 @@ function periodoDe(extraido) {
 
 /**
  * Ruta de carpetas bajo `TapptScan/`, de lo general a lo específico:
- *   ámbito → categoría → emisor → año
+ *   sección → subcarpeta → emisor → año
  *
- * Los tramos que no se pudieron determinar se omiten, así que un documento
- * mal leído cae en algo como `Otros/` en vez de `null/undefined/`.
+ * Las dos primeras salen del andamiaje que ya existe en el Drive del
+ * usuario (`taxonomia.js`); las dos últimas se crean sobre la marcha, que
+ * es lo que hace que `03 · Casa/Servicios/CFE/2026/` aparezca solo.
+ *
+ * Si el clasificador no estuvo seguro, el documento va completo a
+ * `99 · Por revisar` **sin** subniveles de emisor/año: es un buzón para que
+ * el usuario lo mueva, no un archivo más que ordenar.
  */
 function rutaPara(extraido) {
+  const { tramos, confiable } = taxonomia.carpetasDe(extraido.seccion, extraido.subcarpeta);
+  if (!confiable) return tramos;
+
   const { anio } = periodoDe(extraido);
-
-  const tramos = [
-    deCatalogo(extraido.ambito, AMBITOS),
-    deCatalogo(extraido.categoria, CATEGORIAS) || 'Otros',
-    limpiarSegmento(extraido.emisor),
-    anio ? String(anio) : null,
-  ];
-
-  return tramos.filter(Boolean);
+  return [...tramos, limpiarSegmento(extraido.emisor), anio ? String(anio) : null].filter(Boolean);
 }
 
 function montoLegible(monto, moneda) {
@@ -129,4 +117,4 @@ function rutaLegible(tramos) {
   return `/${tramos.join('/')}/`;
 }
 
-module.exports = { rutaPara, nombreArchivo, rutaLegible, periodoDe, AMBITOS, CATEGORIAS, MESES };
+module.exports = { rutaPara, nombreArchivo, rutaLegible, periodoDe, MESES };

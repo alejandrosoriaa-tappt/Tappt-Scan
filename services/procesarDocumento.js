@@ -53,8 +53,8 @@ async function procesarArchivo(usuario, buffer, mimeType = 'image/jpeg', nombreO
     .insert({
       user_id: usuario.id,
       tipo: extraido.tipo || 'otro',
-      ambito: extraido.ambito || null,
-      categoria: extraido.categoria || null,
+      seccion: extraido.seccion || null,
+      subcarpeta: extraido.subcarpeta || null,
       emisor: extraido.emisor || null,
       fecha: extraido.fecha || null,
       monto: extraido.monto ?? null,

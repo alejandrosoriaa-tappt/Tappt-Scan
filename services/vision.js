@@ -1,16 +1,18 @@
 const axios = require('axios');
 
-// Lo que Claude debe deducir para que el archivo se guarde solo. La clave
-// es `ambito` y `categoria`: son los que convierten una carpeta plana en
-// una ruta que un humano habría armado a mano.
+const taxonomia = require('./taxonomia');
+
+// El catálogo de carpetas se inyecta en el prompt desde `taxonomia.js`, así
+// que el modelo clasifica contra las carpetas que el usuario REALMENTE tiene
+// creadas — no contra categorías inventadas que luego hay que mapear.
 const SYSTEM_PROMPT = `Eres el motor de clasificación de TapptScan. Recibes la imagen de un
 documento y devuelves SOLO un JSON, sin texto adicional ni bloques de código.
 
 {
+  "seccion": "clave de sección del catálogo, o null",
+  "subcarpeta": "clave de subcarpeta de ESA sección, o null",
   "tipo": "identificacion|recibo|factura|contrato|estado_cuenta|receta|poliza|otro",
-  "ambito": "Casa|Trabajo|Personal|Vehiculo",
-  "categoria": "Servicios|Impuestos|Salud|Legal|Educacion|Compras|Banco|Seguros|Identificaciones|Otros",
-  "emisor": "nombre corto y reconocible de quien emite (ej. CFE, Telmex, IMSS, Liverpool) o null",
+  "emisor": "nombre corto y reconocible de quien emite (ej. CFE, Telmex, IMSS) o null",
   "fecha": "YYYY-MM-DD del documento, o null",
   "periodo_mes": 1-12 del periodo que cubre el documento, o null,
   "periodo_anio": año de cuatro dígitos del periodo, o null,
@@ -19,16 +21,22 @@ documento y devuelves SOLO un JSON, sin texto adicional ni bloques de código.
   "resumen": "una línea en español describiendo el documento"
 }
 
+Catálogo de carpetas (sección: subcarpetas válidas):
+${taxonomia.catalogoParaPrompt()}
+
 Reglas:
+- "seccion" y "subcarpeta" deben salir EXACTAMENTE del catálogo. La
+  subcarpeta debe pertenecer a la sección elegida.
+- Si dudas entre dos carpetas, o no reconoces el documento, deja ambas en
+  null: el documento se guarda en "99 · Por revisar" y el usuario lo mueve.
+  Es preferible eso a archivarlo mal.
 - "emisor" debe ser la marca corta, no la razón social completa:
   "CFE", no "Comisión Federal de Electricidad, S.A. de C.V.".
-- Un recibo de luz/agua/gas/internet/teléfono es ambito "Casa",
-  categoria "Servicios".
-- Tenencia, verificación, gasolina o servicio mecánico son ambito "Vehiculo".
-- Una credencial, pasaporte o licencia es categoria "Identificaciones".
+- Un recibo de luz, agua, gas, internet o teléfono del hogar va en
+  casa/servicios. Un ticket de compra o gasto suelto va en dinero/recibos.
 - Si el documento cubre un periodo (un mes de consumo), usa ese periodo en
   "periodo_mes"/"periodo_anio", no la fecha de impresión.
-- Si no puedes determinar un campo con confianza, ponlo en null. No inventes.`;
+- No inventes datos: lo que no puedas leer con confianza va en null.`;
 
 async function classifyAndExtract(imageBuffer, mimeType) {
   const base64 = imageBuffer.toString('base64');
@@ -66,7 +74,7 @@ async function classifyAndExtract(imageBuffer, mimeType) {
     return JSON.parse(limpio);
   } catch (err) {
     console.error('[vision] respuesta no parseable:', texto.slice(0, 200));
-    return { tipo: 'otro', ambito: null, categoria: 'Otros' };
+    return { tipo: 'otro', seccion: null, subcarpeta: null };
   }
 }
 

@@ -21,8 +21,15 @@ El momento que define el producto:
 
 ```
 foto de un recibo de luz  →  CFE_Agosto_2026_$1,847.pdf
-                             en  TapptScan/Casa/Servicios/CFE/2026/
+                             en  TapptScan/03 · Casa/Servicios/CFE/2026/
 ```
+
+Al conectar Drive se crea de golpe **todo el árbol de carpetas**
+(`services/taxonomia.js`, 36 carpetas) para que el usuario lo vea listo
+desde el primer momento. Los niveles de emisor y año se crean solos
+conforme llegan documentos. Lo que el clasificador no reconozca con
+confianza cae en **`99 · Por revisar`** — un buzón para que el usuario lo
+mueva, preferible a archivarlo mal.
 
 Todo se guarda como **PDF**, también las fotos: se abre igual en cualquier
 lado y el editor maneja un solo formato.
@@ -108,11 +115,14 @@ credenciales con otra vertical).
   `docs/EDITOR-PDF.md` y `assets/README.md`.
 - `services/whatsapp.js` — mandar texto/botones, resolver y descargar media.
 - `services/vision.js` — llamada a Claude vision, clasifica y extrae JSON.
-- `services/naming.js` — **el corazón de la magia**: convierte el JSON
-  extraído en la ruta (`ámbito/categoría/emisor/año`) y el nombre
-  (`CFE_Agosto_2026_$1,847.pdf`). Valida ámbito y categoría contra un
-  catálogo cerrado y limpia razones sociales, para que un modelo que
-  alucina no llene el Drive del usuario de carpetas basura.
+- `services/taxonomia.js` — **fuente única del árbol de carpetas**. De aquí
+  salen las tres cosas a la vez: las carpetas que se crean en el onboarding,
+  el catálogo que se le inyecta al prompt del clasificador, y la validación
+  de su respuesta. Cambiar el árbol aquí las cambia todas.
+- `services/naming.js` — convierte el JSON extraído en la ruta
+  (`sección/subcarpeta/emisor/año`) y el nombre
+  (`CFE_Agosto_2026_$1,847.pdf`). Limpia razones sociales y manda a
+  `99 · Por revisar` lo que no case con la taxonomía.
 - `services/drive.js` — OAuth de Google (**solo scope `drive.file`**, ver
   `docs/GOOGLE-DRIVE.md` — ampliarlo dispara la evaluación de seguridad de
   Google y atrasa el lanzamiento meses), crea rutas anidadas bajo
