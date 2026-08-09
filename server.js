@@ -22,9 +22,10 @@ if (
 
 const app = express();
 
-// El webhook de Stripe necesita el cuerpo CRUDO para verificar la firma,
-// así que va ANTES del parser JSON global.
+// Los dos webhooks firmados necesitan el cuerpo CRUDO para poder verificar
+// la firma, así que van ANTES del parser JSON global.
 app.use('/api/pagos/webhook', express.raw({ type: 'application/json' }));
+app.use('/webhook', express.raw({ type: 'application/json' }));
 app.use(express.json({ limit: '25mb' }));
 
 app.get('/health', (_req, res) => res.json({ ok: true, service: 'tappt-scan' }));

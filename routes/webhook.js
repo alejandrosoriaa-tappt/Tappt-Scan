@@ -1,3 +1,4 @@
+const crypto = require('crypto');
 const express = require('express');
 const router = express.Router();
 
@@ -22,12 +23,40 @@ router.get('/', (req, res) => {
   return res.sendStatus(403);
 });
 
+/**
+ * Meta firma cada webhook con HMAC-SHA256 del cuerpo crudo usando el secreto
+ * de la app. Sin verificarlo, cualquiera que descubra la URL puede simular
+ * mensajes de un número ya registrado: gastarle sus escaneos, o provocar que
+ * le mandemos links de pago.
+ */
+function firmaValida(req) {
+  const secreto = process.env.WHATSAPP_APP_SECRET;
+  if (!secreto) return true; // sin secreto configurado no se puede verificar
+
+  const recibida = req.headers['x-hub-signature-256'];
+  if (!recibida) return false;
+
+  const esperada =
+    'sha256=' + crypto.createHmac('sha256', secreto).update(req.body).digest('hex');
+
+  const a = Buffer.from(recibida);
+  const b = Buffer.from(esperada);
+  return a.length === b.length && crypto.timingSafeEqual(a, b);
+}
+
 // Eventos entrantes: imagen, documento, texto, botones.
 router.post('/', async (req, res) => {
+  if (!firmaValida(req)) {
+    console.error('[webhook] firma inválida');
+    return res.sendStatus(403);
+  }
+
   res.sendStatus(200); // ack inmediato, Meta reintenta si tardamos
 
   try {
-    const entry = req.body.entry?.[0];
+    // El cuerpo llega crudo (Buffer) porque la firma se calcula sobre él.
+    const cuerpo = JSON.parse(req.body.toString('utf8'));
+    const entry = cuerpo.entry?.[0];
     const change = entry?.changes?.[0];
     const value = change?.value;
     const msg = value?.messages?.[0];

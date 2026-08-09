@@ -216,6 +216,12 @@ y bot solo lo consultan.
 - No mezclar con `tappt-backend` ni `tappt-broker`: ni tablas, ni número de
   WhatsApp, ni env vars.
 
+## Puesta en marcha
+
+Credenciales, variables, qué crear en Railway y qué SQL correr:
+**`docs/PUESTA-EN-MARCHA.md`**. El esquema completo está en
+`scan_schema.sql` (un solo archivo idempotente, se corre entero).
+
 ## Rama de trabajo
 
 Rama activa: **`claude/new-session-9mhtdk`**. Desarrollar, commitear y
