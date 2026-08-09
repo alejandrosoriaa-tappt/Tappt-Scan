@@ -2,8 +2,9 @@
 
 ## Qué es este repo
 
-`tappt-scan`: servicio **Node.js/Express 4 (CommonJS)** independiente, en su
-propio proceso (`server.js`). Es una **vertical propia**, separada de
+`tappt-scan`: monorepo con dos piezas del mismo producto —
+**backend** (raíz, Node.js/Express 4 CommonJS, `server.js`) y **app nativa**
+(`app/`, Expo / React Native). Es una **vertical propia**, separada de
 `tappt-backend` — su propio repo, su propio número de WhatsApp, su propio
 proyecto/schema de Supabase, su propio deploy en Railway. No compartir
 credenciales ni tablas con `tappt-backend` o `tappt-broker`.
@@ -31,10 +32,21 @@ explorador de Drive.
 
 ## Comandos
 
+Backend (raíz):
+
 ```bash
 npm install
 npm run dev     # nodemon server.js → http://localhost:3000
 npm start       # node server.js
+```
+
+App nativa (`app/`):
+
+```bash
+cd app && npm install
+npm start       # expo start (QR para Expo Go)
+npm run ios     # simulador iOS
+npm run android # emulador Android
 ```
 
 Health check: `GET /health`. **Guardrail de identidad**: el server NO
@@ -57,6 +69,24 @@ credenciales con otra vertical).
   número de WhatsApp ↔ cuenta ↔ carpeta de Drive.
 - `services/supabase.js` — cliente Supabase (service-role).
 - `scan_schema.sql` — tablas `scan_users`, `scan_documents`, `scan_links`.
+
+App nativa (`app/`, Expo / React Native, JS sin TypeScript):
+
+- `App.js` — providers (navegación, safe area) y arranque.
+- `src/navigation/RootNavigator.js` — stack raíz + tabs
+  (Inicio · Escanear · Drive · Ajustes); `Documento` se abre como stack.
+- `src/screens/DashboardScreen.js` — saludo, stats (documentos, gasto del
+  mes), banner de upgrade y lista de recientes.
+- `src/screens/EscanearScreen.js` — cámara de respaldo. Obligatoria por la
+  guía 4.2 de Apple: la app no puede ser solo un puente a WhatsApp.
+- `src/screens/DriveScreen.js` — explorador de la carpeta `TapptScan/`.
+- `src/screens/DocumentoScreen.js` — detalle, datos extraídos y acciones
+  (editar PDF, firmar, abrir en Drive).
+- `src/screens/AjustesScreen.js` — cuenta, conexiones, plan y upgrade.
+- `src/components/DocumentoCard.js`, `src/theme.js`, `src/data/mock.js`.
+
+**Estado de la app:** esqueleto navegable con datos de prueba
+(`src/data/mock.js`). Nada está conectado al backend todavía.
 
 ## Modelo de negocio (referencia)
 
@@ -91,6 +121,7 @@ pushear ahí. No abrir PR salvo que se pida explícitamente.
 - `services/drive.js` usa OAuth de usuario final (no cuenta de servicio):
   falta el flujo completo de conexión desde la app nativa (`authUrl` /
   `exchangeCode` ya están, falta wiring del lado de la app).
-- App nativa (dashboard, editor de PDF/firmas, cámara, explorador de
-  Drive) vive fuera de este repo — pendiente de arrancar.
+- App nativa: esqueleto navegable listo; falta cambiar `src/data/mock.js`
+  por datos reales, montar `expo-camera` con detección de bordes, el
+  editor de PDF/firmas y el login + onboarding (OTP y OAuth de Drive).
 - Integración MercadoPago (webhook + generación de link de pago) pendiente.
