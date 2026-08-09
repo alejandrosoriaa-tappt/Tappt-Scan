@@ -105,7 +105,7 @@ const estilos = StyleSheet.create({
   input: {
     backgroundColor: colores.superficie,
     borderWidth: 1,
-    borderColor: colores.borde,
+    borderColor: colores.divisor,
     borderRadius: 12,
     paddingHorizontal: espacio.md,
     paddingVertical: espacio.md,

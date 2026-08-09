@@ -16,6 +16,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import * as ImagePicker from 'expo-image-picker';
 import FirmaPad from '../components/FirmaPad';
+import Icono from '../components/Icono';
 import { api } from '../lib/api';
 import { useIdioma } from '../i18n';
 import { colores, espacio } from '../theme';
@@ -23,12 +24,13 @@ import { colores, espacio } from '../theme';
 const EMOJIS = ['✅', '❌', '⭐', '🔴', '➡️', '📌', '✍️', '⚠️'];
 
 // Herramientas: qué se coloca al tocar el documento.
+// Los sellos de EMOJIS se estampan en el PDF; estos son la interfaz.
 const HERRAMIENTAS = [
-  { id: 'texto', icono: 'T' },
-  { id: 'firma', icono: '✍️' },
-  { id: 'emoji', icono: '☺' },
-  { id: 'imagen', icono: '🖼' },
-  { id: 'tapar', icono: '▭' },
+  { id: 'texto', icono: 'documento' },
+  { id: 'firma', icono: 'etiqueta' },
+  { id: 'emoji', icono: 'estrella' },
+  { id: 'imagen', icono: 'camara' },
+  { id: 'tapar', icono: 'recibo' },
 ];
 
 export default function EditorScreen({ route, navigation }) {
@@ -238,9 +240,11 @@ export default function EditorScreen({ route, navigation }) {
             style={[estilos.herramienta, herramienta === h.id && estilos.herramientaActiva]}
             onPress={() => setHerramienta(h.id)}
           >
-            <Text style={[estilos.herramientaIcono, herramienta === h.id && estilos.herramientaTextoActivo]}>
-              {h.icono}
-            </Text>
+            <Icono
+              nombre={h.icono}
+              tamano={19}
+              color={herramienta === h.id ? colores.primario : colores.textoSuave}
+            />
             <Text style={[estilos.herramientaEtiqueta, herramienta === h.id && estilos.herramientaTextoActivo]}>
               {t(h.id)}
             </Text>
@@ -339,7 +343,7 @@ const estilos = StyleSheet.create({
     backgroundColor: '#FFFFFF',
     borderRadius: 12,
     borderWidth: 1,
-    borderColor: colores.borde,
+    borderColor: colores.divisor,
     overflow: 'hidden',
   },
   imagen: { width: '100%', height: '100%' },
@@ -366,14 +370,14 @@ const estilos = StyleSheet.create({
     marginTop: espacio.md,
   },
   flecha: { fontSize: 28, color: colores.primario, paddingHorizontal: espacio.md },
-  flechaInactiva: { color: colores.borde },
+  flechaInactiva: { color: colores.divisor },
   paginaTexto: { fontSize: 14, color: colores.texto, fontWeight: '500' },
   barra: {
     flexDirection: 'row',
     justifyContent: 'space-around',
     paddingVertical: espacio.sm,
     borderTopWidth: 1,
-    borderTopColor: colores.borde,
+    borderTopColor: colores.divisor,
     backgroundColor: colores.superficie,
   },
   herramienta: { alignItems: 'center', paddingHorizontal: espacio.sm, paddingVertical: espacio.xs },
@@ -390,7 +394,7 @@ const estilos = StyleSheet.create({
   botonSecundario: {
     flex: 1,
     borderWidth: 1,
-    borderColor: colores.borde,
+    borderColor: colores.divisor,
     borderRadius: 12,
     paddingVertical: espacio.md,
     alignItems: 'center',
@@ -426,7 +430,7 @@ const estilos = StyleSheet.create({
   notaModal: { fontSize: 11, color: colores.textoSuave, marginTop: espacio.md, lineHeight: 16 },
   input: {
     borderWidth: 1,
-    borderColor: colores.borde,
+    borderColor: colores.divisor,
     borderRadius: 10,
     padding: espacio.md,
     fontSize: 16,

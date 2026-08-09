@@ -2,6 +2,7 @@ import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { colores, espacio } from '../theme';
+import Icono from '../components/Icono';
 
 const VARIABLES = [
   ['EXPO_PUBLIC_SUPABASE_URL', process.env.EXPO_PUBLIC_SUPABASE_URL],
@@ -20,7 +21,9 @@ export default function ConfiguracionScreen() {
   return (
     <SafeAreaView style={estilos.pantalla}>
       <View style={estilos.contenido}>
-        <Text style={estilos.icono}>⚙️</Text>
+        <View style={estilos.icono}>
+          <Icono nombre="ajustes" tamano={34} color={colores.textoSuave} />
+        </View>
         <Text style={estilos.titulo}>Falta configurar la app</Text>
         <Text style={estilos.texto}>
           No están definidas las variables de entorno. Revisa
@@ -31,7 +34,13 @@ export default function ConfiguracionScreen() {
         <View style={estilos.lista}>
           {VARIABLES.map(([nombre, valor]) => (
             <View key={nombre} style={estilos.fila}>
-              <Text style={estilos.estado}>{valor ? '✓' : '✗'}</Text>
+              <View style={estilos.estado}>
+                <Icono
+                  nombre={valor ? 'verificado' : 'cerrar'}
+                  tamano={15}
+                  color={valor ? colores.primario : colores.peligro}
+                />
+              </View>
               <Text style={[estilos.variable, !valor && estilos.variableFalta]}>{nombre}</Text>
             </View>
           ))}
@@ -44,7 +53,7 @@ export default function ConfiguracionScreen() {
 const estilos = StyleSheet.create({
   pantalla: { flex: 1, backgroundColor: colores.fondo },
   contenido: { flex: 1, justifyContent: 'center', padding: espacio.lg },
-  icono: { fontSize: 40, textAlign: 'center' },
+  icono: { alignItems: 'center' },
   titulo: {
     fontSize: 20,
     fontWeight: '700',
@@ -65,11 +74,11 @@ const estilos = StyleSheet.create({
     backgroundColor: colores.superficie,
     borderRadius: 12,
     borderWidth: 1,
-    borderColor: colores.borde,
+    borderColor: colores.divisor,
     padding: espacio.md,
   },
   fila: { flexDirection: 'row', alignItems: 'center', paddingVertical: espacio.xs },
-  estado: { width: 22, fontSize: 14, fontWeight: '700', color: colores.textoSuave },
+  estado: { width: 22 },
   variable: { fontSize: 12, color: colores.texto, flex: 1 },
   variableFalta: { color: colores.peligro, fontWeight: '600' },
 });

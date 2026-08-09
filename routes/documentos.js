@@ -8,6 +8,7 @@ const procesarDocumento = require('../services/procesarDocumento');
 const drive = require('../services/drive');
 const pdf = require('../services/pdf');
 const imagenServicio = require('../services/imagen');
+const gastos = require('../services/gastos');
 
 // La app manda la foto recién tomada y le devolvemos las esquinas sugeridas
 // del documento, para pre-colocar el marco de recorte.
@@ -188,22 +189,87 @@ router.get('/', requireAuth, async (req, res) => {
   }
 });
 
-// Resumen de gastos del mes (gancho de upsell y pestaña del plan Negocio).
-router.get('/gastos', requireAuth, async (req, res) => {
+// Contadores para las tarjetas de Inicio.
+router.get('/resumen', requireAuth, async (req, res) => {
   try {
     const ahora = new Date();
-    const desde = new Date(Date.UTC(ahora.getUTCFullYear(), ahora.getUTCMonth(), 1)).toISOString();
+    const desdeMes = new Date(Date.UTC(ahora.getUTCFullYear(), ahora.getUTCMonth(), 1)).toISOString();
 
     const { data, error } = await supabase
       .from('scan_documents')
-      .select('monto, emisor, fecha')
-      .eq('user_id', req.usuario.id)
-      .eq('tipo', 'recibo')
-      .gte('created_at', desde);
+      .select('created_at, es_gasto, monto, seccion, subcarpeta')
+      .eq('user_id', req.usuario.id);
     if (error) throw error;
 
-    const total = data.reduce((suma, d) => suma + (Number(d.monto) || 0), 0);
-    res.json({ total, cantidad: data.length, recibos: data });
+    const delMes = data.filter((d) => d.created_at >= desdeMes);
+    const gastoMes = delMes.reduce(
+      (suma, d) => suma + (d.es_gasto ? Number(d.monto) || 0 : 0),
+      0
+    );
+
+    res.json({
+      documentosTotal: data.length,
+      documentosDelMes: delMes.length,
+      gastoDelMes: gastoMes,
+      // Lo que el clasificador no supo ubicar y espera al usuario.
+      porRevisar: data.filter((d) => !d.seccion || !d.subcarpeta).length,
+    });
+  } catch (err) {
+    console.error('[documentos] error resumen', err);
+    res.status(500).json({ error: 'error_resumen' });
+  }
+});
+
+/**
+ * Gastos de un mes: total, desglose por categoría y serie por día para la
+ * gráfica. `?mes=YYYY-MM` permite navegar hacia atrás.
+ */
+router.get('/gastos', requireAuth, async (req, res) => {
+  try {
+    const referencia = /^\d{4}-\d{2}$/.test(req.query.mes || '')
+      ? new Date(`${req.query.mes}-01T00:00:00Z`)
+      : new Date();
+
+    const anio = referencia.getUTCFullYear();
+    const mes = referencia.getUTCMonth();
+    const inicio = new Date(Date.UTC(anio, mes, 1));
+    const fin = new Date(Date.UTC(anio, mes + 1, 0));
+    const iso = (f) => f.toISOString().slice(0, 10);
+
+    const actual = await gastos.consultar(req.usuario.id, { desde: iso(inicio), hasta: iso(fin) });
+
+    // Mes anterior, solo para el "12% menos que julio".
+    const inicioPrevio = new Date(Date.UTC(anio, mes - 1, 1));
+    const finPrevio = new Date(Date.UTC(anio, mes, 0));
+    const previo = await gastos.consultar(req.usuario.id, {
+      desde: iso(inicioPrevio),
+      hasta: iso(finPrevio),
+    });
+
+    // Serie diaria para la gráfica de barras.
+    const dias = fin.getUTCDate();
+    const serie = Array.from({ length: dias }, () => 0);
+    for (const doc of actual.documentos) {
+      const dia = Number((doc.fecha || '').slice(8, 10));
+      if (dia >= 1 && dia <= dias) serie[dia - 1] += Number(doc.monto) || 0;
+    }
+
+    const total = actual.resumen.total;
+    const totalPrevio = previo.resumen.total;
+
+    res.json({
+      mes: `${anio}-${String(mes + 1).padStart(2, '0')}`,
+      total,
+      cantidad: actual.resumen.cantidad,
+      totalPrevio,
+      variacion: totalPrevio > 0 ? Math.round(((total - totalPrevio) / totalPrevio) * 100) : null,
+      serie,
+      porCategoria: actual.resumen.porCategoria.map((c) => ({
+        ...c,
+        porcentaje: total > 0 ? Math.round((c.monto / total) * 100) : 0,
+      })),
+      porComercio: actual.resumen.porEmisor,
+    });
   } catch (err) {
     console.error('[documentos] error gastos', err);
     res.status(500).json({ error: 'error_gastos' });

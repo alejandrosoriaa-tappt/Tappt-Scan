@@ -5,6 +5,7 @@ import * as WebBrowser from 'expo-web-browser';
 import { api } from '../lib/api';
 import { useSesion } from '../context/SesionContext';
 import { useIdioma } from '../i18n';
+import Icono from '../components/Icono';
 import { colores, espacio } from '../theme';
 
 // Dos conexiones antes de poder escanear: el número de WhatsApp (por código
@@ -55,7 +56,7 @@ export default function OnboardingScreen() {
           <View style={estilos.pasoEncabezado}>
             <Text style={estilos.pasoNumero}>1</Text>
             <Text style={estilos.pasoTitulo}>{t('conectaWhatsapp')}</Text>
-            {whatsappListo ? <Text style={estilos.listo}>✓</Text> : null}
+            {whatsappListo ? <Icono nombre="verificado" tamano={19} color={colores.primario} /> : null}
           </View>
 
           {whatsappListo ? (
@@ -86,7 +87,7 @@ export default function OnboardingScreen() {
           <View style={estilos.pasoEncabezado}>
             <Text style={estilos.pasoNumero}>2</Text>
             <Text style={estilos.pasoTitulo}>{t('conectaDrive')}</Text>
-            {driveListo ? <Text style={estilos.listo}>✓</Text> : null}
+            {driveListo ? <Icono nombre="verificado" tamano={19} color={colores.primario} /> : null}
           </View>
 
           {driveListo ? (
@@ -127,7 +128,7 @@ const estilos = StyleSheet.create({
     backgroundColor: colores.superficie,
     borderRadius: 12,
     borderWidth: 1,
-    borderColor: colores.borde,
+    borderColor: colores.divisor,
     padding: espacio.md,
     marginBottom: espacio.md,
   },

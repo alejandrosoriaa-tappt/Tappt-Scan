@@ -112,7 +112,7 @@ const estilos = StyleSheet.create({
     backgroundColor: colores.superficie,
     borderRadius: 12,
     borderWidth: 1,
-    borderColor: colores.borde,
+    borderColor: colores.divisor,
     paddingHorizontal: espacio.md,
   },
   campo: {
@@ -120,7 +120,7 @@ const estilos = StyleSheet.create({
     justifyContent: 'space-between',
     paddingVertical: espacio.md,
     borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: colores.borde,
+    borderBottomColor: colores.divisor,
   },
   campoEtiqueta: { fontSize: 14, color: colores.textoSuave },
   campoValor: { fontSize: 14, fontWeight: '500', color: colores.texto },
@@ -128,7 +128,7 @@ const estilos = StyleSheet.create({
   boton: {
     backgroundColor: colores.superficie,
     borderWidth: 1,
-    borderColor: colores.borde,
+    borderColor: colores.divisor,
     borderRadius: 12,
     paddingVertical: espacio.md,
     alignItems: 'center',

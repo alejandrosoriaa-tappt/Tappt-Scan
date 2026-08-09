@@ -82,4 +82,16 @@ router.get('/carpetas', requireAuth, async (req, res) => {
   }
 });
 
+// Espacio usado en el Drive del usuario.
+router.get('/uso', requireAuth, async (req, res) => {
+  if (!req.usuario.drive_tokens) return res.status(409).json({ error: 'drive_sin_conectar' });
+
+  try {
+    res.json(await drive.usoDeAlmacenamiento(req.usuario.drive_tokens));
+  } catch (err) {
+    console.error('[drive] error consultando uso', err);
+    res.status(500).json({ error: 'error_uso' });
+  }
+});
+
 module.exports = router;

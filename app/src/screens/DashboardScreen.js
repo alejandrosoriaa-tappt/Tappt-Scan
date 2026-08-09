@@ -1,208 +1,250 @@
-import React, { useState } from 'react';
+import React from 'react';
 import {
   View,
   Text,
-  FlatList,
-  StyleSheet,
+  ScrollView,
   TouchableOpacity,
+  StyleSheet,
   ActivityIndicator,
   RefreshControl,
-  Alert,
+  Linking,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import DocumentoCard from '../components/DocumentoCard';
 import useCargar from '../hooks/useCargar';
 import { api } from '../lib/api';
-import { importarArchivo, importarDeGaleria } from '../lib/importar';
-import { useIdioma } from '../i18n';
 import { useSesion } from '../context/SesionContext';
-import { colores, espacio } from '../theme';
+import { useIdioma } from '../i18n';
+import Icono, { IconoChip } from '../components/Icono';
+import { Tarjeta, Barra, formatoDinero, formatoBytes } from '../components/comunes';
+import { colores, espacio, radio, tipo, sombra } from '../theme';
+
+/**
+ * La Home no es un explorador de archivos: es el centro del asistente.
+ *
+ * Por eso lo primero no es la lista de documentos sino las dos formas de
+ * mandarle uno. La frase rectora manda: "tú mandas el documento, TapptScan
+ * hace lo demás".
+ */
+function AccionPrincipal({ icono, fondo, trazo, titulo, detalle, onPress, destacada }) {
+  return (
+    <TouchableOpacity
+      style={[estilos.accion, destacada && estilos.accionDestacada]}
+      activeOpacity={0.85}
+      onPress={onPress}
+    >
+      <IconoChip nombre={icono} fondo={fondo} trazo={trazo} tamano={46} />
+      <View style={estilos.accionTexto}>
+        <Text style={estilos.accionTitulo}>{titulo}</Text>
+        <Text style={estilos.accionDetalle}>{detalle}</Text>
+      </View>
+      <Icono nombre="derecha" tamano={18} color="#C4CDD5" />
+    </TouchableOpacity>
+  );
+}
+
+function Tile({ valor, etiqueta, acento }) {
+  return (
+    <Tarjeta style={estilos.tile}>
+      <Text style={[estilos.tileValor, acento && { color: acento }]}>{valor}</Text>
+      <Text style={estilos.tileEtiqueta}>{etiqueta}</Text>
+    </Tarjeta>
+  );
+}
 
 export default function DashboardScreen({ navigation }) {
   const { cuenta, refrescarCuenta } = useSesion();
   const { t } = useIdioma();
-  const documentos = useCargar(() => api.documentos(), []);
-  const gastos = useCargar(() => api.gastos(), []);
-  const [importando, setImportando] = useState(false);
 
-  const importar = async (elegir) => {
-    setImportando(true);
-    try {
-      const documento = await elegir();
-      if (!documento) return;
-
-      documentos.recargar();
-      refrescarCuenta();
-      navigation.navigate('Documento', { documento });
-    } catch (err) {
-      const mensajes = {
-        limite_alcanzado: t('limiteAlcanzado'),
-        drive_sin_conectar: t('driveSinConectar'),
-      };
-      Alert.alert(t('noSePudo'), mensajes[err.message] || err.message);
-    } finally {
-      setImportando(false);
-    }
-  };
-
-  const recargarTodo = () => {
-    documentos.recargar();
-    gastos.recargar();
-    refrescarCuenta();
-  };
+  const resumen = useCargar(() => api.resumen(), []);
+  const uso = useCargar(() => api.usoDrive().catch(() => null), []);
+  const datos = resumen.datos;
 
   const restantes =
     cuenta?.escaneosLimite != null ? cuenta.escaneosLimite - cuenta.escaneosUsados : null;
 
-  if (documentos.cargando && !documentos.datos) {
-    return (
-      <SafeAreaView style={estilos.centrado}>
-        <ActivityIndicator color={colores.primario} />
-      </SafeAreaView>
-    );
-  }
-
   return (
-    <SafeAreaView style={estilos.pantalla} edges={['top']}>
-      <FlatList
-        data={documentos.datos || []}
-        keyExtractor={(d) => d.id}
-        contentContainerStyle={estilos.lista}
+    <View style={estilos.pantalla}>
+      <SafeAreaView edges={['top']} style={{ backgroundColor: colores.fondo }} />
+
+      <ScrollView
+        contentContainerStyle={estilos.scroll}
+        showsVerticalScrollIndicator={false}
         refreshControl={
-          <RefreshControl refreshing={documentos.cargando} onRefresh={recargarTodo} />
-        }
-        ListHeaderComponent={
-          <View>
-            <Text style={estilos.saludo}>{t('hola')}</Text>
-            <Text style={estilos.subSaludo}>{t('subSaludo')}</Text>
-
-            <View style={estilos.filaStats}>
-              <View style={estilos.stat}>
-                <Text style={estilos.statValor}>{documentos.datos?.length ?? 0}</Text>
-                <Text style={estilos.statEtiqueta}>{t('documentos')}</Text>
-              </View>
-              <View style={estilos.stat}>
-                <Text style={estilos.statValor}>
-                  ${(gastos.datos?.total ?? 0).toLocaleString('es-MX', { maximumFractionDigits: 0 })}
-                </Text>
-                <Text style={estilos.statEtiqueta}>{t('gastoDelMes')}</Text>
-              </View>
-            </View>
-
-            {cuenta?.plan === 'gratis' && restantes != null ? (
-              <TouchableOpacity
-                style={estilos.banner}
-                onPress={() => navigation.navigate('Ajustes')}
-                activeOpacity={0.8}
-              >
-                <Text style={estilos.bannerTitulo}>
-                  {t('escaneosRestantes', {
-                    n: Math.max(restantes, 0),
-                    verbo: restantes === 1 ? t('queda') : t('quedan'),
-                  })}
-                </Text>
-                <Text style={estilos.bannerTexto}>
-                  {t('upsell')}
-                </Text>
-              </TouchableOpacity>
-            ) : null}
-
-            <View style={estilos.filaImportar}>
-              <TouchableOpacity
-                style={estilos.botonImportar}
-                onPress={() => importar(importarArchivo)}
-                disabled={importando}
-                activeOpacity={0.8}
-              >
-                <Text style={estilos.importarIcono}>📄</Text>
-                <Text style={estilos.importarTexto}>
-                  {importando ? t('subiendo') : t('importarArchivo')}
-                </Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={estilos.botonImportar}
-                onPress={() => importar(importarDeGaleria)}
-                disabled={importando}
-                activeOpacity={0.8}
-              >
-                <Text style={estilos.importarIcono}>🖼️</Text>
-                <Text style={estilos.importarTexto}>{t('desdeGaleria')}</Text>
-              </TouchableOpacity>
-            </View>
-
-            <Text style={estilos.tituloSeccion}>{t('recientes')}</Text>
-          </View>
-        }
-        ListEmptyComponent={
-          <Text style={estilos.vacio}>
-            {t('sinDocumentos')}
-          </Text>
-        }
-        renderItem={({ item }) => (
-          <DocumentoCard
-            documento={item}
-            onPress={() => navigation.navigate('Documento', { documento: item })}
+          <RefreshControl
+            refreshing={resumen.cargando}
+            onRefresh={() => {
+              resumen.recargar();
+              uso.recargar();
+              refrescarCuenta();
+            }}
           />
+        }
+      >
+        <View style={estilos.marca}>
+          <Text style={estilos.marcaTexto}>
+            Tappt<Text style={estilos.marcaAcento}>Scan</Text>
+          </Text>
+          <TouchableOpacity onPress={() => navigation.navigate('Ajustes')} hitSlop={10}>
+            <Icono nombre="ajustes" tamano={21} color={colores.textoSuave} />
+          </TouchableOpacity>
+        </View>
+
+        <AccionPrincipal
+          icono="whatsapp"
+          fondo="#DDF7EA"
+          trazo="#128C7E"
+          titulo={t('accionWhatsapp')}
+          detalle={t('accionWhatsappDetalle')}
+          onPress={() => Linking.openURL('https://wa.me/')}
+          destacada
+        />
+
+        <AccionPrincipal
+          icono="camara"
+          fondo={colores.primarioSuave}
+          trazo={colores.primario}
+          titulo={t('accionCamara')}
+          detalle={t('accionCamaraDetalle')}
+          onPress={() => navigation.navigate('Escanear')}
+        />
+
+        <View style={estilos.filaTitulo}>
+          <Text style={estilos.seccion}>{t('resumenRapido')}</Text>
+          <TouchableOpacity onPress={() => navigation.navigate('Documentos')}>
+            <Text style={estilos.verTodo}>{t('verTodo')}</Text>
+          </TouchableOpacity>
+        </View>
+
+        {resumen.cargando && !datos ? (
+          <ActivityIndicator color={colores.primario} style={{ marginTop: espacio.lg }} />
+        ) : (
+          <View style={estilos.rejilla}>
+            <Tile valor={datos?.documentosDelMes ?? 0} etiqueta={t('documentosEsteMes')} />
+            <Tile
+              valor={formatoDinero(datos?.gastoDelMes ?? 0)}
+              etiqueta={t('gastosEsteMes')}
+            />
+            <Tile
+              valor={datos?.porRevisar ?? 0}
+              etiqueta={t('porRevisarTile')}
+              acento={datos?.porRevisar ? colores.alerta : undefined}
+            />
+            <Tile valor={datos?.documentosTotal ?? 0} etiqueta={t('documentosTotal')} />
+          </View>
         )}
-      />
-    </SafeAreaView>
+
+        {cuenta?.plan === 'gratis' && restantes != null ? (
+          <TouchableOpacity
+            style={estilos.banner}
+            activeOpacity={0.85}
+            onPress={() => navigation.navigate('Ajustes')}
+          >
+            <Text style={estilos.bannerTitulo}>
+              {t('escaneosRestantes', {
+                n: Math.max(restantes, 0),
+                verbo: restantes === 1 ? t('queda') : t('quedan'),
+              })}
+            </Text>
+            <Text style={estilos.bannerTexto}>{t('upsell')}</Text>
+          </TouchableOpacity>
+        ) : null}
+
+        {/* La privacidad se recuerda en cada visita: tus documentos viven
+            en tu Drive, no en nuestros servidores. */}
+        <Tarjeta style={estilos.drive}>
+          <View style={estilos.driveFila}>
+            <IconoChip nombre="nube" fondo="#DDEBFB" trazo="#2F80ED" tamano={40} />
+            <View style={estilos.driveTexto}>
+              <Text style={estilos.driveTitulo}>{t('guardandoEnDrive')}</Text>
+              <View style={estilos.driveEstado}>
+                <View style={estilos.punto} />
+                <Text style={estilos.driveDetalle}>{t('sincronizado')}</Text>
+              </View>
+            </View>
+          </View>
+
+          {uso.datos?.porcentaje != null ? (
+            <View style={estilos.driveUso}>
+              <Barra porcentaje={uso.datos.porcentaje} />
+              <Text style={estilos.driveEspacio}>
+                {t('usoDrive', {
+                  usado: formatoBytes(uso.datos.usado),
+                  total: formatoBytes(uso.datos.limite),
+                })}
+              </Text>
+            </View>
+          ) : null}
+        </Tarjeta>
+      </ScrollView>
+    </View>
   );
 }
 
 const estilos = StyleSheet.create({
   pantalla: { flex: 1, backgroundColor: colores.fondo },
-  centrado: { flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: colores.fondo },
-  lista: { padding: espacio.md, paddingBottom: espacio.xl },
-  saludo: { fontSize: 26, fontWeight: '700', color: colores.texto },
-  subSaludo: { fontSize: 14, color: colores.textoSuave, marginTop: 4 },
-  filaStats: { flexDirection: 'row', gap: espacio.sm, marginTop: espacio.lg },
-  stat: {
-    flex: 1,
-    backgroundColor: colores.superficie,
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: colores.borde,
-    padding: espacio.md,
+  scroll: { padding: espacio.md, paddingBottom: 96 },
+
+  marca: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingVertical: espacio.sm,
+    marginBottom: espacio.sm,
   },
-  statValor: { fontSize: 22, fontWeight: '700', color: colores.texto },
-  statEtiqueta: { fontSize: 12, color: colores.textoSuave, marginTop: 2 },
+  marcaTexto: { ...tipo.tituloChico, color: colores.texto },
+  marcaAcento: { color: colores.primario },
+
+  accion: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: colores.superficie,
+    borderRadius: radio.lg,
+    padding: espacio.md,
+    marginBottom: espacio.sm,
+    ...sombra,
+  },
+  accionDestacada: { borderWidth: 1, borderColor: colores.primarioSuave },
+  accionTexto: { flex: 1, marginLeft: espacio.md },
+  accionTitulo: { ...tipo.cuerpoFuerte, color: colores.texto },
+  accionDetalle: { ...tipo.menor, color: colores.textoSuave, marginTop: 3, lineHeight: 16 },
+
+  filaTitulo: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginTop: espacio.lg,
+    marginBottom: espacio.md,
+  },
+  seccion: { ...tipo.seccion, color: colores.texto },
+  verTodo: { ...tipo.secundario, fontWeight: '600', color: colores.primario },
+
+  rejilla: { flexDirection: 'row', flexWrap: 'wrap', gap: espacio.sm },
+  tile: { width: '48%', flexGrow: 1, paddingVertical: espacio.md + 2 },
+  tileValor: { ...tipo.metrica, color: colores.texto },
+  tileEtiqueta: { ...tipo.menor, color: colores.textoSuave, marginTop: 4, lineHeight: 16 },
+
   banner: {
     backgroundColor: colores.primarioSuave,
-    borderRadius: 12,
+    borderRadius: radio.lg,
     padding: espacio.md,
     marginTop: espacio.md,
   },
-  bannerTitulo: { fontSize: 15, fontWeight: '700', color: colores.primario },
-  bannerTexto: { fontSize: 13, color: colores.primario, marginTop: 4, lineHeight: 18 },
-  tituloSeccion: {
-    fontSize: 13,
-    fontWeight: '700',
-    color: colores.textoSuave,
-    textTransform: 'uppercase',
-    letterSpacing: 0.5,
-    marginTop: espacio.lg,
-    marginBottom: espacio.sm,
+  bannerTitulo: { ...tipo.cuerpoFuerte, fontSize: 14, color: '#0B6B4F' },
+  bannerTexto: { ...tipo.menor, color: '#0B6B4F', marginTop: 4, lineHeight: 17 },
+
+  drive: { marginTop: espacio.md },
+  driveFila: { flexDirection: 'row', alignItems: 'center' },
+  driveTexto: { flex: 1, marginLeft: espacio.md },
+  driveTitulo: { ...tipo.cuerpoFuerte, fontSize: 14, color: colores.texto },
+  driveEstado: { flexDirection: 'row', alignItems: 'center', marginTop: 3 },
+  punto: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+    backgroundColor: colores.primario,
+    marginRight: 6,
   },
-  filaImportar: { flexDirection: 'row', gap: espacio.sm, marginTop: espacio.md },
-  botonImportar: {
-    flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: espacio.xs,
-    backgroundColor: colores.superficie,
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: colores.borde,
-    paddingVertical: espacio.md,
-  },
-  importarIcono: { fontSize: 16 },
-  importarTexto: { fontSize: 13, fontWeight: '600', color: colores.texto },
-  vacio: {
-    fontSize: 14,
-    color: colores.textoSuave,
-    textAlign: 'center',
-    lineHeight: 20,
-    marginTop: espacio.lg,
-  },
+  driveDetalle: { ...tipo.menor, color: colores.textoSuave },
+  driveUso: { marginTop: espacio.md },
+  driveEspacio: { ...tipo.menor, color: colores.textoSuave, marginTop: espacio.sm },
 });

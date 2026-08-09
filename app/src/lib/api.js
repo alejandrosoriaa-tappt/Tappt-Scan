@@ -55,10 +55,12 @@ export const api = {
       method: 'POST',
       body: JSON.stringify({ anotaciones }),
     }),
-  gastos: () => request('/api/documentos/gastos'),
+  gastos: (mes) => request(`/api/documentos/gastos${mes ? `?mes=${mes}` : ''}`),
+  resumen: () => request('/api/documentos/resumen'),
   borrarDocumento: (id) => request(`/api/documentos/${id}`, { method: 'DELETE' }),
 
   urlConectarDrive: () => request('/api/drive/conectar'),
+  usoDrive: () => request('/api/drive/uso'),
   carpetas: (carpeta) =>
     request(`/api/drive/carpetas${carpeta ? `?carpeta=${carpeta}` : ''}`),
 };

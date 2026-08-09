@@ -141,7 +141,7 @@ const estilos = StyleSheet.create({
     marginHorizontal: espacio.md,
     borderRadius: 12,
     borderWidth: 1,
-    borderColor: colores.borde,
+    borderColor: colores.divisor,
     backgroundColor: '#FFFFFF',
     overflow: 'hidden',
   },

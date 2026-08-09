@@ -126,6 +126,25 @@ async function listarCarpeta(tokens, carpetaId) {
   }));
 }
 
+// Cuota de almacenamiento del usuario, para la barra de "6.2 GB de 15 GB".
+// `about.get` está permitido con el scope drive.file.
+async function usoDeAlmacenamiento(tokens) {
+  const auth = oauthClient(tokens);
+  const drive = google.drive({ version: 'v3', auth });
+
+  const { data } = await drive.about.get({ fields: 'storageQuota' });
+  const cuota = data.storageQuota || {};
+
+  const limite = Number(cuota.limit) || null;
+  const usado = Number(cuota.usage) || 0;
+
+  return {
+    usado,
+    limite,
+    porcentaje: limite ? Math.round((usado / limite) * 100) : null,
+  };
+}
+
 async function uploadFile(tokens, { folderId, name, mimeType, buffer }) {
   const auth = oauthClient(tokens);
   const drive = google.drive({ version: 'v3', auth });
@@ -157,6 +176,7 @@ module.exports = {
   ensureEstructura,
   ensureRuta,
   listarCarpeta,
+  usoDeAlmacenamiento,
   uploadFile,
   downloadFile,
   ROOT_FOLDER_NAME,
