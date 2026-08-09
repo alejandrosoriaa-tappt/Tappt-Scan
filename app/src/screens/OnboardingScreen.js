@@ -4,12 +4,14 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import * as WebBrowser from 'expo-web-browser';
 import { api } from '../lib/api';
 import { useSesion } from '../context/SesionContext';
+import { useIdioma } from '../i18n';
 import { colores, espacio } from '../theme';
 
 // Dos conexiones antes de poder escanear: el número de WhatsApp (por código
 // de un solo uso) y el Google Drive donde vivirán los archivos.
 export default function OnboardingScreen() {
   const { cuenta, refrescarCuenta, cerrarSesion } = useSesion();
+  const { t } = useIdioma();
   const [codigo, setCodigo] = useState(null);
   const [cargando, setCargando] = useState(false);
 
@@ -19,7 +21,7 @@ export default function OnboardingScreen() {
       const { codigo } = await api.codigoWhatsapp();
       setCodigo(codigo);
     } catch (err) {
-      Alert.alert('No pudimos generar el código', err.message);
+      Alert.alert(t('noSePudo'), err.message);
     } finally {
       setCargando(false);
     }
@@ -32,7 +34,7 @@ export default function OnboardingScreen() {
       await WebBrowser.openAuthSessionAsync(url);
       await refrescarCuenta();
     } catch (err) {
-      Alert.alert('No pudimos conectar tu Drive', err.message);
+      Alert.alert(t('noSePudo'), err.message);
     } finally {
       setCargando(false);
     }
@@ -44,29 +46,28 @@ export default function OnboardingScreen() {
   return (
     <SafeAreaView style={estilos.pantalla}>
       <ScrollView contentContainerStyle={estilos.contenido}>
-        <Text style={estilos.titulo}>Ya casi</Text>
+        <Text style={estilos.titulo}>{t('yaCasi')}</Text>
         <Text style={estilos.subtitulo}>
-          Dos pasos y puedes empezar a escanear desde WhatsApp.
+          {t('yaCasiDetalle')}
         </Text>
 
         <View style={estilos.paso}>
           <View style={estilos.pasoEncabezado}>
             <Text style={estilos.pasoNumero}>1</Text>
-            <Text style={estilos.pasoTitulo}>Conecta tu WhatsApp</Text>
+            <Text style={estilos.pasoTitulo}>{t('conectaWhatsapp')}</Text>
             {whatsappListo ? <Text style={estilos.listo}>✓</Text> : null}
           </View>
 
           {whatsappListo ? (
-            <Text style={estilos.pasoTexto}>Conectado: {cuenta.whatsapp}</Text>
+            <Text style={estilos.pasoTexto}>{t('conectado', { valor: cuenta.whatsapp })}</Text>
           ) : codigo ? (
             <View>
               <Text style={estilos.codigo}>{codigo}</Text>
               <Text style={estilos.pasoTexto}>
-                Manda este código por WhatsApp a TapptScan desde el número que quieres
-                conectar. Vence en 15 minutos.
+                {t('codigoInstrucciones')}
               </Text>
               <TouchableOpacity onPress={refrescarCuenta}>
-                <Text style={estilos.enlace}>Ya lo mandé, verificar</Text>
+                <Text style={estilos.enlace}>{t('yaLoMande')}</Text>
               </TouchableOpacity>
             </View>
           ) : (
@@ -76,7 +77,7 @@ export default function OnboardingScreen() {
               disabled={cargando}
               activeOpacity={0.8}
             >
-              <Text style={estilos.botonTexto}>Generar código</Text>
+              <Text style={estilos.botonTexto}>{t('generarCodigo')}</Text>
             </TouchableOpacity>
           )}
         </View>
@@ -84,19 +85,18 @@ export default function OnboardingScreen() {
         <View style={estilos.paso}>
           <View style={estilos.pasoEncabezado}>
             <Text style={estilos.pasoNumero}>2</Text>
-            <Text style={estilos.pasoTitulo}>Conecta tu Google Drive</Text>
+            <Text style={estilos.pasoTitulo}>{t('conectaDrive')}</Text>
             {driveListo ? <Text style={estilos.listo}>✓</Text> : null}
           </View>
 
           {driveListo ? (
             <Text style={estilos.pasoTexto}>
-              Listo. Creamos la carpeta TapptScan con sus subcarpetas.
+              {t('driveListo')}
             </Text>
           ) : (
             <View>
               <Text style={estilos.pasoTexto}>
-                Ahí se guardan tus documentos. Nosotros solo guardamos sus datos para que
-                puedas buscarlos.
+                {t('driveDetalle')}
               </Text>
               <TouchableOpacity
                 style={estilos.boton}
@@ -104,14 +104,14 @@ export default function OnboardingScreen() {
                 disabled={cargando}
                 activeOpacity={0.8}
               >
-                <Text style={estilos.botonTexto}>Conectar Drive</Text>
+                <Text style={estilos.botonTexto}>{t('conectarDrive')}</Text>
               </TouchableOpacity>
             </View>
           )}
         </View>
 
         <TouchableOpacity onPress={cerrarSesion}>
-          <Text style={estilos.salir}>Cerrar sesión</Text>
+          <Text style={estilos.salir}>{t('cerrarSesion')}</Text>
         </TouchableOpacity>
       </ScrollView>
     </SafeAreaView>

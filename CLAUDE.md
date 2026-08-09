@@ -35,8 +35,11 @@ organizar) se hace en la app.
 - IA: Anthropic (Claude, visión) para clasificar/extraer — `services/vision.js`.
 - Mensajería: WhatsApp Cloud API (Meta Graph v19) — `services/whatsapp.js`.
 - Almacenamiento: Google Drive del usuario vía OAuth — `services/drive.js`.
-- Pagos: MercadoPago (planes Personal/Negocio), cobro fuera de la app nativa
-  para evitar comisión de las tiendas (mismo patrón que `tappt-broker`).
+- Pagos: **Stripe Checkout** (planes Personal/Negocio), cobro fuera de la app
+  nativa para evitar la comisión de las tiendas. Multi-moneda (mxn/usd/eur)
+  para poder salir a otros países sin tocar código.
+- Idiomas: español e inglés, en la app y en el bot (`services/i18n.js` y
+  `app/src/i18n/`). El idioma del usuario vive en `scan_users.idioma`.
 
 ## Comandos
 
@@ -75,11 +78,14 @@ credenciales con otra vertical).
   y horneado de anotaciones.
 - `routes/drive.js` — inicio de OAuth, callback (guarda tokens y crea
   carpetas) y listado de carpetas para el explorador.
-- `routes/pagos.js` — webhook de MercadoPago; al aprobarse sube el plan.
+- `routes/pagos.js` — webhook de Stripe. **Verifica la firma** con
+  `STRIPE_WEBHOOK_SECRET`; por eso `server.js` monta `express.raw` en esa
+  ruta antes del parser JSON. Es idempotente ante reintentos.
 - `services/auth.js` — valida el JWT de Supabase y da de alta al usuario
   la primera vez (`requireAuth` deja el usuario en `req.usuario`).
 - `services/planes.js` — límites por plan (gratis: 5/mes) y conteo mensual.
-- `services/mercadopago.js` — genera el link de pago y consulta el estado.
+- `services/stripe.js` — crea la sesión de Checkout y verifica los webhooks.
+- `services/i18n.js` — textos del bot de WhatsApp y detección de idioma.
 - `services/procesarDocumento.js` — tubería compartida (visión → Drive →
   DB) que usan los tres caminos de entrada.
 - `services/imagen.js` — detección de las esquinas del documento (Otsu +
@@ -127,6 +133,9 @@ App nativa (`app/`, Expo / React Native, JS sin TypeScript):
 - `src/lib/importar.js` — importación desde archivos del dispositivo
   (`expo-document-picker`) o desde la galería (`expo-image-picker`).
 - `src/components/FirmaPad.js` — lienzo de firma en WebView; devuelve PNG.
+- `src/i18n/` — `textos.js` (catálogo es/en) y el proveedor con `useIdioma()`.
+  El idioma sale del dispositivo, el usuario lo puede cambiar en Ajustes, y
+  se sincroniza al backend para que el bot le hable igual.
 - `src/hooks/useCargar.js`, `src/components/DocumentoCard.js`, `src/theme.js`.
 
 **Navegación:** tres puertas — sin sesión → Login; con sesión pero sin Drive
@@ -137,15 +146,16 @@ conectado → Onboarding; todo listo → tabs.
 
 ## Modelo de negocio (referencia)
 
-| Plan | Precio | Incluye |
-|---|---|---|
-| Gratis | $0 | 5 escaneos/mes, marca de agua, sin edición de PDF ni firmas |
-| Personal | $299 MXN/año | Escaneos ilimitados, edición de PDF + firmas |
-| Negocio | $499 MXN/año | + control de gastos automático, multi-usuario, recordatorios |
+| Plan | MXN | USD | EUR | Incluye |
+|---|---|---|---|---|
+| Gratis | $0 | $0 | €0 | 5 escaneos/mes, sin edición de PDF ni firmas |
+| Personal | $299 | $19 | €18 | Escaneos ilimitados, edición de PDF + firmas |
+| Negocio | $499 | $29 | €28 | + control de gastos, multi-usuario, recordatorios |
 
-Cobro por WhatsApp (link de MercadoPago), nunca dentro de la app nativa.
-El webhook de MercadoPago actualiza `scan_users.plan`; app y bot solo
-lo consultan.
+Precios en `services/planes.js` (`PRECIOS`): agregar una moneda ahí basta
+para vender en otro país. Cobro por WhatsApp (link de Stripe Checkout),
+nunca dentro de la app nativa. El webhook actualiza `scan_users.plan`; app
+y bot solo lo consultan.
 
 ## Convenciones
 
@@ -184,4 +194,9 @@ Pendientes de código:
   `/api/documentos/gastos` ya existe; falta la pantalla y el Google Sheet
   en la carpeta del usuario.
 - Refrescar el token de Google cuando expire (hoy se guarda tal cual).
+- **Idioma:** solo es/en. Para agregar otro, añadir su clave a
+  `services/i18n.js` y `app/src/i18n/textos.js` — lo que falte cae al
+  español, así que una traducción parcial degrada en vez de romper.
+- **Moneda:** la app no deja elegirla todavía; se usa la del usuario o
+  `STRIPE_MONEDA`. El endpoint `PUT /api/cuenta/preferencias` ya la acepta.
 - Recordatorios de vencimiento (plan Negocio) y multi-usuario.

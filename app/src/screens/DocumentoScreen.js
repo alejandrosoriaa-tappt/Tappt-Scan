@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { View, Text, ScrollView, TouchableOpacity, StyleSheet, Alert, Linking } from 'react-native';
 import { api } from '../lib/api';
+import { useIdioma } from '../i18n';
 import { colores, porTipo, espacio } from '../theme';
 
 function Campo({ etiqueta, valor }) {
@@ -16,6 +17,7 @@ export default function DocumentoScreen({ route, navigation }) {
   const { documento } = route.params;
   const meta = porTipo[documento.tipo] || porTipo.otro;
   const [abriendo, setAbriendo] = useState(false);
+  const { t } = useIdioma();
 
   // El original vive en Drive; el backend nos manda la primera página ya
   // lista para mostrar (rasterizada si es PDF).
@@ -25,7 +27,7 @@ export default function DocumentoScreen({ route, navigation }) {
       const paginaInicial = await api.pagina(documento.id, 0);
       navigation.navigate('Editor', { documento, paginaInicial });
     } catch (err) {
-      Alert.alert('No pudimos abrir el editor', err.message);
+      Alert.alert(t('noSePudo'), err.message);
     } finally {
       setAbriendo(false);
     }
@@ -38,13 +40,13 @@ export default function DocumentoScreen({ route, navigation }) {
         <Text style={estilos.nombreArchivo}>{documento.nombre_archivo}</Text>
       </View>
 
-      <Text style={estilos.tituloSeccion}>Datos extraídos</Text>
+      <Text style={estilos.tituloSeccion}>{t('datosExtraidos')}</Text>
       <View style={estilos.tarjeta}>
-        <Campo etiqueta="Tipo" valor={meta.etiqueta} />
-        <Campo etiqueta="Emisor" valor={documento.emisor} />
-        <Campo etiqueta="Fecha" valor={documento.fecha} />
+        <Campo etiqueta={t('tipo')} valor={t(meta.clave)} />
+        <Campo etiqueta={t('emisor')} valor={documento.emisor} />
+        <Campo etiqueta={t('fecha')} valor={documento.fecha} />
         <Campo
-          etiqueta="Monto"
+          etiqueta={t('monto')}
           valor={
             documento.monto != null
               ? `$${Number(documento.monto).toLocaleString('es-MX', {
@@ -53,35 +55,34 @@ export default function DocumentoScreen({ route, navigation }) {
               : null
           }
         />
-        <Campo etiqueta="Carpeta" valor={meta.carpeta} />
+        <Campo etiqueta={t('carpeta')} valor={meta.carpeta} />
         <Campo
-          etiqueta="Formato"
+          etiqueta={t('formato')}
           valor={
             documento.mime_type === 'application/pdf'
-              ? `PDF · ${documento.paginas || 1} ${documento.paginas > 1 ? 'páginas' : 'página'}`
-              : 'Imagen'
+              ? `PDF · ${documento.paginas || 1} ${documento.paginas > 1 ? t('paginasPlural') : t('paginaSingular')}`
+              : t('imagen')
           }
         />
       </View>
 
-      <Text style={estilos.tituloSeccion}>Acciones</Text>
+      <Text style={estilos.tituloSeccion}>{t('acciones')}</Text>
       <View style={estilos.acciones}>
         <TouchableOpacity style={estilos.boton} onPress={abrirEditor} disabled={abriendo}>
           <Text style={estilos.botonTexto}>
-            {abriendo ? 'Abriendo…' : 'Editar y firmar'}
+            {abriendo ? t('abriendo') : t('editarFirmar')}
           </Text>
         </TouchableOpacity>
         <TouchableOpacity
           style={[estilos.boton, estilos.botonPrimario]}
           onPress={() => Linking.openURL(documento.drive_link)}
         >
-          <Text style={[estilos.botonTexto, estilos.botonTextoPrimario]}>Abrir en Drive</Text>
+          <Text style={[estilos.botonTexto, estilos.botonTextoPrimario]}>{t('abrirEnDrive')}</Text>
         </TouchableOpacity>
       </View>
 
       <Text style={estilos.nota}>
-        Este archivo vive en tu Google Drive. Nosotros solo guardamos sus datos para
-        que puedas buscarlo.
+        {t('notaPrivacidad')}
       </Text>
     </ScrollView>
   );

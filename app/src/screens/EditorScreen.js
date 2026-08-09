@@ -17,22 +17,24 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import * as ImagePicker from 'expo-image-picker';
 import FirmaPad from '../components/FirmaPad';
 import { api } from '../lib/api';
+import { useIdioma } from '../i18n';
 import { colores, espacio } from '../theme';
 
 const EMOJIS = ['✅', '❌', '⭐', '🔴', '➡️', '📌', '✍️', '⚠️'];
 
 // Herramientas: qué se coloca al tocar el documento.
 const HERRAMIENTAS = [
-  { id: 'texto', etiqueta: 'Texto', icono: 'T' },
-  { id: 'firma', etiqueta: 'Firma', icono: '✍️' },
-  { id: 'emoji', etiqueta: 'Emoji', icono: '☺' },
-  { id: 'imagen', etiqueta: 'Imagen', icono: '🖼' },
-  { id: 'tapar', etiqueta: 'Tapar', icono: '▭' },
+  { id: 'texto', icono: 'T' },
+  { id: 'firma', icono: '✍️' },
+  { id: 'emoji', icono: '☺' },
+  { id: 'imagen', icono: '🖼' },
+  { id: 'tapar', icono: '▭' },
 ];
 
 export default function EditorScreen({ route, navigation }) {
   const { documento, paginaInicial } = route.params;
 
+  const { t } = useIdioma();
   const [herramienta, setHerramienta] = useState('texto');
   const [anotaciones, setAnotaciones] = useState([]);
   const [lienzo, setLienzo] = useState({ ancho: 1, alto: 1 });
@@ -52,7 +54,7 @@ export default function EditorScreen({ route, navigation }) {
     api
       .pagina(documento.id, pagina)
       .then((datos) => !cancelado && setVista(datos))
-      .catch((err) => !cancelado && Alert.alert('No pudimos abrir la página', err.message))
+      .catch((err) => !cancelado && Alert.alert(t('noSePudo'), err.message))
       .finally(() => !cancelado && setCargandoPagina(false));
 
     return () => {
@@ -110,7 +112,7 @@ export default function EditorScreen({ route, navigation }) {
 
   const guardar = async () => {
     if (!anotaciones.length) {
-      Alert.alert('Sin cambios', 'Agrega algo al documento antes de guardar.');
+      Alert.alert(t('sinCambios'), t('sinCambiosDetalle'));
       return;
     }
 
@@ -119,15 +121,15 @@ export default function EditorScreen({ route, navigation }) {
       const { nombre, driveLink, omitidas } = await api.editar(documento.id, anotaciones);
 
       const aviso = omitidas?.length
-        ? `\n\nOjo: ${omitidas.length} texto(s) no se pudieron dibujar porque la fuente no tiene esos caracteres.`
+        ? `\n\n${t('avisoOmitidas', { n: omitidas.length })}`
         : '';
 
-      Alert.alert('Guardado', `Se guardó "${nombre}" en tu Drive.${aviso}`, [
-        { text: 'Ver en Drive', onPress: () => Linking.openURL(driveLink) },
-        { text: 'Listo', onPress: () => navigation.goBack() },
+      Alert.alert(t('guardado'), `${nombre}${aviso}`, [
+        { text: t('abrirEnDrive'), onPress: () => Linking.openURL(driveLink) },
+        { text: t('listo'), onPress: () => navigation.goBack() },
       ]);
     } catch (err) {
-      Alert.alert('No se pudo guardar', err.message);
+      Alert.alert(t('noSePudo'), err.message);
     } finally {
       setGuardando(false);
     }
@@ -211,7 +213,7 @@ export default function EditorScreen({ route, navigation }) {
               <Text style={[estilos.flecha, pagina === 0 && estilos.flechaInactiva]}>‹</Text>
             </TouchableOpacity>
             <Text style={estilos.paginaTexto}>
-              Página {pagina + 1} de {totalPaginas}
+              {t('pagina', { n: pagina + 1, total: totalPaginas })}
             </Text>
             <TouchableOpacity
               onPress={() => setPagina((p) => Math.min(totalPaginas - 1, p + 1))}
@@ -225,7 +227,7 @@ export default function EditorScreen({ route, navigation }) {
         ) : null}
 
         <Text style={estilos.pista}>
-          Elige una herramienta y toca el documento donde quieras colocarla.
+          {t('eligeHerramienta')}
         </Text>
       </ScrollView>
 
@@ -240,7 +242,7 @@ export default function EditorScreen({ route, navigation }) {
               {h.icono}
             </Text>
             <Text style={[estilos.herramientaEtiqueta, herramienta === h.id && estilos.herramientaTextoActivo]}>
-              {h.etiqueta}
+              {t(h.id)}
             </Text>
           </TouchableOpacity>
         ))}
@@ -248,13 +250,13 @@ export default function EditorScreen({ route, navigation }) {
 
       <View style={estilos.acciones}>
         <TouchableOpacity style={estilos.botonSecundario} onPress={deshacer} disabled={!anotaciones.length}>
-          <Text style={estilos.botonSecundarioTexto}>Deshacer</Text>
+          <Text style={estilos.botonSecundarioTexto}>{t('deshacer')}</Text>
         </TouchableOpacity>
         <TouchableOpacity style={estilos.botonPrimario} onPress={guardar} disabled={guardando}>
           {guardando ? (
             <ActivityIndicator color="#FFFFFF" />
           ) : (
-            <Text style={estilos.botonPrimarioTexto}>Guardar PDF</Text>
+            <Text style={estilos.botonPrimarioTexto}>{t('guardarPdf')}</Text>
           )}
         </TouchableOpacity>
       </View>
@@ -272,7 +274,7 @@ export default function EditorScreen({ route, navigation }) {
           onPress={() => setEmojisAbiertos(false)}
         >
           <View style={estilos.hojaEmojis}>
-            <Text style={estilos.tituloModal}>Elige un signo</Text>
+            <Text style={estilos.tituloModal}>{t('eligeSigno')}</Text>
             <View style={estilos.rejilla}>
               {EMOJIS.map((emoji) => (
                 <TouchableOpacity
@@ -288,8 +290,7 @@ export default function EditorScreen({ route, navigation }) {
               ))}
             </View>
             <Text style={estilos.notaModal}>
-              Los emojis a color se ven en pantalla, pero en el PDF salen en negro salvo que
-              se incrusten como imagen.
+              {t('notaEmojis')}
             </Text>
           </View>
         </TouchableOpacity>
@@ -298,18 +299,18 @@ export default function EditorScreen({ route, navigation }) {
       <Modal visible={textoAbierto} transparent animationType="fade">
         <View style={estilos.fondoModal}>
           <View style={estilos.hojaTexto}>
-            <Text style={estilos.tituloModal}>Escribe el texto</Text>
+            <Text style={estilos.tituloModal}>{t('escribeTexto')}</Text>
             <TextInput
               style={estilos.input}
               value={textoNuevo}
               onChangeText={setTextoNuevo}
-              placeholder="Tu texto"
+              placeholder={t('tuTexto')}
               placeholderTextColor={colores.textoSuave}
               autoFocus
             />
             <View style={estilos.accionesModal}>
               <TouchableOpacity onPress={() => setTextoAbierto(false)}>
-                <Text style={estilos.cancelar}>Cancelar</Text>
+                <Text style={estilos.cancelar}>{t('cancelar')}</Text>
               </TouchableOpacity>
               <TouchableOpacity
                 onPress={() => {
@@ -319,7 +320,7 @@ export default function EditorScreen({ route, navigation }) {
                   setTextoAbierto(false);
                 }}
               >
-                <Text style={estilos.aceptar}>Colocar</Text>
+                <Text style={estilos.aceptar}>{t('colocar')}</Text>
               </TouchableOpacity>
             </View>
           </View>

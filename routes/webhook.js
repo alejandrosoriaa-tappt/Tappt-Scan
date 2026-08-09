@@ -5,8 +5,9 @@ const whatsapp = require('../services/whatsapp');
 const procesarDocumento = require('../services/procesarDocumento');
 const linking = require('../services/linking');
 const planes = require('../services/planes');
-const mercadopago = require('../services/mercadopago');
+const stripe = require('../services/stripe');
 const supabase = require('../services/supabase');
+const { t, detectarIdioma } = require('../services/i18n');
 
 // Verificación del webhook (Meta llama a esto al configurar la app).
 router.get('/', (req, res) => {
@@ -20,7 +21,7 @@ router.get('/', (req, res) => {
   return res.sendStatus(403);
 });
 
-// Eventos entrantes: imagen, texto, botones.
+// Eventos entrantes: imagen, documento, texto, botones.
 router.post('/', async (req, res) => {
   res.sendStatus(200); // ack inmediato, Meta reintenta si tardamos
 
@@ -47,30 +48,41 @@ router.post('/', async (req, res) => {
   }
 });
 
-// Fotos y PDFs reenviados comparten todo: mismas validaciones, misma
-// tubería. Solo cambia el tipo de medio que llega.
-async function recibirArchivo(from, medio, mimePorDefecto) {
-  const { data: user } = await supabase
+async function traerUsuario(from) {
+  const { data } = await supabase
     .from('scan_users')
     .select('*')
     .eq('whatsapp_phone', from)
     .maybeSingle();
+  return data;
+}
+
+// El idioma del usuario manda; si aún no tiene, se intenta adivinar del
+// mensaje y se guarda para no volver a adivinar.
+async function idiomaDe(usuario, texto = null) {
+  if (usuario?.idioma) return usuario.idioma;
+
+  const detectado = detectarIdioma(texto);
+  if (detectado && usuario) {
+    await supabase.from('scan_users').update({ idioma: detectado }).eq('id', usuario.id);
+  }
+  return detectado || 'es';
+}
+
+// Fotos y PDFs reenviados comparten todo: mismas validaciones, misma
+// tubería. Solo cambia el tipo de medio que llega.
+async function recibirArchivo(from, medio, mimePorDefecto) {
+  const user = await traerUsuario(from);
+  const idioma = await idiomaDe(user);
 
   if (!user || !user.drive_tokens) {
-    await whatsapp.sendText(
-      from,
-      'Todavía no tienes tu Google Drive conectado. Baja la app de TapptScan para conectarlo y guardar tus documentos automáticamente.'
-    );
+    await whatsapp.sendText(from, t(idioma, 'sinDrive'));
     return;
   }
 
   const cupo = await planes.puedeEscanear(user);
   if (!cupo.permitido) {
-    await whatsapp.sendText(
-      from,
-      `Ya usaste tus ${cupo.limite} escaneos gratis de este mes. Pásate al plan Personal ` +
-        `y escanea sin límite — escríbeme "quiero personal" y te mando el link.`
-    );
+    await whatsapp.sendText(from, t(idioma, 'limite', { limite: cupo.limite }));
     return;
   }
 
@@ -84,14 +96,17 @@ async function recibirArchivo(from, medio, mimePorDefecto) {
     medio.filename || null
   );
 
-  const detallePaginas = paginas > 1 ? ` (${paginas} páginas)` : '';
   await whatsapp.sendButtons(
     from,
-    `Guardé "${nombreArchivo}"${detallePaginas} en ${nombreCarpeta}. ¿Todo bien?`,
+    t(idioma, 'guardado', {
+      archivo: nombreArchivo,
+      carpeta: nombreCarpeta,
+      paginas: paginas > 1 ? t(idioma, 'paginas', { n: paginas }) : '',
+    }),
     [
-      { id: 'ok', title: 'Guardar' },
-      { id: 'app', title: 'Editar en la app' },
-      { id: 'otra_cosa', title: 'Es otra cosa' },
+      { id: 'ok', title: t(idioma, 'botonGuardar') },
+      { id: 'app', title: t(idioma, 'botonApp') },
+      { id: 'otra_cosa', title: t(idioma, 'botonOtra') },
     ]
   );
 }
@@ -103,59 +118,52 @@ const handleImage = (from, image) => recibirArchivo(from, image, 'image/jpeg');
 async function handleDocument(from, documento) {
   const mime = documento.mime_type || '';
   if (!mime.includes('pdf') && !mime.startsWith('image/')) {
-    await whatsapp.sendText(
-      from,
-      'Por ahora solo puedo con PDF e imágenes. Reenvíame el documento en alguno de esos formatos.'
-    );
+    const idioma = await idiomaDe(await traerUsuario(from));
+    await whatsapp.sendText(from, t(idioma, 'formatoNoSoportado'));
     return;
   }
 
   await recibirArchivo(from, documento, 'application/pdf');
 }
 
+// Intención de compra, en español o inglés.
+const QUIERE_PLAN = /(quiero|dame|activar|i want|upgrade to|get)\s+(el\s+)?(plan\s+)?(personal|negocio|business)/i;
+
 async function handleText(from, text) {
   const limpio = text.trim();
+  const user = await traerUsuario(from);
+  const idioma = await idiomaDe(user, limpio);
 
-  if (/quiero (el plan )?(personal|negocio)/i.test(limpio)) {
-    const plan = /negocio/i.test(limpio) ? 'negocio' : 'personal';
-    const { data: user } = await supabase
-      .from('scan_users')
-      .select('*')
-      .eq('whatsapp_phone', from)
-      .maybeSingle();
+  if (QUIERE_PLAN.test(limpio)) {
+    const plan = /negocio|business/i.test(limpio) ? 'negocio' : 'personal';
 
     if (!user) {
-      await whatsapp.sendText(from, 'Primero conecta tu cuenta desde la app de TapptScan.');
+      await whatsapp.sendText(from, t(idioma, 'primeroApp'));
       return;
     }
 
-    const link = await mercadopago.crearLinkDePago(user, plan);
-    await whatsapp.sendText(from, `Aquí está tu link para activar el plan ${plan}:\n${link}`);
+    const link = await stripe.crearLinkDePago(user, plan);
+    await whatsapp.sendText(from, t(idioma, 'linkPago', { plan, link }));
     return;
   }
 
   if (/^\d{6}$/.test(limpio)) {
-    const userId = await linking.redeemLinkCode(text.trim(), from);
-    if (userId) {
-      await whatsapp.sendText(from, 'Listo, tu WhatsApp quedó conectado a tu cuenta de TapptScan.');
-    } else {
-      await whatsapp.sendText(from, 'Ese código no es válido o ya expiró.');
-    }
+    const userId = await linking.redeemLinkCode(limpio, from);
+    await whatsapp.sendText(from, t(idioma, userId ? 'codigoOk' : 'codigoMal'));
     return;
   }
 
-  await whatsapp.sendText(
-    from,
-    'Hola, soy TapptScan. Mándame la foto de un documento y lo guardo directo en tu Google Drive.'
-  );
+  await whatsapp.sendText(from, t(idioma, 'bienvenida'));
 }
 
 async function handleButton(from, interactive) {
   const id = interactive?.button_reply?.id;
+  const idioma = await idiomaDe(await traerUsuario(from));
+
   if (id === 'app') {
-    await whatsapp.sendText(from, 'Ábrelo en la app de TapptScan para verlo, editarlo o firmarlo.');
+    await whatsapp.sendText(from, t(idioma, 'verApp'));
   } else if (id === 'otra_cosa') {
-    await whatsapp.sendText(from, 'Ok, dime qué tipo de documento es o mándame otra foto.');
+    await whatsapp.sendText(from, t(idioma, 'otraCosa'));
   }
 }
 

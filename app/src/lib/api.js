@@ -28,6 +28,8 @@ async function request(ruta, opciones = {}) {
 export const api = {
   cuenta: () => request('/api/cuenta'),
   codigoWhatsapp: () => request('/api/cuenta/codigo-whatsapp', { method: 'POST' }),
+  preferencias: (cambios) =>
+    request('/api/cuenta/preferencias', { method: 'PUT', body: JSON.stringify(cambios) }),
   upgrade: (plan) =>
     request('/api/cuenta/upgrade', { method: 'POST', body: JSON.stringify({ plan }) }),
 

@@ -2,6 +2,7 @@ import React, { useRef } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, Modal } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { WebView } from 'react-native-webview';
+import { useIdioma } from '../i18n';
 import { colores, espacio } from '../theme';
 
 // Lienzo de firma dentro de un WebView: el trazo a dedo se maneja mucho
@@ -77,6 +78,7 @@ const HTML = `<!doctype html><html><head>
 </script></body></html>`;
 
 export default function FirmaPad({ visible, onCerrar, onFirmar }) {
+  const { t } = useIdioma();
   const web = useRef(null);
 
   const recibir = (evento) => {
@@ -92,11 +94,11 @@ export default function FirmaPad({ visible, onCerrar, onFirmar }) {
       <SafeAreaView style={estilos.pantalla}>
         <View style={estilos.encabezado}>
           <TouchableOpacity onPress={onCerrar}>
-            <Text style={estilos.cancelar}>Cancelar</Text>
+            <Text style={estilos.cancelar}>{t('cancelar')}</Text>
           </TouchableOpacity>
-          <Text style={estilos.titulo}>Firma aquí</Text>
+          <Text style={estilos.titulo}>{t('firmaAqui')}</Text>
           <TouchableOpacity onPress={() => web.current?.injectJavaScript('window.exportar();true;')}>
-            <Text style={estilos.listo}>Listo</Text>
+            <Text style={estilos.listo}>{t('listo')}</Text>
           </TouchableOpacity>
         </View>
 
@@ -114,7 +116,7 @@ export default function FirmaPad({ visible, onCerrar, onFirmar }) {
           onPress={() => web.current?.injectJavaScript('window.limpiar();true;')}
           style={estilos.limpiar}
         >
-          <Text style={estilos.limpiarTexto}>Borrar y volver a empezar</Text>
+          <Text style={estilos.limpiarTexto}>{t('borrarFirma')}</Text>
         </TouchableOpacity>
       </SafeAreaView>
     </Modal>

@@ -14,11 +14,13 @@ import DocumentoCard from '../components/DocumentoCard';
 import useCargar from '../hooks/useCargar';
 import { api } from '../lib/api';
 import { importarArchivo, importarDeGaleria } from '../lib/importar';
+import { useIdioma } from '../i18n';
 import { useSesion } from '../context/SesionContext';
 import { colores, espacio } from '../theme';
 
 export default function DashboardScreen({ navigation }) {
   const { cuenta, refrescarCuenta } = useSesion();
+  const { t } = useIdioma();
   const documentos = useCargar(() => api.documentos(), []);
   const gastos = useCargar(() => api.gastos(), []);
   const [importando, setImportando] = useState(false);
@@ -34,10 +36,10 @@ export default function DashboardScreen({ navigation }) {
       navigation.navigate('Documento', { documento });
     } catch (err) {
       const mensajes = {
-        limite_alcanzado: 'Ya usaste tus escaneos gratis del mes.',
-        drive_sin_conectar: 'Conecta tu Google Drive para poder guardar documentos.',
+        limite_alcanzado: t('limiteAlcanzado'),
+        drive_sin_conectar: t('driveSinConectar'),
       };
-      Alert.alert('No se pudo importar', mensajes[err.message] || err.message);
+      Alert.alert(t('noSePudo'), mensajes[err.message] || err.message);
     } finally {
       setImportando(false);
     }
@@ -71,19 +73,19 @@ export default function DashboardScreen({ navigation }) {
         }
         ListHeaderComponent={
           <View>
-            <Text style={estilos.saludo}>Hola</Text>
-            <Text style={estilos.subSaludo}>Tus documentos, en tu propio Drive.</Text>
+            <Text style={estilos.saludo}>{t('hola')}</Text>
+            <Text style={estilos.subSaludo}>{t('subSaludo')}</Text>
 
             <View style={estilos.filaStats}>
               <View style={estilos.stat}>
                 <Text style={estilos.statValor}>{documentos.datos?.length ?? 0}</Text>
-                <Text style={estilos.statEtiqueta}>Documentos</Text>
+                <Text style={estilos.statEtiqueta}>{t('documentos')}</Text>
               </View>
               <View style={estilos.stat}>
                 <Text style={estilos.statValor}>
                   ${(gastos.datos?.total ?? 0).toLocaleString('es-MX', { maximumFractionDigits: 0 })}
                 </Text>
-                <Text style={estilos.statEtiqueta}>Gasto del mes</Text>
+                <Text style={estilos.statEtiqueta}>{t('gastoDelMes')}</Text>
               </View>
             </View>
 
@@ -94,10 +96,13 @@ export default function DashboardScreen({ navigation }) {
                 activeOpacity={0.8}
               >
                 <Text style={estilos.bannerTitulo}>
-                  Te {restantes === 1 ? 'queda' : 'quedan'} {Math.max(restantes, 0)} escaneos este mes
+                  {t('escaneosRestantes', {
+                    n: Math.max(restantes, 0),
+                    verbo: restantes === 1 ? t('queda') : t('quedan'),
+                  })}
                 </Text>
                 <Text style={estilos.bannerTexto}>
-                  Pásate a Personal para escaneos ilimitados, edición de PDF y firmas.
+                  {t('upsell')}
                 </Text>
               </TouchableOpacity>
             ) : null}
@@ -111,7 +116,7 @@ export default function DashboardScreen({ navigation }) {
               >
                 <Text style={estilos.importarIcono}>📄</Text>
                 <Text style={estilos.importarTexto}>
-                  {importando ? 'Subiendo…' : 'Importar archivo'}
+                  {importando ? t('subiendo') : t('importarArchivo')}
                 </Text>
               </TouchableOpacity>
               <TouchableOpacity
@@ -121,16 +126,16 @@ export default function DashboardScreen({ navigation }) {
                 activeOpacity={0.8}
               >
                 <Text style={estilos.importarIcono}>🖼️</Text>
-                <Text style={estilos.importarTexto}>Desde galería</Text>
+                <Text style={estilos.importarTexto}>{t('desdeGaleria')}</Text>
               </TouchableOpacity>
             </View>
 
-            <Text style={estilos.tituloSeccion}>Recientes</Text>
+            <Text style={estilos.tituloSeccion}>{t('recientes')}</Text>
           </View>
         }
         ListEmptyComponent={
           <Text style={estilos.vacio}>
-            Todavía no tienes documentos. Mándanos una foto por WhatsApp o usa la cámara.
+            {t('sinDocumentos')}
           </Text>
         }
         renderItem={({ item }) => (

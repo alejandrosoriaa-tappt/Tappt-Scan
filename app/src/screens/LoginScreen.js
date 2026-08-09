@@ -11,9 +11,11 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { supabase } from '../lib/supabase';
+import { useIdioma } from '../i18n';
 import { colores, espacio } from '../theme';
 
 export default function LoginScreen() {
+  const { t } = useIdioma();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [registrando, setRegistrando] = useState(false);
@@ -21,7 +23,7 @@ export default function LoginScreen() {
 
   const enviar = async () => {
     if (!email || !password) {
-      Alert.alert('Faltan datos', 'Escribe tu correo y contraseña.');
+      Alert.alert(t('faltanDatos'), t('faltanDatosDetalle'));
       return;
     }
 
@@ -32,9 +34,9 @@ export default function LoginScreen() {
     setCargando(false);
 
     if (error) {
-      Alert.alert('No pudimos entrar', error.message);
+      Alert.alert(t('noPudimosEntrar'), error.message);
     } else if (registrando) {
-      Alert.alert('Revisa tu correo', 'Te mandamos un link para confirmar tu cuenta.');
+      Alert.alert(t('revisaCorreo'), t('revisaCorreoDetalle'));
     }
   };
 
@@ -46,12 +48,12 @@ export default function LoginScreen() {
       >
         <Text style={estilos.logo}>TapptScan</Text>
         <Text style={estilos.promesa}>
-          Tus documentos no se guardan en nuestros servidores — viven en tu Google Drive.
+          {t('promesa')}
         </Text>
 
         <TextInput
           style={estilos.input}
-          placeholder="Correo"
+          placeholder={t('correo')}
           placeholderTextColor={colores.textoSuave}
           autoCapitalize="none"
           keyboardType="email-address"
@@ -60,7 +62,7 @@ export default function LoginScreen() {
         />
         <TextInput
           style={estilos.input}
-          placeholder="Contraseña"
+          placeholder={t('contrasena')}
           placeholderTextColor={colores.textoSuave}
           secureTextEntry
           value={password}
@@ -74,13 +76,13 @@ export default function LoginScreen() {
           activeOpacity={0.8}
         >
           <Text style={estilos.botonTexto}>
-            {cargando ? 'Un momento…' : registrando ? 'Crear cuenta' : 'Entrar'}
+            {cargando ? t('espera') : registrando ? t('crearCuenta') : t('entrar')}
           </Text>
         </TouchableOpacity>
 
         <TouchableOpacity onPress={() => setRegistrando(!registrando)}>
           <Text style={estilos.alterno}>
-            {registrando ? '¿Ya tienes cuenta? Entra' : '¿Eres nuevo? Crea tu cuenta'}
+            {registrando ? t('yaTienesCuenta') : t('eresNuevo')}
           </Text>
         </TouchableOpacity>
       </KeyboardAvoidingView>

@@ -58,3 +58,12 @@ create index if not exists idx_scan_payments_user on scan_payments(user_id);
 alter table scan_documents add column if not exists mime_type text default 'image/jpeg';
 alter table scan_documents add column if not exists paginas integer not null default 1;
 alter table scan_documents add column if not exists nombre_original text;
+
+-- Stripe e internacionalización (agosto 2026): se reemplaza MercadoPago por
+-- Stripe Checkout y se guarda idioma/moneda por usuario.
+alter table scan_users add column if not exists idioma text;
+alter table scan_users add column if not exists moneda text;
+
+alter table scan_payments add column if not exists session_id text;
+alter table scan_payments add column if not exists moneda text not null default 'mxn';
+alter table scan_payments drop column if exists preference_id;

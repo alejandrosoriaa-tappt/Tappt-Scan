@@ -12,6 +12,7 @@ import DocumentoCard from '../components/DocumentoCard';
 import useCargar from '../hooks/useCargar';
 import { api } from '../lib/api';
 import { colores, porTipo, espacio } from '../theme';
+import { useIdioma } from '../i18n';
 
 const CARPETA_A_TIPO = {
   Identificaciones: 'identificacion',
@@ -22,6 +23,7 @@ const CARPETA_A_TIPO = {
 
 // Explorador de la carpeta TapptScan/ del Drive del usuario.
 export default function DriveScreen({ navigation }) {
+  const { t } = useIdioma();
   const [carpetaAbierta, setCarpetaAbierta] = useState(null);
   const carpetas = useCargar(() => api.carpetas(), []);
   const contenido = useCargar(
@@ -47,7 +49,7 @@ export default function DriveScreen({ navigation }) {
             contenido.cargando ? (
               <ActivityIndicator color={colores.primario} style={{ marginTop: espacio.xl }} />
             ) : (
-              <Text style={estilos.vacio}>Esta carpeta está vacía.</Text>
+              <Text style={estilos.vacio}>{t('carpetaVacia')}</Text>
             )
           }
           renderItem={({ item }) => (
@@ -65,7 +67,7 @@ export default function DriveScreen({ navigation }) {
     <SafeAreaView style={estilos.pantalla} edges={['top']}>
       <View style={estilos.encabezado}>
         <Text style={estilos.titulo}>TapptScan</Text>
-        <Text style={estilos.subtitulo}>En tu Google Drive</Text>
+        <Text style={estilos.subtitulo}>{t('enTuDrive')}</Text>
       </View>
 
       <FlatList
@@ -76,7 +78,7 @@ export default function DriveScreen({ navigation }) {
           carpetas.cargando ? (
             <ActivityIndicator color={colores.primario} style={{ marginTop: espacio.xl }} />
           ) : (
-            <Text style={estilos.vacio}>{carpetas.error || 'Sin carpetas todavía.'}</Text>
+            <Text style={estilos.vacio}>{carpetas.error || t('sinCarpetas')}</Text>
           )
         }
         renderItem={({ item }) => (

@@ -6,9 +6,17 @@ const LIMITES = {
   negocio: Infinity,
 };
 
+// Precios por moneda. Para salir a otros países basta agregar la divisa
+// aquí — Stripe Checkout cobra en la que se le pase.
 const PRECIOS = {
-  personal: { titulo: 'TapptScan Personal (1 año)', monto: 299 },
-  negocio: { titulo: 'TapptScan Negocio (1 año)', monto: 499 },
+  personal: {
+    titulo: { es: 'TapptScan Personal (1 año)', en: 'TapptScan Personal (1 year)' },
+    montos: { mxn: 299, usd: 19, eur: 18 },
+  },
+  negocio: {
+    titulo: { es: 'TapptScan Negocio (1 año)', en: 'TapptScan Business (1 year)' },
+    montos: { mxn: 499, usd: 29, eur: 28 },
+  },
 };
 
 function limiteDe(plan) {

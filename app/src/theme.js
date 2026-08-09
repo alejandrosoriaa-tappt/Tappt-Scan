@@ -13,10 +13,10 @@ export const colores = {
 // Cada tipo de documento tiene su color e ícono para que la lista se lea
 // de un vistazo.
 export const porTipo = {
-  identificacion: { etiqueta: 'Identificación', icono: '🪪', color: '#6366F1', carpeta: 'Identificaciones' },
-  recibo: { etiqueta: 'Recibo', icono: '🧾', color: '#0F766E', carpeta: 'Recibos' },
-  contrato: { etiqueta: 'Contrato', icono: '📄', color: '#B45309', carpeta: 'Contratos' },
-  otro: { etiqueta: 'Otro', icono: '🗂️', color: '#64748B', carpeta: 'Otros' },
+  identificacion: { clave: 'tipoIdentificacion', icono: '🪪', color: '#6366F1', carpeta: 'Identificaciones' },
+  recibo: { clave: 'tipoRecibo', icono: '🧾', color: '#0F766E', carpeta: 'Recibos' },
+  contrato: { clave: 'tipoContrato', icono: '📄', color: '#B45309', carpeta: 'Contratos' },
+  otro: { clave: 'tipoOtro', icono: '🗂️', color: '#64748B', carpeta: 'Otros' },
 };
 
 export const espacio = { xs: 4, sm: 8, md: 16, lg: 24, xl: 32 };

@@ -1,34 +1,52 @@
 const express = require('express');
 const router = express.Router();
 
-const mercadopago = require('../services/mercadopago');
+const stripe = require('../services/stripe');
 const supabase = require('../services/supabase');
 const whatsapp = require('../services/whatsapp');
+const { t } = require('../services/i18n');
 
 const UN_ANIO_MS = 365 * 24 * 60 * 60 * 1000;
 
-// Webhook de MercadoPago: al confirmarse el pago, sube el plan del usuario.
+/**
+ * Webhook de Stripe.
+ *
+ * Necesita el cuerpo CRUDO para verificar la firma, por eso `server.js`
+ * monta `express.raw` en esta ruta antes del parser JSON global.
+ */
 router.post('/webhook', async (req, res) => {
-  res.sendStatus(200); // ack inmediato
+  let evento;
+  try {
+    evento = stripe.verificarEvento(req.body, req.headers['stripe-signature']);
+  } catch (err) {
+    console.error('[pagos] firma inválida', err.message);
+    return res.status(400).send(`firma_invalida: ${err.message}`);
+  }
+
+  res.json({ recibido: true }); // ack inmediato; Stripe reintenta si tardamos
+
+  if (evento.type !== 'checkout.session.completed') return;
 
   try {
-    const paymentId = req.body?.data?.id;
-    if (!paymentId || req.body?.type !== 'payment') return;
+    const sesion = evento.data.object;
+    if (sesion.payment_status !== 'paid') return;
 
-    const pago = await mercadopago.consultarPago(paymentId);
-    if (pago.status !== 'approved') return;
+    const pagoId = sesion.client_reference_id;
+    if (!pagoId) return;
 
     const { data: registro, error } = await supabase
       .from('scan_payments')
       .select('*')
-      .eq('id', pago.external_reference)
+      .eq('id', pagoId)
       .maybeSingle();
     if (error) throw error;
+
+    // Stripe puede reintentar el mismo evento: si ya lo procesamos, salir.
     if (!registro || registro.estado === 'pagado') return;
 
     await supabase
       .from('scan_payments')
-      .update({ estado: 'pagado', payment_id: String(paymentId) })
+      .update({ estado: 'pagado', payment_id: sesion.payment_intent || sesion.id })
       .eq('id', registro.id);
 
     await supabase
@@ -41,18 +59,18 @@ router.post('/webhook', async (req, res) => {
 
     const { data: usuario } = await supabase
       .from('scan_users')
-      .select('whatsapp_phone')
+      .select('whatsapp_phone, idioma')
       .eq('id', registro.user_id)
       .maybeSingle();
 
     if (usuario?.whatsapp_phone) {
       await whatsapp.sendText(
         usuario.whatsapp_phone,
-        `Tu plan ${registro.plan} quedó activo. Ya tienes escaneos ilimitados y edición de PDF.`
+        t(usuario.idioma, 'planActivo', { plan: registro.plan })
       );
     }
   } catch (err) {
-    console.error('[pagos] error procesando webhook', err);
+    console.error('[pagos] error procesando evento', err);
   }
 });
 

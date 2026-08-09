@@ -12,6 +12,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { api } from '../lib/api';
 import { useSesion } from '../context/SesionContext';
+import { useIdioma } from '../i18n';
 import { colores, espacio } from '../theme';
 
 const MARCO_COMPLETO = [
@@ -70,6 +71,7 @@ function Tirador({ indice, esquina, lienzo, onMover }) {
 export default function RecorteScreen({ route, navigation }) {
   const { fotoBase64 } = route.params;
   const { refrescarCuenta } = useSesion();
+  const { t } = useIdioma();
 
   const [esquinas, setEsquinas] = useState(MARCO_COMPLETO);
   const [lienzo, setLienzo] = useState({ ancho: 1, alto: 1 });
@@ -87,10 +89,10 @@ export default function RecorteScreen({ route, navigation }) {
         if (cancelado) return;
         setEsquinas(resultado.esquinas);
         if (!resultado.confiable) {
-          setAviso('No distinguí bien el documento — ajusta las esquinas a mano.');
+          setAviso(t('ajustaAMano'));
         }
       })
-      .catch(() => !cancelado && setAviso('Ajusta las esquinas a mano.'))
+      .catch(() => !cancelado && setAviso(t('ajustaAMano')))
       .finally(() => !cancelado && setDetectando(false));
 
     return () => {
@@ -109,11 +111,11 @@ export default function RecorteScreen({ route, navigation }) {
       navigation.replace('Documento', { documento });
     } catch (err) {
       const mensajes = {
-        limite_alcanzado: 'Ya usaste tus escaneos gratis del mes.',
-        drive_sin_conectar: 'Conecta tu Google Drive para poder guardar documentos.',
-        recorte_demasiado_chico: 'El recorte quedó muy chico. Agranda el marco.',
+        limite_alcanzado: t('limiteAlcanzado'),
+        drive_sin_conectar: t('driveSinConectar'),
+        recorte_demasiado_chico: t('recorteChico'),
       };
-      Alert.alert('No se pudo guardar', mensajes[err.message] || err.message);
+      Alert.alert(t('noSePudo'), mensajes[err.message] || err.message);
     } finally {
       setGuardando(false);
     }
@@ -174,13 +176,13 @@ export default function RecorteScreen({ route, navigation }) {
         {detectando ? (
           <View style={estilos.capaCargando}>
             <ActivityIndicator color="#FFFFFF" />
-            <Text style={estilos.cargandoTexto}>Buscando el documento…</Text>
+            <Text style={estilos.cargandoTexto}>{t('buscandoDocumento')}</Text>
           </View>
         ) : null}
       </View>
 
       <Text style={estilos.pista}>
-        {aviso || 'Arrastra las esquinas para ajustar el recorte.'}
+        {aviso || t('arrastraEsquinas')}
       </Text>
 
       <View style={estilos.acciones}>
@@ -188,7 +190,7 @@ export default function RecorteScreen({ route, navigation }) {
           style={estilos.botonSecundario}
           onPress={() => setEsquinas(MARCO_COMPLETO)}
         >
-          <Text style={estilos.botonSecundarioTexto}>Toda la foto</Text>
+          <Text style={estilos.botonSecundarioTexto}>{t('todaLaFoto')}</Text>
         </TouchableOpacity>
         <TouchableOpacity
           style={estilos.botonPrimario}
@@ -198,7 +200,7 @@ export default function RecorteScreen({ route, navigation }) {
           {guardando ? (
             <ActivityIndicator color="#FFFFFF" />
           ) : (
-            <Text style={estilos.botonPrimarioTexto}>Enderezar y guardar</Text>
+            <Text style={estilos.botonPrimarioTexto}>{t('enderezarGuardar')}</Text>
           )}
         </TouchableOpacity>
       </View>

@@ -1,6 +1,7 @@
 import React from 'react';
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import { colores, porTipo, espacio } from '../theme';
+import { useIdioma } from '../i18n';
 
 function formatoMonto(monto, moneda) {
   if (monto == null) return null;
@@ -9,6 +10,7 @@ function formatoMonto(monto, moneda) {
 }
 
 export default function DocumentoCard({ documento, onPress }) {
+  const { t } = useIdioma();
   const meta = porTipo[documento.tipo] || porTipo.otro;
   const monto = formatoMonto(documento.monto, documento.moneda);
 
@@ -20,10 +22,10 @@ export default function DocumentoCard({ documento, onPress }) {
 
       <View style={estilos.centro}>
         <Text style={estilos.emisor} numberOfLines={1}>
-          {documento.emisor || 'Sin emisor'}
+          {documento.emisor || t('sinEmisor')}
         </Text>
         <Text style={estilos.sub}>
-          {meta.etiqueta} · {documento.fecha}
+          {t(meta.clave)} · {documento.fecha}
         </Text>
       </View>
 

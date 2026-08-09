@@ -2,12 +2,14 @@ import React, { useRef, useState } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, Alert, ActivityIndicator } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { CameraView, useCameraPermissions } from 'expo-camera';
+import { useIdioma } from '../i18n';
 import { colores, espacio } from '../theme';
 
 // Cámara de respaldo: el camino principal sigue siendo WhatsApp, pero la app
 // debe poder escanear por sí sola (requisito de tiendas, guía 4.2 de Apple).
 export default function EscanearScreen({ navigation }) {
   const [permiso, pedirPermiso] = useCameraPermissions();
+  const { t } = useIdioma();
   const [capturando, setCapturando] = useState(false);
   const camara = useRef(null);
 
@@ -22,12 +24,12 @@ export default function EscanearScreen({ navigation }) {
   if (!permiso.granted) {
     return (
       <SafeAreaView style={estilos.centrado}>
-        <Text style={estilos.permisoTitulo}>Necesitamos la cámara</Text>
+        <Text style={estilos.permisoTitulo}>{t('permisoCamara')}</Text>
         <Text style={estilos.permisoTexto}>
-          Para escanear tus documentos desde la app. También puedes mandarlos por WhatsApp.
+          {t('permisoCamaraDetalle')}
         </Text>
         <TouchableOpacity style={estilos.botonPermiso} onPress={pedirPermiso} activeOpacity={0.8}>
-          <Text style={estilos.botonPermisoTexto}>Permitir cámara</Text>
+          <Text style={estilos.botonPermisoTexto}>{t('permitirCamara')}</Text>
         </TouchableOpacity>
       </SafeAreaView>
     );
@@ -43,7 +45,7 @@ export default function EscanearScreen({ navigation }) {
       const foto = await camara.current.takePictureAsync({ quality: 0.8, base64: true });
       navigation.navigate('Recorte', { fotoBase64: foto.base64 });
     } catch (err) {
-      Alert.alert('No se pudo capturar', err.message);
+      Alert.alert(t('noSePudo'), err.message);
     } finally {
       setCapturando(false);
     }
@@ -56,7 +58,7 @@ export default function EscanearScreen({ navigation }) {
       <SafeAreaView style={estilos.capa} edges={['top', 'bottom']}>
         <View style={estilos.visor}>
           <View style={estilos.marco}>
-            <Text style={estilos.marcoTexto}>Coloca el documento dentro del marco</Text>
+            <Text style={estilos.marcoTexto}>{t('colocaDocumento')}</Text>
           </View>
         </View>
 
@@ -70,9 +72,7 @@ export default function EscanearScreen({ navigation }) {
             <View style={[estilos.obturadorInterior, capturando && estilos.obturadorActivo]} />
           </TouchableOpacity>
           <Text style={estilos.ayuda}>
-            {capturando
-              ? 'Tomando la foto…'
-              : 'También puedes mandarnos la foto por WhatsApp y la guardamos igual.'}
+            {capturando ? t('tomandoFoto') : t('tambienWhatsapp')}
           </Text>
         </View>
       </SafeAreaView>

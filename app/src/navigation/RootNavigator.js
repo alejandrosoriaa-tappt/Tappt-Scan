@@ -13,6 +13,7 @@ import RecorteScreen from '../screens/RecorteScreen';
 import LoginScreen from '../screens/LoginScreen';
 import OnboardingScreen from '../screens/OnboardingScreen';
 import { useSesion } from '../context/SesionContext';
+import { useIdioma } from '../i18n';
 import { colores } from '../theme';
 
 const Tab = createBottomTabNavigator();
@@ -21,6 +22,8 @@ const Stack = createNativeStackNavigator();
 const ICONOS = { Inicio: '🏠', Escanear: '📷', Drive: '📁', Ajustes: '⚙️' };
 
 function Tabs() {
+  const { t } = useIdioma();
+
   return (
     <Tab.Navigator
       screenOptions={({ route }) => ({
@@ -30,6 +33,9 @@ function Tabs() {
         tabBarIcon: ({ color }) => (
           <Text style={{ fontSize: 18, color }}>{ICONOS[route.name]}</Text>
         ),
+        // Las rutas conservan su nombre interno en español; solo la
+        // etiqueta visible se traduce.
+        tabBarLabel: t(route.name.toLowerCase()),
       })}
     >
       <Tab.Screen name="Inicio" component={DashboardScreen} />
@@ -42,6 +48,7 @@ function Tabs() {
 
 export default function RootNavigator() {
   const { sesion, cuenta, cargando } = useSesion();
+  const { t } = useIdioma();
 
   if (cargando) {
     return (
@@ -75,17 +82,17 @@ export default function RootNavigator() {
       <Stack.Screen
         name="Documento"
         component={DocumentoScreen}
-        options={{ title: 'Documento', headerTintColor: colores.primario }}
+        options={{ title: t('documento'), headerTintColor: colores.primario }}
       />
       <Stack.Screen
         name="Editor"
         component={EditorScreen}
-        options={{ title: 'Editar', headerTintColor: colores.primario }}
+        options={{ title: t('editar'), headerTintColor: colores.primario }}
       />
       <Stack.Screen
         name="Recorte"
         component={RecorteScreen}
-        options={{ title: 'Ajustar recorte', headerTintColor: colores.primario }}
+        options={{ title: t('ajustarRecorte'), headerTintColor: colores.primario }}
       />
     </Stack.Navigator>
   );
