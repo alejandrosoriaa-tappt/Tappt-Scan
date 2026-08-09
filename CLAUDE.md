@@ -113,7 +113,9 @@ credenciales con otra vertical).
   (`CFE_Agosto_2026_$1,847.pdf`). Valida ámbito y categoría contra un
   catálogo cerrado y limpia razones sociales, para que un modelo que
   alucina no llene el Drive del usuario de carpetas basura.
-- `services/drive.js` — OAuth de Google, crea rutas anidadas bajo
+- `services/drive.js` — OAuth de Google (**solo scope `drive.file`**, ver
+  `docs/GOOGLE-DRIVE.md` — ampliarlo dispara la evaluación de seguridad de
+  Google y atrasa el lanzamiento meses), crea rutas anidadas bajo
   `TapptScan/` (`ensureRuta`), lista carpetas para el explorador y sube o
   baja archivos. Las carpetas **no son fijas**: las crea el clasificador.
 - `services/linking.js` — código de un solo uso que amarra
