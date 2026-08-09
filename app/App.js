@@ -6,7 +6,9 @@ import { aplicarEstilosWeb } from './src/lib/estilosWeb';
 import MarcoWeb from './src/components/MarcoWeb';
 import { IdiomaProvider } from './src/i18n';
 import { SesionProvider } from './src/context/SesionContext';
-import { faltaConfiguracion } from './src/lib/supabase';
+
+// Sin la URL del backend no hay nada que hacer.
+const faltaConfiguracion = !process.env.EXPO_PUBLIC_API_URL;
 import ConfiguracionScreen from './src/screens/ConfiguracionScreen';
 import RootNavigator from './src/navigation/RootNavigator';
 

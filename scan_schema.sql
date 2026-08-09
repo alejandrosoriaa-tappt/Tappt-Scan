@@ -118,3 +118,26 @@ alter table scan_users enable row level security;
 alter table scan_documents enable row level security;
 alter table scan_links enable row level security;
 alter table scan_payments enable row level security;
+
+-- ------------------------------------------------------------- sesiones
+-- Acceso sin correo ni contraseña: la identidad es el número de WhatsApp.
+-- La app genera un código, el usuario lo manda por WhatsApp de un toque, y
+-- el webhook amarra la sesión a ese número. Ver `services/sesiones.js`.
+create table if not exists scan_sesiones (
+  id uuid primary key default gen_random_uuid(),
+  codigo text unique not null,
+  estado text not null default 'pendiente'
+    check (estado in ('pendiente', 'verificado', 'consumido')),
+  user_id uuid references scan_users(id) on delete cascade,
+  expires_at timestamptz not null,
+  created_at timestamptz not null default now()
+);
+
+create index if not exists idx_scan_sesiones_codigo on scan_sesiones(codigo);
+alter table scan_sesiones enable row level security;
+
+-- El id del usuario ya no viene de Supabase Auth: lo genera la base.
+alter table scan_users alter column id set default gen_random_uuid();
+
+-- `scan_links` era el flujo viejo de vinculación por código de 6 dígitos.
+drop table if exists scan_links;

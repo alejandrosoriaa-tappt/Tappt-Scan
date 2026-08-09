@@ -1,18 +1,16 @@
-import { supabase } from './supabase';
+import { leerToken } from './sesion';
 
 const BASE = process.env.EXPO_PUBLIC_API_URL;
 
-// Toda llamada al backend va firmada con el JWT de Supabase.
+// Toda llamada al backend va firmada con el token de TapptScan.
 async function request(ruta, opciones = {}) {
-  const {
-    data: { session },
-  } = await supabase.auth.getSession();
+  const token = await leerToken();
 
   const respuesta = await fetch(`${BASE}${ruta}`, {
     ...opciones,
     headers: {
       'Content-Type': 'application/json',
-      ...(session ? { Authorization: `Bearer ${session.access_token}` } : {}),
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
       ...opciones.headers,
     },
   });
@@ -26,8 +24,12 @@ async function request(ruta, opciones = {}) {
 }
 
 export const api = {
+  // Acceso: la app pide un código y espera a que el usuario lo mande por
+  // WhatsApp. Ninguno de estos dos lleva token todavía.
+  iniciarSesion: () => request('/api/auth/iniciar', { method: 'POST' }),
+  estadoSesion: (codigo) => request(`/api/auth/estado/${codigo}`),
+
   cuenta: () => request('/api/cuenta'),
-  codigoWhatsapp: () => request('/api/cuenta/codigo-whatsapp', { method: 'POST' }),
   preferencias: (cambios) =>
     request('/api/cuenta/preferencias', { method: 'PUT', body: JSON.stringify(cambios) }),
   upgrade: (plan) =>

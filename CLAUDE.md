@@ -99,8 +99,13 @@ credenciales con otra vertical).
 - `routes/pagos.js` — webhook de Stripe. **Verifica la firma** con
   `STRIPE_WEBHOOK_SECRET`; por eso `server.js` monta `express.raw` en esa
   ruta antes del parser JSON. Es idempotente ante reintentos.
-- `services/auth.js` — valida el JWT de Supabase y da de alta al usuario
-  la primera vez (`requireAuth` deja el usuario en `req.usuario`).
+- `services/sesiones.js` — **acceso sin correo ni contraseña**. WhatsApp no
+  deja escribirle primero a quien no te ha escrito salvo con plantilla
+  aprobada, así que el flujo se invierte: la app abre WhatsApp con el código
+  ya escrito, el usuario toca enviar, y el webhook amarra la sesión a ese
+  número. Un toque y cero trámites con Meta.
+- `services/auth.js` — valida el token propio (`requireAuth` deja el usuario
+  en `req.usuario`). **No se usa Supabase Auth**: Supabase es solo la base.
 - `services/planes.js` — límites por plan (gratis: 5/mes) y conteo mensual.
 - `services/stripe.js` — crea la sesión de Checkout y verifica los webhooks.
 - `services/i18n.js` — textos del bot de WhatsApp y detección de idioma.

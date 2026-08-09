@@ -1,32 +1,23 @@
 import React, { useState } from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, Alert, ScrollView } from 'react-native';
+import { View, Text, TouchableOpacity, StyleSheet, Alert, ActivityIndicator } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import * as WebBrowser from 'expo-web-browser';
 import { api } from '../lib/api';
 import { useSesion } from '../context/SesionContext';
 import { useIdioma } from '../i18n';
-import Icono from '../components/Icono';
-import { colores, espacio } from '../theme';
+import Icono, { IconoChip } from '../components/Icono';
+import { colores, espacio, radio, tipo, sombra } from '../theme';
 
-// Dos conexiones antes de poder escanear: el número de WhatsApp (por código
-// de un solo uso) y el Google Drive donde vivirán los archivos.
+/**
+ * Único paso previo a usar la app: conectar Google Drive.
+ *
+ * El número de WhatsApp ya quedó verificado al entrar, así que aquí solo
+ * falta decidir dónde van a vivir los documentos.
+ */
 export default function OnboardingScreen() {
   const { cuenta, refrescarCuenta, cerrarSesion } = useSesion();
   const { t } = useIdioma();
-  const [codigo, setCodigo] = useState(null);
   const [cargando, setCargando] = useState(false);
-
-  const pedirCodigo = async () => {
-    setCargando(true);
-    try {
-      const { codigo } = await api.codigoWhatsapp();
-      setCodigo(codigo);
-    } catch (err) {
-      Alert.alert(t('noSePudo'), err.message);
-    } finally {
-      setCargando(false);
-    }
-  };
 
   const conectarDrive = async () => {
     setCargando(true);
@@ -41,129 +32,87 @@ export default function OnboardingScreen() {
     }
   };
 
-  const whatsappListo = Boolean(cuenta?.whatsapp);
-  const driveListo = Boolean(cuenta?.driveConectado);
-
   return (
     <SafeAreaView style={estilos.pantalla}>
-      <ScrollView contentContainerStyle={estilos.contenido}>
-        <Text style={estilos.titulo}>{t('yaCasi')}</Text>
-        <Text style={estilos.subtitulo}>
-          {t('yaCasiDetalle')}
-        </Text>
-
-        <View style={estilos.paso}>
-          <View style={estilos.pasoEncabezado}>
-            <Text style={estilos.pasoNumero}>1</Text>
-            <Text style={estilos.pasoTitulo}>{t('conectaWhatsapp')}</Text>
-            {whatsappListo ? <Icono nombre="verificado" tamano={19} color={colores.primario} /> : null}
-          </View>
-
-          {whatsappListo ? (
-            <Text style={estilos.pasoTexto}>{t('conectado', { valor: cuenta.whatsapp })}</Text>
-          ) : codigo ? (
-            <View>
-              <Text style={estilos.codigo}>{codigo}</Text>
-              <Text style={estilos.pasoTexto}>
-                {t('codigoInstrucciones')}
-              </Text>
-              <TouchableOpacity onPress={refrescarCuenta}>
-                <Text style={estilos.enlace}>{t('yaLoMande')}</Text>
-              </TouchableOpacity>
-            </View>
-          ) : (
-            <TouchableOpacity
-              style={estilos.boton}
-              onPress={pedirCodigo}
-              disabled={cargando}
-              activeOpacity={0.8}
-            >
-              <Text style={estilos.botonTexto}>{t('generarCodigo')}</Text>
-            </TouchableOpacity>
-          )}
+      <View style={estilos.contenido}>
+        <View style={estilos.encabezado}>
+          <IconoChip nombre="nube" fondo="#DDEBFB" trazo="#2F80ED" tamano={56} />
+          <Text style={estilos.titulo}>{t('conectaDrive')}</Text>
+          <Text style={estilos.subtitulo}>{t('driveDetalle')}</Text>
         </View>
 
-        <View style={estilos.paso}>
-          <View style={estilos.pasoEncabezado}>
-            <Text style={estilos.pasoNumero}>2</Text>
-            <Text style={estilos.pasoTitulo}>{t('conectaDrive')}</Text>
-            {driveListo ? <Icono nombre="verificado" tamano={19} color={colores.primario} /> : null}
-          </View>
-
-          {driveListo ? (
-            <Text style={estilos.pasoTexto}>
-              {t('driveListo')}
-            </Text>
-          ) : (
-            <View>
-              <Text style={estilos.pasoTexto}>
-                {t('driveDetalle')}
-              </Text>
-              <TouchableOpacity
-                style={estilos.boton}
-                onPress={conectarDrive}
-                disabled={cargando}
-                activeOpacity={0.8}
-              >
-                <Text style={estilos.botonTexto}>{t('conectarDrive')}</Text>
-              </TouchableOpacity>
+        <View style={estilos.tarjeta}>
+          {[
+            ['carpeta', t('ventajaCarpetas')],
+            ['escudo', t('ventajaPrivacidad')],
+            ['verificado', t('ventajaTuyo')],
+          ].map(([icono, texto]) => (
+            <View key={icono} style={estilos.ventaja}>
+              <Icono nombre={icono} tamano={18} color={colores.primario} />
+              <Text style={estilos.ventajaTexto}>{texto}</Text>
             </View>
-          )}
+          ))}
         </View>
+
+        <TouchableOpacity
+          style={estilos.boton}
+          onPress={conectarDrive}
+          disabled={cargando}
+          activeOpacity={0.85}
+        >
+          {cargando ? (
+            <ActivityIndicator color={colores.blanco} />
+          ) : (
+            <Text style={estilos.botonTexto}>{t('conectarDrive')}</Text>
+          )}
+        </TouchableOpacity>
+
+        {cuenta?.whatsapp ? (
+          <Text style={estilos.conectado}>{t('conectado', { valor: cuenta.whatsapp })}</Text>
+        ) : null}
 
         <TouchableOpacity onPress={cerrarSesion}>
           <Text style={estilos.salir}>{t('cerrarSesion')}</Text>
         </TouchableOpacity>
-      </ScrollView>
+      </View>
     </SafeAreaView>
   );
 }
 
 const estilos = StyleSheet.create({
   pantalla: { flex: 1, backgroundColor: colores.fondo },
-  contenido: { padding: espacio.lg },
-  titulo: { fontSize: 28, fontWeight: '700', color: colores.texto },
-  subtitulo: { fontSize: 14, color: colores.textoSuave, marginTop: 4, marginBottom: espacio.lg },
-  paso: {
+  contenido: { flex: 1, justifyContent: 'center', padding: espacio.lg },
+
+  encabezado: { alignItems: 'center', marginBottom: espacio.xl },
+  titulo: { ...tipo.titulo, color: colores.texto, marginTop: espacio.md, textAlign: 'center' },
+  subtitulo: {
+    ...tipo.cuerpo,
+    color: colores.textoSuave,
+    textAlign: 'center',
+    lineHeight: 21,
+    marginTop: espacio.sm,
+  },
+
+  tarjeta: {
     backgroundColor: colores.superficie,
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: colores.divisor,
+    borderRadius: radio.lg,
     padding: espacio.md,
-    marginBottom: espacio.md,
+    gap: espacio.md,
+    ...sombra,
   },
-  pasoEncabezado: { flexDirection: 'row', alignItems: 'center', marginBottom: espacio.sm },
-  pasoNumero: {
-    width: 24,
-    height: 24,
-    borderRadius: 12,
-    backgroundColor: colores.primarioSuave,
-    color: colores.primario,
-    textAlign: 'center',
-    lineHeight: 24,
-    fontWeight: '700',
-    fontSize: 13,
-    marginRight: espacio.sm,
-  },
-  pasoTitulo: { flex: 1, fontSize: 16, fontWeight: '600', color: colores.texto },
-  listo: { color: '#16A34A', fontSize: 18, fontWeight: '700' },
-  pasoTexto: { fontSize: 13, color: colores.textoSuave, lineHeight: 19 },
-  codigo: {
-    fontSize: 36,
-    fontWeight: '800',
-    letterSpacing: 6,
-    color: colores.primario,
-    textAlign: 'center',
-    marginVertical: espacio.sm,
-  },
+  ventaja: { flexDirection: 'row', alignItems: 'center' },
+  ventajaTexto: { flex: 1, ...tipo.secundario, color: colores.texto, marginLeft: espacio.md, lineHeight: 19 },
+
   boton: {
     backgroundColor: colores.primario,
-    borderRadius: 10,
-    paddingVertical: espacio.sm + 2,
+    borderRadius: radio.lg,
+    paddingVertical: espacio.md + 2,
     alignItems: 'center',
-    marginTop: espacio.md,
+    marginTop: espacio.lg,
+    ...sombra,
   },
-  botonTexto: { color: '#FFFFFF', fontSize: 15, fontWeight: '600' },
-  enlace: { color: colores.primario, fontSize: 14, marginTop: espacio.md, textAlign: 'center' },
-  salir: { color: colores.textoSuave, fontSize: 14, textAlign: 'center', marginTop: espacio.lg },
+  botonTexto: { color: colores.blanco, fontSize: 16, fontWeight: '600' },
+
+  conectado: { ...tipo.menor, color: colores.textoSuave, textAlign: 'center', marginTop: espacio.lg },
+  salir: { ...tipo.secundario, color: colores.textoSuave, textAlign: 'center', marginTop: espacio.md },
 });

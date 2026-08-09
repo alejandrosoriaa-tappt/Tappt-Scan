@@ -1,6 +1,7 @@
 require('dotenv').config();
 const express = require('express');
 const webhookRouter = require('./routes/webhook');
+const authRouter = require('./routes/auth');
 const cuentaRouter = require('./routes/cuenta');
 const documentosRouter = require('./routes/documentos');
 const driveRouter = require('./routes/drive');
@@ -31,6 +32,7 @@ app.use(express.json({ limit: '25mb' }));
 app.get('/health', (_req, res) => res.json({ ok: true, service: 'tappt-scan' }));
 
 app.use('/webhook', webhookRouter);
+app.use('/api/auth', authRouter);
 app.use('/api/cuenta', cuentaRouter);
 app.use('/api/documentos', documentosRouter);
 app.use('/api/drive', driveRouter);

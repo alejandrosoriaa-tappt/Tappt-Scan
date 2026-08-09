@@ -195,6 +195,23 @@ export const TEXTOS = {
     gasto_otros: 'Otros',
     gasto_sin_clasificar: 'Sin clasificar',
 
+
+    // Acceso por WhatsApp
+    entrarConWhatsapp: 'Entrar con WhatsApp',
+    pasoUno: 'Se abre WhatsApp con un mensaje ya escrito.',
+    pasoDos: 'Solo tocas enviar.',
+    pasoTres: 'Listo, ya estás dentro.',
+    sinContrasena: 'Sin correo ni contraseña. Tu número de WhatsApp es tu cuenta.',
+    esperandoWhatsapp: 'Esperando tu mensaje…',
+    esperandoWhatsappDetalle: 'Manda el mensaje en WhatsApp y vuelve aquí. Se abre solo.',
+    tuCodigo: 'Tu código',
+    abrirWhatsappOtraVez: 'Abrir WhatsApp de nuevo',
+    codigoVencido: 'El código venció',
+    codigoVencidoDetalle: 'Genera uno nuevo para entrar.',
+    ventajaCarpetas: 'Te creo tus carpetas y guardo cada documento en la suya.',
+    ventajaPrivacidad: 'Los archivos viven en tu Drive, no en nuestros servidores.',
+    ventajaTuyo: 'Si algún día te vas, tus documentos se quedan contigo.',
+
     // Errores
     noSePudo: 'No se pudo',
     limiteAlcanzado: 'Ya usaste tus escaneos gratis del mes.',
@@ -399,6 +416,22 @@ export const TEXTOS = {
     gasto_trabajo: 'Work',
     gasto_otros: 'Other',
     gasto_sin_clasificar: 'Unclassified',
+
+
+    entrarConWhatsapp: 'Continue with WhatsApp',
+    pasoUno: 'WhatsApp opens with a message already written.',
+    pasoDos: 'You just tap send.',
+    pasoTres: "That's it — you're in.",
+    sinContrasena: 'No email, no password. Your WhatsApp number is your account.',
+    esperandoWhatsapp: 'Waiting for your message…',
+    esperandoWhatsappDetalle: 'Send the message on WhatsApp and come back. It opens on its own.',
+    tuCodigo: 'Your code',
+    abrirWhatsappOtraVez: 'Open WhatsApp again',
+    codigoVencido: 'The code expired',
+    codigoVencidoDetalle: 'Generate a new one to sign in.',
+    ventajaCarpetas: 'I create your folders and file each document where it belongs.',
+    ventajaPrivacidad: 'Files live in your Drive, not on our servers.',
+    ventajaTuyo: 'If you ever leave, your documents stay with you.',
 
     noSePudo: "Couldn't do that",
     limiteAlcanzado: "You've used your free scans for this month.",

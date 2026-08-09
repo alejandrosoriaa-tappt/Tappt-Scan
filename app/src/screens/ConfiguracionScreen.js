@@ -4,11 +4,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { colores, espacio } from '../theme';
 import Icono from '../components/Icono';
 
-const VARIABLES = [
-  ['EXPO_PUBLIC_SUPABASE_URL', process.env.EXPO_PUBLIC_SUPABASE_URL],
-  ['EXPO_PUBLIC_SUPABASE_ANON_KEY', process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY],
-  ['EXPO_PUBLIC_API_URL', process.env.EXPO_PUBLIC_API_URL],
-];
+const VARIABLES = [['EXPO_PUBLIC_API_URL', process.env.EXPO_PUBLIC_API_URL]];
 
 /**
  * Pantalla de último recurso cuando faltan variables de entorno.

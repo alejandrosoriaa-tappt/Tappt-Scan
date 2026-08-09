@@ -4,7 +4,7 @@ const router = express.Router();
 
 const whatsapp = require('../services/whatsapp');
 const procesarDocumento = require('../services/procesarDocumento');
-const linking = require('../services/linking');
+const sesiones = require('../services/sesiones');
 const planes = require('../services/planes');
 const stripe = require('../services/stripe');
 const consultas = require('../services/consultas');
@@ -192,9 +192,11 @@ async function handleText(from, text) {
     // Si no la entendió como pregunta de gastos, sigue al flujo normal.
   }
 
-  if (/^\d{6}$/.test(limpio)) {
-    const userId = await linking.redeemLinkCode(limpio, from);
-    await whatsapp.sendText(from, t(idioma, userId ? 'codigoOk' : 'codigoMal'));
+  // Acceso a la app: el usuario manda el código que la app le prellenó.
+  const codigo = sesiones.extraerCodigo(limpio);
+  if (codigo) {
+    const usuario = await sesiones.verificarDesdeWhatsapp(codigo, from);
+    await whatsapp.sendText(from, t(idioma, usuario ? 'accesoOk' : 'codigoMal'));
     return;
   }
 

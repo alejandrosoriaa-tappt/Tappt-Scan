@@ -1,34 +1,31 @@
 const supabase = require('./supabase');
+const sesiones = require('./sesiones');
 
-// La app se autentica con Supabase Auth y manda el JWT en Authorization.
-// Aquí lo validamos y dejamos el usuario de TapptScan en req.usuario.
+/**
+ * La app manda un token propio de TapptScan en Authorization.
+ *
+ * No se usa Supabase Auth: la identidad del usuario es su número de
+ * WhatsApp, verificado al entrar (ver `services/sesiones.js`). Supabase
+ * queda solo como base de datos.
+ */
 async function requireAuth(req, res, next) {
   try {
     const header = req.headers.authorization || '';
     const token = header.startsWith('Bearer ') ? header.slice(7) : null;
     if (!token) return res.status(401).json({ error: 'falta_token' });
 
-    const { data, error } = await supabase.auth.getUser(token);
-    if (error || !data?.user) return res.status(401).json({ error: 'token_invalido' });
+    const usuarioId = sesiones.verificarToken(token);
+    if (!usuarioId) return res.status(401).json({ error: 'token_invalido' });
 
-    const authUser = data.user;
-
-    // Alta perezosa: la primera vez que entra, se crea su fila.
-    let { data: usuario } = await supabase
+    const { data: usuario, error } = await supabase
       .from('scan_users')
       .select('*')
-      .eq('id', authUser.id)
+      .eq('id', usuarioId)
       .maybeSingle();
+    if (error) throw error;
 
-    if (!usuario) {
-      const { data: creado, error: errorAlta } = await supabase
-        .from('scan_users')
-        .insert({ id: authUser.id, email: authUser.email })
-        .select()
-        .single();
-      if (errorAlta) throw errorAlta;
-      usuario = creado;
-    }
+    // El token es válido pero el usuario ya no existe: sesión huérfana.
+    if (!usuario) return res.status(401).json({ error: 'usuario_no_encontrado' });
 
     req.usuario = usuario;
     next();

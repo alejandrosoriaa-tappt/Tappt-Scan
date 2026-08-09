@@ -14,18 +14,18 @@ Proyecto **propio** de TapptScan. No reutilizar el de Tappt ni el del bróker.
 1. Crear proyecto en [supabase.com](https://supabase.com).
 2. **SQL Editor → New query** → pegar **`scan_schema.sql`** completo y correrlo.
    Crea las cuatro tablas, los índices y activa RLS. Es idempotente.
-3. **Authentication → Providers → Email**: activarlo. Si se quiere probar sin
-   confirmar correos, desactivar *Confirm email* mientras dure la beta.
+3. **No hay que tocar Authentication.** TapptScan no usa Supabase Auth: la
+   identidad del usuario es su número de WhatsApp, verificado al entrar
+   (ver `services/sesiones.js`). Supabase queda solo como base de datos.
 4. Copiar de **Project Settings → API**:
 
 | Dato | Va en |
 |---|---|
-| Project URL | `SUPABASE_URL` (backend) y `EXPO_PUBLIC_SUPABASE_URL` (app) |
-| `service_role` key | `SUPABASE_SERVICE_ROLE_KEY` — **solo backend, nunca en la app** |
-| `anon` key | `EXPO_PUBLIC_SUPABASE_ANON_KEY` (app) |
+| Project URL | `SUPABASE_URL` |
+| Secret key (`sb_secret_…`, o `service_role` en la pestaña *Legacy*) | `SUPABASE_SERVICE_ROLE_KEY` |
 
-> La `service_role` ignora RLS: si acaba en el bundle de la app, cualquiera
-> puede leer y escribir toda la base. Va únicamente en Railway.
+> Ambas van **solo en Railway**. La app no necesita ninguna llave de
+> Supabase: solo habla con nuestro backend.
 
 ---
 
@@ -139,11 +139,9 @@ arman con `price_data` en el código.
 
 ## 7 · La app
 
-`app/.env` (a partir de `app/.env.example`):
+`app/.env` — una sola variable:
 
 ```
-EXPO_PUBLIC_SUPABASE_URL=
-EXPO_PUBLIC_SUPABASE_ANON_KEY=
 EXPO_PUBLIC_API_URL=https://TU-APP.up.railway.app
 ```
 
@@ -173,24 +171,24 @@ STRIPE_MONEDA                     STRIPE_SUCCESS_URL
 STRIPE_CANCEL_URL
 ```
 
-**App — 3 variables:** las tres `EXPO_PUBLIC_*` de arriba.
+**App — 1 variable:** `EXPO_PUBLIC_API_URL`. Nada más: el acceso es por
+WhatsApp y todo pasa por el backend.
 
 ---
 
 ## Primera prueba, en este orden
 
 1. `GET /health` responde `{"ok":true}`.
-2. Crear cuenta en la app → llegar al onboarding.
+2. Abrir la app → **Entrar con WhatsApp** → se abre WhatsApp con el mensaje
+   escrito → tocar enviar → la app debe entrar sola en un par de segundos.
 3. **Conectar Drive** → revisar que aparezcan las **36 carpetas** en tu Drive.
-4. Generar el código de 6 dígitos y mandarlo por WhatsApp → debe responder
-   que quedó conectado.
-5. **Mandar una foto de un recibo por WhatsApp.** Es la prueba que importa:
+4. **Mandar una foto de un recibo por WhatsApp.** Es la prueba que importa:
    debe contestar con el nombre y la ruta, y el PDF debe aparecer archivado
    en tu Drive.
-6. Repetir con **cinco documentos distintos** (recibo de luz, ticket de
+5. Repetir con **cinco documentos distintos** (recibo de luz, ticket de
    súper, identificación, contrato, factura) y ver dónde cae cada uno. Ahí
    se descubre si el catálogo de `services/taxonomia.js` aguanta documentos
    reales — ajustarlo es una sola edición.
-7. Reenviar un **PDF** desde otro chat.
-8. Llegar a los 5 escaneos y comprobar que ofrece el upgrade.
-9. Pagar con una tarjeta de prueba de Stripe y verificar que el plan sube.
+6. Reenviar un **PDF** desde otro chat.
+7. Llegar a los 5 escaneos y comprobar que ofrece el upgrade.
+8. Pagar con una tarjeta de prueba de Stripe y verificar que el plan sube.

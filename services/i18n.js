@@ -21,8 +21,8 @@ const MENSAJES = {
     paginas: ' ({n} páginas)',
     formatoNoSoportado:
       'Por ahora solo puedo con PDF e imágenes. Reenvíame el documento en alguno de esos formatos.',
-    codigoOk: 'Listo, tu WhatsApp quedó conectado a tu cuenta de TapptScan.',
-    codigoMal: 'Ese código no es válido o ya expiró.',
+    accesoOk: '¡Listo! Ya puedes volver a la app, tu sesión está abierta. 👋',
+    codigoMal: 'Ese código no es válido o ya venció. Genera uno nuevo desde la app.',
     primeroApp: 'Primero conecta tu cuenta desde la app de TapptScan.',
     linkPago: 'Aquí está tu link para activar el plan {plan}:\n{link}',
     planActivo:
@@ -47,8 +47,8 @@ const MENSAJES = {
     paginas: ' ({n} pages)',
     formatoNoSoportado:
       "For now I can only handle PDFs and images. Please forward the document in one of those formats.",
-    codigoOk: 'Done — your WhatsApp is now linked to your TapptScan account.',
-    codigoMal: "That code isn't valid or has expired.",
+    accesoOk: "You're in! Head back to the app, your session is open. 👋",
+    codigoMal: "That code isn't valid or has expired. Generate a new one from the app.",
     primeroApp: 'First connect your account from the TapptScan app.',
     linkPago: "Here's your link to activate the {plan} plan:\n{link}",
     planActivo:

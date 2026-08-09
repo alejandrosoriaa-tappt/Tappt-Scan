@@ -2,7 +2,6 @@ const express = require('express');
 const router = express.Router();
 
 const { requireAuth } = require('../services/auth');
-const linking = require('../services/linking');
 const planes = require('../services/planes');
 const stripe = require('../services/stripe');
 const whatsapp = require('../services/whatsapp');
@@ -29,18 +28,6 @@ router.get('/', requireAuth, async (req, res) => {
   } catch (err) {
     console.error('[cuenta] error', err);
     res.status(500).json({ error: 'error_cuenta' });
-  }
-});
-
-// Paso 1 de vincular WhatsApp: la app pide un código y el usuario lo manda
-// por WhatsApp desde el número que quiere conectar.
-router.post('/codigo-whatsapp', requireAuth, async (req, res) => {
-  try {
-    const { code, expiresAt } = await linking.createLinkCode(req.usuario.id);
-    res.json({ codigo: code, expira: expiresAt });
-  } catch (err) {
-    console.error('[cuenta] error generando código', err);
-    res.status(500).json({ error: 'error_codigo' });
   }
 });
 
