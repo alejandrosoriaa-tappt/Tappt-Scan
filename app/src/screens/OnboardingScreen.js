@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, Alert, ActivityIndicator } from 'react-native';
+import { View, Text, TouchableOpacity, StyleSheet, Alert, ActivityIndicator, Platform } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import * as WebBrowser from 'expo-web-browser';
 import { api } from '../lib/api';
@@ -23,6 +23,15 @@ export default function OnboardingScreen() {
     setCargando(true);
     try {
       const { url } = await api.urlConectarDrive();
+
+      if (Platform.OS === 'web') {
+        // Navegar la misma pestaña en vez de un popup: el callback del
+        // backend regresa a "/" cuando Google termina, y ahí la app
+        // vuelve a cargar ya con el Drive conectado.
+        window.location.href = url;
+        return;
+      }
+
       await WebBrowser.openAuthSessionAsync(url);
       await refrescarCuenta();
     } catch (err) {

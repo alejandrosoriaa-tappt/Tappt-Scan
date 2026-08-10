@@ -6,6 +6,7 @@ import {
   StyleSheet,
   ActivityIndicator,
   Linking,
+  Platform,
   Alert,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -16,6 +17,19 @@ import Icono, { IconoChip } from '../components/Icono';
 import { colores, espacio, radio, tipo, sombra } from '../theme';
 
 const INTERVALO_MS = 2500;
+
+// En web, Linking.openURL usa window.open por debajo — y si ya pasó un
+// await (la llamada al backend) antes de invocarlo, el navegador ya no lo
+// considera una reacción directa al toque y lo bloquea en silencio, sin
+// error. Navegar en la misma pestaña con window.location no tiene ese
+// problema y es justo lo que se quiere: mandar al usuario a WhatsApp.
+function abrirEnlace(url) {
+  if (Platform.OS === 'web') {
+    window.location.href = url;
+    return Promise.resolve();
+  }
+  return Linking.openURL(url);
+}
 
 /**
  * Acceso sin correo ni contraseña.
@@ -66,7 +80,7 @@ export default function LoginScreen() {
       const nueva = await api.iniciarSesion();
       setSesion(nueva);
       setEsperando(true);
-      await Linking.openURL(nueva.enlaceWhatsapp);
+      await abrirEnlace(nueva.enlaceWhatsapp);
     } catch (err) {
       Alert.alert(t('noSePudo'), err.message);
       setEsperando(false);
@@ -96,7 +110,7 @@ export default function LoginScreen() {
               <Text style={estilos.codigo}>{sesion.codigo}</Text>
             </View>
 
-            <TouchableOpacity onPress={() => Linking.openURL(sesion.enlaceWhatsapp)}>
+            <TouchableOpacity onPress={() => abrirEnlace(sesion.enlaceWhatsapp)}>
               <Text style={estilos.enlace}>{t('abrirWhatsappOtraVez')}</Text>
             </TouchableOpacity>
           </View>
