@@ -32,6 +32,12 @@ app.use(express.json({ limit: '25mb' }));
 
 app.get('/health', (_req, res) => res.json({ ok: true, service: 'tappt-scan' }));
 
+// Requeridas para publicar la app de Meta y la pantalla de consentimiento
+// de Google — cada vertical tiene la suya, no se reutiliza la de Tappt
+// (agenda): las prácticas de datos son distintas (Drive, WhatsApp como
+// login, Anthropic procesando documentos).
+app.use(express.static(path.join(__dirname, 'public')));
+
 app.use('/webhook', webhookRouter);
 app.use('/api/auth', authRouter);
 app.use('/api/cuenta', cuentaRouter);
