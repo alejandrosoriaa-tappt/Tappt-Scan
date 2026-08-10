@@ -236,6 +236,11 @@ Credenciales, variables, qué crear en Railway y qué SQL correr:
 **`docs/PUESTA-EN-MARCHA.md`**. El esquema completo está en
 `scan_schema.sql` (un solo archivo idempotente, se corre entero).
 
+**Qué cuenta/proyecto es cada cosa** (Supabase, Railway, Google Cloud,
+Stripe — nombres, IDs, org, sin secretos): **`docs/INVENTARIO-INFRAESTRUCTURA.md`**.
+Consultar ahí antes de crear nada nuevo, para no duplicar cuentas ni mezclar
+infraestructura con otra vertical.
+
 ## Rama de trabajo
 
 Rama activa: **`claude/new-session-9mhtdk`**. Desarrollar, commitear y
