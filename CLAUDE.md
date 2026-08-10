@@ -260,9 +260,6 @@ Pendientes de código:
   sobre fondo oscuro. Fuera de ese caso pide ajuste manual.
 - **Editor**: falta arrastrar un elemento ya colocado y reemplazar texto de
   un PDF nativo en su sitio. Ver `docs/EDITOR-PDF.md`.
-- **Migración pendiente en Supabase**: las columnas `mime_type`, `paginas`
-  y `nombre_original` de `scan_documents` están al final de
-  `scan_schema.sql` como `alter table` — hay que correrlas.
 - **Fuente Unicode** (`assets/fuente-unicode.ttf`) — sin ella se omiten los
   caracteres fuera de WinAnsi. Ver `assets/README.md`.
 - **Pestaña de Gastos en la app** — el backend ya responde preguntas por
