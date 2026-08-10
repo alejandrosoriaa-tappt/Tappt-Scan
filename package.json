@@ -5,7 +5,9 @@
   "main": "server.js",
   "scripts": {
     "start": "node server.js",
-    "dev": "nodemon server.js"
+    "dev": "nodemon server.js",
+    "variables": "node scripts/variables.js",
+    "variables:revisar": "node scripts/variables.js --revisar"
   },
   "license": "UNLICENSED",
   "private": true,

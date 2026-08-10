@@ -1,9 +1,38 @@
 # Puesta en marcha — todo lo que hay que crear y configurar
 
-_Última actualización: 2026-08-09_
+_Última actualización: 2026-08-10_
 
 Orden recomendado. Cada paso depende del anterior, y el paso 4 (Google)
 necesita la URL que sale del paso 3 (Railway).
+
+---
+
+## 0 · El atajo: `npm run variables`
+
+Son 20 variables repartidas en cinco consolas distintas. En vez de teclearlas
+una por una en el panel de Railway:
+
+```bash
+npm run variables            # modo guiado: pregunta una por una
+npm run variables -- --raw   # solo imprime la plantilla, sin preguntar
+npm run variables:revisar    # revisa el .env que ya tienes
+```
+
+El script **genera** los dos secretos que se pueden generar (`JWT_SECRET`,
+`WHATSAPP_VERIFY_TOKEN`), **deriva** los que salen de otros
+(`EXPECTED_WHATSAPP_PHONE_NUMBER_ID`, `GOOGLE_REDIRECT_URI`), **valida** el
+formato de lo que pegas, y escupe un bloque que se pega de una sola vez en el
+**Raw Editor** de Railway (*Variables → `{}` Raw Editor → Save*). También
+escribe `.env` y `app/.env` locales.
+
+Escribe `PENDIENTE` en cualquier respuesta para dejarla para después —
+`STRIPE_WEBHOOK_SECRET` no existe hasta que crees el endpoint, que a su vez
+necesita el dominio de Railway.
+
+> Ojo con la lista de **"Suggested Variables"** de Railway: detecta las que el
+> código lee, pero **se salta las que tienen valor por defecto**
+> (`WHATSAPP_NUMERO`, `CLAUDE_*_MODEL`, `STRIPE_MONEDA`, `STRIPE_SUCCESS_URL`,
+> `STRIPE_CANCEL_URL`). Si te guías solo por esa lista, faltan seis.
 
 ---
 
@@ -47,8 +76,13 @@ bajar a un modelo más chico para reducir costo por escaneo.
 2. Railway detecta Node y corre `npm start`. No hace falta Dockerfile.
 3. **Settings → Networking → Generate Domain**. Esa URL es la base de todo
    lo que sigue; llamémosla `https://TU-APP.up.railway.app`.
-4. **Variables**: pegar todas las de `.env.example` con sus valores.
-   `PORT` lo inyecta Railway solo.
+4. **Variables → `{}` Raw Editor**: pegar de un jalón el bloque que genera
+   `npm run variables` (ver paso 0). `PORT` lo inyecta Railway solo.
+
+Mientras falten variables el servicio va a aparecer como **Crashed** en cada
+deploy. Es lo esperado: el proceso arranca, no encuentra lo que necesita y se
+sale. Se arregla solo en cuanto guardes las variables completas — Railway
+redespliega al guardar.
 
 **No hace falta base de datos en Railway.** Los datos viven en Supabase y los
 archivos en el Drive del usuario. Railway solo corre el proceso.
