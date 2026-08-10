@@ -7,10 +7,10 @@ import {
   ActivityIndicator,
   Linking,
   Platform,
-  Alert,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { api } from '../lib/api';
+import { alertar } from '../lib/alerta';
 import { useSesion } from '../context/SesionContext';
 import { useIdioma } from '../i18n';
 import Icono, { IconoChip } from '../components/Icono';
@@ -64,7 +64,7 @@ export default function LoginScreen() {
           clearInterval(temporizador.current);
           setEsperando(false);
           setSesion(null);
-          Alert.alert(t('codigoVencido'), t('codigoVencidoDetalle'));
+          alertar(t('codigoVencido'), t('codigoVencidoDetalle'));
         }
       } catch {
         // Un fallo de red suelto no debe cortar la espera.
@@ -82,7 +82,7 @@ export default function LoginScreen() {
       setEsperando(true);
       await abrirEnlace(nueva.enlaceWhatsapp);
     } catch (err) {
-      Alert.alert(t('noSePudo'), err.message);
+      alertar(t('noSePudo'), err.message);
       setEsperando(false);
     } finally {
       setCargando(false);

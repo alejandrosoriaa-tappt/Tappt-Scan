@@ -1,8 +1,9 @@
 import React, { useState } from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, Alert, ActivityIndicator, Platform } from 'react-native';
+import { View, Text, TouchableOpacity, StyleSheet, ActivityIndicator, Platform } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import * as WebBrowser from 'expo-web-browser';
 import { api } from '../lib/api';
+import { alertar } from '../lib/alerta';
 import { useSesion } from '../context/SesionContext';
 import { useIdioma } from '../i18n';
 import Icono, { IconoChip } from '../components/Icono';
@@ -35,7 +36,7 @@ export default function OnboardingScreen() {
       await WebBrowser.openAuthSessionAsync(url);
       await refrescarCuenta();
     } catch (err) {
-      Alert.alert(t('noSePudo'), err.message);
+      alertar(t('noSePudo'), err.message);
     } finally {
       setCargando(false);
     }
