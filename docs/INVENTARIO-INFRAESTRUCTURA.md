@@ -62,8 +62,22 @@ llaves reales viven **solo en Railway** (ver `docs/PUESTA-EN-MARCHA.md`).
 
 ## WhatsApp Cloud API
 
-- Pendiente: crear app de Meta propia para TapptScan (no reutilizar la app
-  de Tania IA / bróker). Ver `docs/PUESTA-EN-MARCHA.md` §5.
+- App de Meta propia: **`TapptScan`** (Business, portfolio "Tappt").
+- Número migrado desde la app del bróker: `+52 1 56 4417 0712`
+  (`WHATSAPP_PHONE_NUMBER_ID = 1328916286960986`). La migración exige que el
+  nombre visible de origen y destino coincidan primero; ya migrado, se
+  intentó renombrar a `TapptScan` y Meta lo **rechazó** (motivo no
+  detallado). El límite de cambios de nombre visible es mensual, así que no
+  se reintenta ahora.
+- **Decisión (2026-08-10):** este número se queda con el nombre "Tappt
+  TaniaIA" solo para las pruebas técnicas (el nombre visible no afecta el
+  funcionamiento de la API). Antes de lanzar a producción se va a **dar de
+  alta un número nuevo** dentro de esta misma WABA/app, ya con el nombre
+  "TapptScan" limpio desde el inicio, y se apunta `WHATSAPP_PHONE_NUMBER_ID`
+  /`EXPECTED_WHATSAPP_PHONE_NUMBER_ID` a ese número nuevo en Railway.
+- Token de acceso usado en pruebas: **temporal (24h)**, generado desde
+  Configuración de la API. Antes de producción hay que generar uno
+  permanente (usuario de sistema en Business Manager).
 
 ## Stripe — cobros
 
