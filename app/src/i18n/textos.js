@@ -212,6 +212,18 @@ export const TEXTOS = {
     ventajaPrivacidad: 'Los archivos viven en tu Drive, no en nuestros servidores.',
     ventajaTuyo: 'Si algún día te vas, tus documentos se quedan contigo.',
 
+
+    // Límite alcanzado
+    limiteTitulo: 'Llegaste a tu límite del mes',
+    limiteDetalle: 'Ya usaste tus {limite} escaneos gratis. Sigue guardando sin límite con el plan Personal.',
+    ventajaIlimitado: 'Escaneos ilimitados, todos los meses.',
+    ventajaFirmas: 'Edición de PDF y firmas.',
+    ventajaGastos: 'Control de gastos automático (plan Negocio).',
+    continuarEnWhatsapp: 'Continuar en WhatsApp',
+    limiteNota: 'Te atiendo por WhatsApp, como todo lo demás. Tu documento sigue aquí esperando.',
+    ahoraNo: 'Ahora no',
+    mensajeQuieroMas: 'Quiero el plan Personal',
+
     // Errores
     noSePudo: 'No se pudo',
     limiteAlcanzado: 'Ya usaste tus escaneos gratis del mes.',
@@ -432,6 +444,17 @@ export const TEXTOS = {
     ventajaCarpetas: 'I create your folders and file each document where it belongs.',
     ventajaPrivacidad: 'Files live in your Drive, not on our servers.',
     ventajaTuyo: 'If you ever leave, your documents stay with you.',
+
+
+    limiteTitulo: "You've hit this month's limit",
+    limiteDetalle: "You've used your {limite} free scans. Keep saving without limits on the Personal plan.",
+    ventajaIlimitado: 'Unlimited scans, every month.',
+    ventajaFirmas: 'PDF editing and signatures.',
+    ventajaGastos: 'Automatic expense tracking (Business plan).',
+    continuarEnWhatsapp: 'Continue on WhatsApp',
+    limiteNota: "I'll take it from WhatsApp, like everything else. Your document is still here waiting.",
+    ahoraNo: 'Not now',
+    mensajeQuieroMas: 'I want the Personal plan',
 
     noSePudo: "Couldn't do that",
     limiteAlcanzado: "You've used your free scans for this month.",

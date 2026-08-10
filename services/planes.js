@@ -19,6 +19,19 @@ const PRECIOS = {
   },
 };
 
+/**
+ * El plan vigente del usuario.
+ *
+ * Un plan vencido NO es un plan: sin esta comprobación, quien pagó una vez
+ * se queda con el beneficio para siempre. `plan_vence` se fija a un año al
+ * confirmarse el pago (ver `routes/pagos.js`).
+ */
+function planVigente(usuario) {
+  if (!usuario || usuario.plan === 'gratis') return 'gratis';
+  if (usuario.plan_vence && new Date(usuario.plan_vence) < new Date()) return 'gratis';
+  return usuario.plan;
+}
+
 function limiteDe(plan) {
   return LIMITES[plan] ?? LIMITES.gratis;
 }
@@ -42,7 +55,7 @@ async function escaneosDelMes(userId) {
 // Devuelve { permitido, usados, limite } — el webhook lo consulta antes de
 // procesar una imagen.
 async function puedeEscanear(usuario) {
-  const limite = limiteDe(usuario.plan);
+  const limite = limiteDe(planVigente(usuario));
   if (limite === Infinity) return { permitido: true, usados: 0, limite };
 
   const usados = await escaneosDelMes(usuario.id);
@@ -52,11 +65,12 @@ async function puedeEscanear(usuario) {
 // El control de gastos (hoja de cálculo y preguntas por chat) es el
 // beneficio que justifica el plan Negocio.
 function tieneControlDeGastos(usuario) {
-  return usuario?.plan === 'negocio';
+  return planVigente(usuario) === 'negocio';
 }
 
 module.exports = {
   LIMITES,
+  planVigente,
   PRECIOS,
   limiteDe,
   puedeEscanear,

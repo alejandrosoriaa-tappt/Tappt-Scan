@@ -12,18 +12,23 @@ const { t, IDIOMAS } = require('../services/i18n');
 router.get('/', requireAuth, async (req, res) => {
   try {
     const usados = await planes.escaneosDelMes(req.usuario.id);
-    const limite = planes.limiteDe(req.usuario.plan);
+    const vigente = planes.planVigente(req.usuario);
+    const limite = planes.limiteDe(vigente);
 
     res.json({
       id: req.usuario.id,
       email: req.usuario.email,
       whatsapp: req.usuario.whatsapp_phone,
       driveConectado: Boolean(req.usuario.drive_tokens),
-      plan: req.usuario.plan,
+      plan: vigente,
+      planVence: req.usuario.plan_vence || null,
       idioma: req.usuario.idioma || null,
       moneda: req.usuario.moneda || null,
       escaneosUsados: usados,
       escaneosLimite: limite === Infinity ? null : limite,
+      // La app lo necesita para armar los enlaces wa.me; sin esto los
+      // botones de WhatsApp abren la app sin destinatario.
+      numeroTapptScan: (process.env.WHATSAPP_NUMERO || '').replace(/\D/g, ''),
     });
   } catch (err) {
     console.error('[cuenta] error', err);

@@ -18,6 +18,7 @@ import OnboardingScreen from '../screens/OnboardingScreen';
 
 import Icono from '../components/Icono';
 import HojaCaptura from '../components/HojaCaptura';
+import HojaLimite from '../components/HojaLimite';
 import { importarArchivo, importarDeGaleria } from '../lib/importar';
 import { useSesion } from '../context/SesionContext';
 import { useIdioma } from '../i18n';
@@ -87,16 +88,15 @@ function BarraInferior({ state, navigation, onCapturar }) {
 function Tabs({ navigation }) {
   const { t } = useIdioma();
   const [hoja, setHoja] = useState(false);
+  const [limite, setLimite] = useState(false);
 
   const importar = async (elegir) => {
     try {
       const documento = await elegir();
       if (documento) navigation.navigate('Documento', { documento });
     } catch (err) {
-      const mensajes = {
-        limite_alcanzado: t('limiteAlcanzado'),
-        drive_sin_conectar: t('driveSinConectar'),
-      };
+      if (err.message === 'limite_alcanzado') return setLimite(true);
+      const mensajes = { drive_sin_conectar: t('driveSinConectar') };
       Alert.alert(t('noSePudo'), mensajes[err.message] || err.message);
     }
   };
@@ -120,6 +120,8 @@ function Tabs({ navigation }) {
         onImportarArchivo={() => importar(importarArchivo)}
         onImportarFoto={() => importar(importarDeGaleria)}
       />
+
+      <HojaLimite visible={limite} onCerrar={() => setLimite(false)} />
     </>
   );
 }

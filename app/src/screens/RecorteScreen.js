@@ -13,6 +13,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { api } from '../lib/api';
 import { useSesion } from '../context/SesionContext';
 import { useIdioma } from '../i18n';
+import HojaLimite from '../components/HojaLimite';
 import { colores, espacio } from '../theme';
 
 const MARCO_COMPLETO = [
@@ -78,6 +79,7 @@ export default function RecorteScreen({ route, navigation }) {
   const [detectando, setDetectando] = useState(true);
   const [aviso, setAviso] = useState(null);
   const [guardando, setGuardando] = useState(false);
+  const [limite, setLimite] = useState(false);
 
   // El servidor sugiere el marco; el usuario siempre lo puede corregir.
   useEffect(() => {
@@ -110,8 +112,14 @@ export default function RecorteScreen({ route, navigation }) {
       refrescarCuenta();
       navigation.replace('Documento', { documento });
     } catch (err) {
+      // El límite no es un error: es el momento de ofrecer el upgrade. La
+      // hoja se cierra y la foto sigue aquí, lista para reintentar.
+      if (err.message === 'limite_alcanzado') {
+        setLimite(true);
+        return;
+      }
+
       const mensajes = {
-        limite_alcanzado: t('limiteAlcanzado'),
         drive_sin_conectar: t('driveSinConectar'),
         recorte_demasiado_chico: t('recorteChico'),
       };
@@ -204,6 +212,8 @@ export default function RecorteScreen({ route, navigation }) {
           )}
         </TouchableOpacity>
       </View>
+
+      <HojaLimite visible={limite} onCerrar={() => setLimite(false)} />
     </SafeAreaView>
   );
 }

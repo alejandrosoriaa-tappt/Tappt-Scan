@@ -3,6 +3,7 @@ import { View, Text, TouchableOpacity, StyleSheet, Modal, Linking } from 'react-
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Icono, { IconoChip } from './Icono';
 import { useIdioma } from '../i18n';
+import { useSesion } from '../context/SesionContext';
 import { colores, espacio, radio, tipo } from '../theme';
 
 /**
@@ -13,6 +14,7 @@ import { colores, espacio, radio, tipo } from '../theme';
  */
 export default function HojaCaptura({ visible, onCerrar, onEscanear, onImportarArchivo, onImportarFoto }) {
   const { t } = useIdioma();
+  const { cuenta } = useSesion();
 
   const opciones = [
     {
@@ -22,7 +24,7 @@ export default function HojaCaptura({ visible, onCerrar, onEscanear, onImportarA
       trazo: '#128C7E',
       titulo: t('capturaWhatsapp'),
       detalle: t('capturaWhatsappDetalle'),
-      accion: () => Linking.openURL('https://wa.me/'),
+      accion: () => Linking.openURL(`https://wa.me/${cuenta?.numeroTapptScan || ''}`),
     },
     {
       clave: 'camara',

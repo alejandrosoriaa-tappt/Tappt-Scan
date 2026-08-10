@@ -95,7 +95,7 @@ export default function DashboardScreen({ navigation }) {
           trazo="#128C7E"
           titulo={t('accionWhatsapp')}
           detalle={t('accionWhatsappDetalle')}
-          onPress={() => Linking.openURL('https://wa.me/')}
+          onPress={() => Linking.openURL(`https://wa.me/${cuenta?.numeroTapptScan || ''}`)}
           destacada
         />
 

@@ -1,4 +1,5 @@
-import React, { createContext, useContext, useEffect, useState, useCallback } from 'react';
+import React, { createContext, useContext, useEffect, useState, useCallback, useRef } from 'react';
+import { AppState } from 'react-native';
 import { api } from '../lib/api';
 import { leerToken, guardarToken, borrarToken } from '../lib/sesion';
 import { useIdioma } from '../i18n';
@@ -44,6 +45,23 @@ export function SesionProvider({ children }) {
       .then(() => setCuenta((previa) => ({ ...previa, idioma })))
       .catch((err) => console.warn('[sesion] no se pudo guardar el idioma', err.message));
   }, [token, cuenta, idioma]);
+
+  /**
+   * Al volver de WhatsApp se recarga la cuenta.
+   *
+   * Es lo que hace que pagar se sienta instantáneo: el usuario paga en el
+   * navegador, regresa a la app y su plan ya está arriba, sin reiniciar
+   * nada ni tocar un botón de "actualizar".
+   */
+  const estadoApp = useRef(AppState.currentState);
+  useEffect(() => {
+    const sub = AppState.addEventListener('change', (nuevo) => {
+      const volvio = estadoApp.current.match(/inactive|background/) && nuevo === 'active';
+      estadoApp.current = nuevo;
+      if (volvio && token) refrescarCuenta();
+    });
+    return () => sub.remove();
+  }, [token, refrescarCuenta]);
 
   const entrarConToken = useCallback(async (nuevo) => {
     await guardarToken(nuevo);
