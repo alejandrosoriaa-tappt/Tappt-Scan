@@ -1,9 +1,17 @@
 import React, { useRef, useState } from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, Alert, ActivityIndicator } from 'react-native';
+import { View, Text, TouchableOpacity, StyleSheet, Platform, ActivityIndicator } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { CameraView, useCameraPermissions } from 'expo-camera';
 import { useIdioma } from '../i18n';
+import { alertar } from '../lib/alerta';
 import { colores, espacio } from '../theme';
+
+// expo-camera 15 en web solo entiende la prop vieja `type` para elegir
+// cámara (su capa web nunca se actualizó a la prop `facing` que sí usa
+// nativo) — sin esto abre la frontal por default en cualquier navegador.
+// Ver node_modules/expo-camera/build/utils/props.js: ConversionTables
+// solo mapea "type", `facing` se cuela sin traducir y se pierde.
+const propsCamaraTrasera = Platform.OS === 'web' ? { type: 'back' } : {};
 
 // Cámara de respaldo: el camino principal sigue siendo WhatsApp, pero la app
 // debe poder escanear por sí sola (requisito de tiendas, guía 4.2 de Apple).
@@ -45,7 +53,7 @@ export default function EscanearScreen({ navigation }) {
       const foto = await camara.current.takePictureAsync({ quality: 0.8, base64: true });
       navigation.navigate('Recorte', { fotoBase64: foto.base64 });
     } catch (err) {
-      Alert.alert(t('noSePudo'), err.message);
+      alertar(t('noSePudo'), err.message);
     } finally {
       setCapturando(false);
     }
@@ -53,7 +61,7 @@ export default function EscanearScreen({ navigation }) {
 
   return (
     <View style={estilos.pantalla}>
-      <CameraView ref={camara} style={StyleSheet.absoluteFill} facing="back" />
+      <CameraView ref={camara} style={StyleSheet.absoluteFill} facing="back" {...propsCamaraTrasera} />
 
       <SafeAreaView style={estilos.capa} edges={['top', 'bottom']}>
         <View style={estilos.visor}>

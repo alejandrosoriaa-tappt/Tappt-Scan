@@ -5,10 +5,12 @@
     "version": "0.1.0",
     "orientation": "portrait",
     "userInterfaceStyle": "light",
-    "primaryColor": "#0F766E",
+    "primaryColor": "#18B875",
+    "icon": "./assets/icon.png",
     "splash": {
+      "image": "./assets/icon.png",
       "resizeMode": "contain",
-      "backgroundColor": "#0F766E"
+      "backgroundColor": "#18B875"
     },
     "assetBundlePatterns": [
       "**/*"
@@ -49,9 +51,10 @@
       "bundler": "metro",
       "name": "TapptScan",
       "shortName": "TapptScan",
-      "themeColor": "#0F766E",
+      "themeColor": "#18B875",
       "backgroundColor": "#F8FAFC",
-      "display": "standalone"
+      "display": "standalone",
+      "favicon": "./assets/favicon.png"
     }
   }
 }
