@@ -75,9 +75,12 @@ llaves reales viven **solo en Railway** (ver `docs/PUESTA-EN-MARCHA.md`).
   alta un número nuevo** dentro de esta misma WABA/app, ya con el nombre
   "TapptScan" limpio desde el inicio, y se apunta `WHATSAPP_PHONE_NUMBER_ID`
   /`EXPECTED_WHATSAPP_PHONE_NUMBER_ID` a ese número nuevo en Railway.
-- Token de acceso usado en pruebas: **temporal (24h)**, generado desde
-  Configuración de la API. Antes de producción hay que generar uno
-  permanente (usuario de sistema en Business Manager).
+- Token: **permanente**, generado con un usuario de sistema propio
+  (`TapptScan Backend`, rol Employee — el límite de admins del portfolio
+  "Tappt" ya estaba tomado por `tappt-system`) con acceso total a la app
+  `TapptScan` y a su cuenta de WhatsApp, permisos
+  `whatsapp_business_messaging` + `whatsapp_business_management`,
+  caducidad "Nunca". Cargado en Railway el 2026-08-10.
 
 ## Stripe — cobros
 
@@ -91,7 +94,9 @@ llaves reales viven **solo en Railway** (ver `docs/PUESTA-EN-MARCHA.md`).
 
 ## Pendiente de completar en este inventario
 
-- IDs de la app de Meta / número de WhatsApp una vez creados.
-- Client ID de Google OAuth una vez generado.
 - Confirmación de que Stripe quedó en modo live y con qué webhook secret
   (sin escribir el secret aquí — solo la fecha en que se activó).
+- Configurar el webhook de Meta (Callback URL + Verify token) — falta el
+  paso 5B de `docs/PUESTA-EN-MARCHA.md`.
+- Dar de alta el número nuevo con nombre "TapptScan" limpio antes de lanzar
+  a producción (ver nota en la sección de WhatsApp arriba).
