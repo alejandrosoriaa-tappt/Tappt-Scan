@@ -4,6 +4,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { CameraView, useCameraPermissions } from 'expo-camera';
 import { useIdioma } from '../i18n';
 import { alertar } from '../lib/alerta';
+import Icono from '../components/Icono';
 import { colores, espacio } from '../theme';
 
 // expo-camera 15 en web solo entiende la prop vieja `type` para elegir
@@ -39,6 +40,9 @@ export default function EscanearScreen({ navigation }) {
         <TouchableOpacity style={estilos.botonPermiso} onPress={pedirPermiso} activeOpacity={0.8}>
           <Text style={estilos.botonPermisoTexto}>{t('permitirCamara')}</Text>
         </TouchableOpacity>
+        <TouchableOpacity onPress={() => navigation.goBack()} style={{ marginTop: espacio.md }}>
+          <Text style={estilos.permisoTexto}>{t('cancelar')}</Text>
+        </TouchableOpacity>
       </SafeAreaView>
     );
   }
@@ -64,6 +68,15 @@ export default function EscanearScreen({ navigation }) {
       <CameraView ref={camara} style={StyleSheet.absoluteFill} facing="back" {...propsCamaraTrasera} />
 
       <SafeAreaView style={estilos.capa} edges={['top', 'bottom']}>
+        <TouchableOpacity
+          style={estilos.cerrar}
+          onPress={() => navigation.goBack()}
+          hitSlop={12}
+          activeOpacity={0.8}
+        >
+          <Icono nombre="cerrar" tamano={20} color="#FFFFFF" />
+        </TouchableOpacity>
+
         <View style={estilos.visor}>
           <View style={estilos.marco}>
             <Text style={estilos.marcoTexto}>{t('colocaDocumento')}</Text>
@@ -91,6 +104,18 @@ export default function EscanearScreen({ navigation }) {
 const estilos = StyleSheet.create({
   pantalla: { flex: 1, backgroundColor: '#0B1220' },
   capa: { flex: 1 },
+  cerrar: {
+    position: 'absolute',
+    top: espacio.md,
+    left: espacio.md,
+    zIndex: 10,
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: 'rgba(0,0,0,0.45)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
   centrado: {
     flex: 1,
     backgroundColor: '#0B1220',
