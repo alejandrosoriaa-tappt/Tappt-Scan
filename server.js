@@ -1,4 +1,5 @@
 require('dotenv').config();
+const path = require('path');
 const express = require('express');
 const webhookRouter = require('./routes/webhook');
 const authRouter = require('./routes/auth');
@@ -37,6 +38,16 @@ app.use('/api/cuenta', cuentaRouter);
 app.use('/api/documentos', documentosRouter);
 app.use('/api/drive', driveRouter);
 app.use('/api/pagos', pagosRouter);
+
+// Espejo web de la app nativa (React Native Web), para probar el
+// onboarding completo desde el navegador sin instalar nada. Va al final:
+// el build referencia rutas absolutas (/_expo/...), así que vive en la
+// raíz del dominio — las rutas de API de arriba ya se quedan con lo suyo
+// porque Express prueba las rutas en orden de registro. Ver
+// docs/DISTRIBUCION.md · Nivel 0.
+const appDist = path.join(__dirname, 'app', 'dist');
+app.use(express.static(appDist));
+app.get('*', (_req, res) => res.sendFile(path.join(appDist, 'index.html')));
 
 const port = process.env.PORT || 3000;
 app.listen(port, () => console.log(`tappt-scan escuchando en :${port}`));
