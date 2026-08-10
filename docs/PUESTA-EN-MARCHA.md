@@ -125,15 +125,23 @@ Número **propio** de TapptScan, distinto al de Tappt y al del bróker.
 1. `STRIPE_SECRET_KEY` desde **Developers → API keys**.
 2. **Developers → Webhooks → Add endpoint**:
    - URL: `https://TU-APP.up.railway.app/api/pagos/webhook`
-   - Evento: **`checkout.session.completed`**
+   - Eventos (los cuatro cubren el ciclo completo de la suscripción):
+     - `checkout.session.completed` — primera compra
+     - `invoice.paid` — renovación anual
+     - `invoice.payment_failed` — la tarjeta falló
+     - `customer.subscription.deleted` — canceló y venció su periodo
    - Copiar el **Signing secret** → `STRIPE_WEBHOOK_SECRET`.
-3. `STRIPE_SUCCESS_URL` y `STRIPE_CANCEL_URL`: dos páginas cualesquiera de
+3. **Settings → Billing → Customer portal**: activarlo. Es donde el usuario
+   cambia su tarjeta o cancela; el bot le manda el link si escribe
+   "cancelar" o "mi suscripción".
+4. `STRIPE_SUCCESS_URL` y `STRIPE_CANCEL_URL`: dos páginas cualesquiera de
    tu sitio.
-4. Precios por moneda en `services/planes.js` (`PRECIOS`). Para vender en
+5. Precios por moneda en `services/planes.js` (`PRECIOS`). Para vender en
    otro país basta agregar la divisa ahí.
 
-No hay que crear productos ni precios en el panel de Stripe: las sesiones se
-arman con `price_data` en el código.
+No hay que crear productos ni precios en el panel: las sesiones se arman con
+`price_data` en el código. Es **suscripción anual**, no pago único — Stripe
+renueva solo y avisa por webhook.
 
 ---
 

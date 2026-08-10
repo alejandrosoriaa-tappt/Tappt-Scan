@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
 import { View, Text, ScrollView, TouchableOpacity, StyleSheet, Alert } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { api } from '../lib/api';
+import { Linking } from 'react-native';
+import Icono from '../components/Icono';
 import { useSesion } from '../context/SesionContext';
 import { useIdioma } from '../i18n';
 import { TEXTOS } from '../i18n/textos';
@@ -24,23 +25,18 @@ function Fila({ etiqueta, valor, estado }) {
 export default function AjustesScreen() {
   const { cuenta, cerrarSesion } = useSesion();
   const { t, idioma, setIdioma, idiomas } = useIdioma();
-  const [pidiendo, setPidiendo] = useState(false);
 
-  // El cobro NUNCA va dentro de la app (evita la comisión de las tiendas):
-  // el backend genera el link de Stripe y lo manda por WhatsApp.
-  const pedirUpgrade = async (plan) => {
-    setPidiendo(true);
-    try {
-      const { enviadoPorWhatsapp } = await api.upgrade(plan);
-      Alert.alert(
-        t('linkEnviado'),
-        enviadoPorWhatsapp ? t('linkEnviadoDetalle') : t('conectaWhatsappParaPago')
-      );
-    } catch (err) {
-      Alert.alert(t('noPudimosEntrar'), err.message);
-    } finally {
-      setPidiendo(false);
-    }
+  /**
+   * La app NO muestra precios ni lleva a pagar.
+   *
+   * La guía 3.1.1 de Apple prohíbe botones que dirijan a comprar fuera de
+   * su sistema, y un precio dentro de la app es justo lo que buscan los
+   * revisores. Aquí solo se abre la conversación de WhatsApp; el precio y
+   * el cobro viven allá.
+   */
+  const abrirWhatsapp = (mensaje) => {
+    const numero = cuenta?.numeroTapptScan || '';
+    Linking.openURL(`https://wa.me/${numero}?text=${encodeURIComponent(mensaje)}`);
   };
 
   if (!cuenta) return <SafeAreaView style={estilos.pantalla} />;
@@ -89,6 +85,12 @@ export default function AjustesScreen() {
         <Text style={estilos.tituloSeccion}>{t('plan')}</Text>
         <View style={estilos.tarjeta}>
           <Fila etiqueta={t('planActual')} valor={PLANES[cuenta.plan]} />
+          {cuenta.planVence ? (
+            <Fila
+              etiqueta={t('renovacion')}
+              valor={new Date(cuenta.planVence).toLocaleDateString()}
+            />
+          ) : null}
           <Fila
             etiqueta={t('escaneosEsteMes')}
             valor={
@@ -99,26 +101,16 @@ export default function AjustesScreen() {
           />
         </View>
 
-        {cuenta.plan === 'gratis' ? (
-          <View style={estilos.acciones}>
-            <TouchableOpacity
-              style={estilos.botonUpgrade}
-              onPress={() => pedirUpgrade('personal')}
-              disabled={pidiendo}
-              activeOpacity={0.8}
-            >
-              <Text style={estilos.botonUpgradeTexto}>{t('mejorarPersonal')}</Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={estilos.botonSecundario}
-              onPress={() => pedirUpgrade('negocio')}
-              disabled={pidiendo}
-              activeOpacity={0.8}
-            >
-              <Text style={estilos.botonSecundarioTexto}>Negocio</Text>
-            </TouchableOpacity>
-          </View>
-        ) : null}
+        <TouchableOpacity
+          style={estilos.botonWhatsapp}
+          onPress={() => abrirWhatsapp(t(cuenta.plan === 'gratis' ? 'mensajeQuieroMas' : 'mensajeMiSuscripcion'))}
+          activeOpacity={0.85}
+        >
+          <Icono nombre="whatsapp" tamano={19} color={colores.primario} />
+          <Text style={estilos.botonWhatsappTexto}>
+            {t(cuenta.plan === 'gratis' ? 'hablarDePlanes' : 'gestionarSuscripcion')}
+          </Text>
+        </TouchableOpacity>
 
         <TouchableOpacity onPress={cerrarSesion}>
           <Text style={estilos.salir}>{t('cerrarSesion')}</Text>
@@ -174,23 +166,17 @@ const estilos = StyleSheet.create({
   chipIdiomaActivo: { backgroundColor: colores.primario, borderColor: colores.primario },
   chipIdiomaTexto: { fontSize: 14, color: colores.textoSuave, fontWeight: '500' },
   chipIdiomaTextoActivo: { color: '#FFFFFF', fontWeight: '700' },
-  acciones: { gap: espacio.sm, marginTop: espacio.md },
-  botonUpgrade: {
-    backgroundColor: colores.primario,
+  botonWhatsapp: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: espacio.sm,
+    backgroundColor: colores.primarioSuave,
     borderRadius: 12,
     paddingVertical: espacio.md,
-    alignItems: 'center',
+    marginTop: espacio.md,
   },
-  botonUpgradeTexto: { color: '#FFFFFF', fontSize: 15, fontWeight: '600' },
-  botonSecundario: {
-    backgroundColor: colores.superficie,
-    borderWidth: 1,
-    borderColor: colores.divisor,
-    borderRadius: 12,
-    paddingVertical: espacio.md,
-    alignItems: 'center',
-  },
-  botonSecundarioTexto: { color: colores.texto, fontSize: 15, fontWeight: '600' },
+  botonWhatsappTexto: { color: colores.primario, fontSize: 15, fontWeight: '600' },
   salir: { color: colores.peligro, fontSize: 14, textAlign: 'center', marginTop: espacio.lg },
   nota: {
     fontSize: 12,

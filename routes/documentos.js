@@ -130,6 +130,26 @@ router.get('/:id/pagina/:n', requireAuth, async (req, res) => {
   }
 });
 
+// Marcar o desmarcar como favorito.
+router.put('/:id/favorito', requireAuth, async (req, res) => {
+  try {
+    const { data, error } = await supabase
+      .from('scan_documents')
+      .update({ favorito: Boolean(req.body.favorito) })
+      .eq('id', req.params.id)
+      .eq('user_id', req.usuario.id)
+      .select()
+      .maybeSingle();
+    if (error) throw error;
+    if (!data) return res.status(404).json({ error: 'documento_no_encontrado' });
+
+    res.json({ favorito: data.favorito });
+  } catch (err) {
+    console.error('[documentos] error marcando favorito', err);
+    res.status(500).json({ error: 'error_favorito' });
+  }
+});
+
 // Hornea las anotaciones (texto, firma, imágenes, emojis, tapados) sobre la
 // imagen del documento y sube el PDF resultante al Drive del usuario.
 router.post('/:id/editar', requireAuth, async (req, res) => {

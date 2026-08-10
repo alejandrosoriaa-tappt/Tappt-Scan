@@ -224,6 +224,13 @@ export const TEXTOS = {
     ahoraNo: 'Ahora no',
     mensajeQuieroMas: 'Quiero el plan Personal',
 
+
+    hablarDePlanes: 'Hablar de planes por WhatsApp',
+    gestionarSuscripcion: 'Gestionar mi suscripción',
+    mensajeMiSuscripcion: 'Mi suscripción',
+    renovacion: 'Renovación',
+    seRenueva: 'Se renueva el {fecha}',
+
     // Errores
     noSePudo: 'No se pudo',
     limiteAlcanzado: 'Ya usaste tus escaneos gratis del mes.',
@@ -455,6 +462,13 @@ export const TEXTOS = {
     limiteNota: "I'll take it from WhatsApp, like everything else. Your document is still here waiting.",
     ahoraNo: 'Not now',
     mensajeQuieroMas: 'I want the Personal plan',
+
+
+    hablarDePlanes: 'Talk plans on WhatsApp',
+    gestionarSuscripcion: 'Manage my subscription',
+    mensajeMiSuscripcion: 'My subscription',
+    renovacion: 'Renewal',
+    seRenueva: 'Renews on {fecha}',
 
     noSePudo: "Couldn't do that",
     limiteAlcanzado: "You've used your free scans for this month.",

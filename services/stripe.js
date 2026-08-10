@@ -16,10 +16,14 @@ function aCentavos(monto) {
 /**
  * Crea una sesión de Checkout y devuelve su URL.
  *
+ * Es **suscripción anual**, no pago único: con pago único habría que
+ * perseguir a cada usuario cada año, y en la práctica eso significa perder
+ * la renovación. Stripe cobra solo y avisa por webhook.
+ *
  * El cobro NUNCA pasa por la app nativa (evita la comisión de 15-30% de
- * Apple/Google): el link se manda por WhatsApp y el usuario paga en el
- * navegador. Checkout además nos da tarjetas internacionales, Apple Pay y
- * Google Pay sin trabajo extra, que es el punto de usar Stripe.
+ * Apple/Google): el link se manda por WhatsApp y se paga en el navegador.
+ * Checkout además da tarjetas internacionales, Apple Pay y Google Pay sin
+ * trabajo extra.
  */
 async function crearLinkDePago(usuario, plan, moneda) {
   const precio = PRECIOS[plan];
@@ -37,22 +41,25 @@ async function crearLinkDePago(usuario, plan, moneda) {
   if (error) throw error;
 
   const sesion = await cliente().checkout.sessions.create({
-    mode: 'payment',
+    mode: 'subscription',
     line_items: [
       {
         quantity: 1,
         price_data: {
           currency: divisa,
           unit_amount: aCentavos(monto),
+          recurring: { interval: 'year' },
           product_data: { name: precio.titulo[usuario.idioma === 'en' ? 'en' : 'es'] },
         },
       },
     ],
-    // `client_reference_id` es lo que amarra la sesión con nuestro registro:
-    // el webhook lo lee para saber a quién subirle el plan.
+    // Amarra la sesión con nuestro registro y con el usuario. `metadata` se
+    // copia a la suscripción para poder identificarla en las renovaciones.
     client_reference_id: pago.id,
-    customer_email: usuario.email || undefined,
+    customer: usuario.stripe_customer_id || undefined,
+    customer_email: usuario.stripe_customer_id ? undefined : usuario.email || undefined,
     metadata: { user_id: usuario.id, plan, pago_id: pago.id },
+    subscription_data: { metadata: { user_id: usuario.id, plan } },
     success_url: process.env.STRIPE_SUCCESS_URL || 'https://tappt.lat/scan/gracias',
     cancel_url: process.env.STRIPE_CANCEL_URL || 'https://tappt.lat/scan',
   });
@@ -75,4 +82,21 @@ function verificarEvento(cuerpoCrudo, firma) {
   );
 }
 
-module.exports = { crearLinkDePago, verificarEvento };
+// Portal de facturación: el usuario cancela o cambia su tarjeta desde ahí.
+// Se abre por WhatsApp, igual que el cobro.
+async function portalDeCliente(usuario) {
+  if (!usuario.stripe_customer_id) return null;
+
+  const sesion = await cliente().billingPortal.sessions.create({
+    customer: usuario.stripe_customer_id,
+    return_url: process.env.STRIPE_SUCCESS_URL || 'https://tappt.lat/scan',
+  });
+
+  return sesion.url;
+}
+
+async function traerSuscripcion(id) {
+  return cliente().subscriptions.retrieve(id);
+}
+
+module.exports = { crearLinkDePago, verificarEvento, portalDeCliente, traerSuscripcion };

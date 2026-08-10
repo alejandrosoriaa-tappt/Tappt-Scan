@@ -51,6 +51,11 @@ export const api = {
       method: 'POST',
       body: JSON.stringify({ archivo, mimeType, nombre }),
     }),
+  favorito: (id, favorito) =>
+    request(`/api/documentos/${id}/favorito`, {
+      method: 'PUT',
+      body: JSON.stringify({ favorito }),
+    }),
   pagina: (id, n = 0) => request(`/api/documentos/${id}/pagina/${n}`),
   editar: (id, anotaciones) =>
     request(`/api/documentos/${id}/editar`, {

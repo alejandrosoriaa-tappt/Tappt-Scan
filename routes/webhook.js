@@ -159,10 +159,29 @@ async function handleDocument(from, documento) {
 // Intención de compra, en español o inglés.
 const QUIERE_PLAN = /(quiero|dame|activar|i want|upgrade to|get)\s+(el\s+)?(plan\s+)?(personal|negocio|business)/i;
 
+// Cancelar, cambiar tarjeta o ver la facturación.
+const QUIERE_SUSCRIPCION =
+  /\b(cancelar|cancelaci[óo]n|mi suscripci[óo]n|dar de baja|cambiar (mi )?tarjeta|facturaci[óo]n|cancel|my subscription|unsubscribe|billing)\b/i;
+
 async function handleText(from, text) {
   const limpio = text.trim();
   const user = await traerUsuario(from);
   const idioma = await idiomaDe(user, limpio);
+
+  // Cancelar o cambiar tarjeta: se manda al portal de Stripe.
+  if (QUIERE_SUSCRIPCION.test(limpio)) {
+    if (!user) {
+      await whatsapp.sendText(from, t(idioma, 'primeroApp'));
+      return;
+    }
+
+    const link = await stripe.portalDeCliente(user);
+    await whatsapp.sendText(
+      from,
+      link ? t(idioma, 'portalPago', { link }) : t(idioma, 'sinSuscripcion')
+    );
+    return;
+  }
 
   if (QUIERE_PLAN.test(limpio)) {
     const plan = /negocio|business/i.test(limpio) ? 'negocio' : 'personal';

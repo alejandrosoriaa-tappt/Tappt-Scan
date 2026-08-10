@@ -26,7 +26,15 @@ const MENSAJES = {
     primeroApp: 'Primero conecta tu cuenta desde la app de TapptScan.',
     linkPago: 'Aquí está tu link para activar el plan {plan}:\n{link}',
     planActivo:
-      'Tu plan {plan} quedó activo. Ya tienes escaneos ilimitados y edición de PDF.',
+      'Tu plan {plan} quedó activo. Ya tienes escaneos ilimitados y edición de PDF. Se renueva solo cada año; puedes cancelar cuando quieras escribiéndome "cancelar".',
+    planRenovado:
+      'Renové tu plan {plan} por un año más. Todo sigue igual, no tienes que hacer nada.',
+    cobroFallido:
+      'No pude cobrar tu renovación — parece que la tarjeta falló. Lo intento otra vez en unos días. Si quieres cambiarla, escríbeme "mi suscripción".',
+    planTerminado:
+      'Tu plan terminó y volviste al gratis: 5 escaneos al mes. Tus documentos siguen intactos en tu Drive. Cuando quieras volver, escríbeme "quiero personal".',
+    portalPago: 'Aquí puedes cambiar tu tarjeta o cancelar cuando quieras:\n{link}',
+    sinSuscripcion: 'Todavía no tienes un plan de pago activo.',
     verApp: 'Ábrelo en la app de TapptScan para verlo, editarlo o firmarlo.',
     gastosEsNegocio:
       'Esa pregunta la contesto con el plan Negocio: llevo tus gastos en una hoja dentro de tu Drive y te respondo aquí mismo. Escríbeme "quiero negocio" y te mando el link.',
@@ -52,7 +60,15 @@ const MENSAJES = {
     primeroApp: 'First connect your account from the TapptScan app.',
     linkPago: "Here's your link to activate the {plan} plan:\n{link}",
     planActivo:
-      'Your {plan} plan is active. You now have unlimited scans and PDF editing.',
+      'Your {plan} plan is active. Unlimited scans and PDF editing from now on. It renews yearly on its own — cancel any time by messaging me "cancel".',
+    planRenovado:
+      'I renewed your {plan} plan for another year. Nothing for you to do.',
+    cobroFallido:
+      "I couldn't charge your renewal — looks like the card failed. I'll retry in a few days. To update it, message me \"my subscription\".",
+    planTerminado:
+      'Your plan ended and you\'re back on free: 5 scans a month. Your documents are untouched in your Drive. Message me "I want personal" to come back.',
+    portalPago: 'Here you can change your card or cancel any time:\n{link}',
+    sinSuscripcion: "You don't have a paid plan yet.",
     verApp: 'Open it in the TapptScan app to view, edit or sign it.',
     gastosEsNegocio:
       'That one comes with the Business plan: I keep your expenses in a sheet inside your Drive and answer right here. Reply "I want business" and I\'ll send you the link.',

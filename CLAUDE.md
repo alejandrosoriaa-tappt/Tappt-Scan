@@ -53,9 +53,11 @@ organizar) se hace en la app.
 - IA: Anthropic (Claude, visión) para clasificar/extraer — `services/vision.js`.
 - Mensajería: WhatsApp Cloud API (Meta Graph v19) — `services/whatsapp.js`.
 - Almacenamiento: Google Drive del usuario vía OAuth — `services/drive.js`.
-- Pagos: **Stripe Checkout** (planes Personal/Negocio), cobro fuera de la app
-  nativa para evitar la comisión de las tiendas. Multi-moneda (mxn/usd/eur)
-  para poder salir a otros países sin tocar código.
+- Pagos: **Stripe Checkout en modo suscripción anual** (planes
+  Personal/Negocio). El cobro va fuera de la app nativa para evitar la
+  comisión de las tiendas, y **la app no muestra precios** (guía 3.1.1 de
+  Apple): solo abre WhatsApp, donde vive el precio y el link. Multi-moneda
+  (mxn/usd/eur) para salir a otros países sin tocar código.
 - Idiomas: español e inglés, en la app y en el bot (`services/i18n.js` y
   `app/src/i18n/`). El idioma del usuario vive en `scan_users.idioma`.
 
@@ -97,9 +99,11 @@ credenciales con otra vertical).
   y horneado de anotaciones.
 - `routes/drive.js` — inicio de OAuth, callback (guarda tokens y crea
   carpetas) y listado de carpetas para el explorador.
-- `routes/pagos.js` — webhook de Stripe. **Verifica la firma** con
-  `STRIPE_WEBHOOK_SECRET`; por eso `server.js` monta `express.raw` en esa
-  ruta antes del parser JSON. Es idempotente ante reintentos.
+- `routes/pagos.js` — webhook de Stripe: primera compra, renovación, cobro
+  fallido y cancelación. **Verifica la firma** con `STRIPE_WEBHOOK_SECRET`;
+  por eso `server.js` monta `express.raw` en esa ruta antes del parser JSON.
+  Es idempotente ante reintentos. Un cobro fallido **no** baja el plan —
+  Stripe reintenta durante días; solo la cancelación lo baja.
 - `services/sesiones.js` — **acceso sin correo ni contraseña**. WhatsApp no
   deja escribirle primero a quien no te ha escrito salvo con plantilla
   aprobada, así que el flujo se invierte: la app abre WhatsApp con el código

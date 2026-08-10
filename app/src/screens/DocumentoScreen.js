@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { View, Text, ScrollView, TouchableOpacity, StyleSheet, Alert, Linking } from 'react-native';
 import { api } from '../lib/api';
+import Icono from '../components/Icono';
 import { useIdioma } from '../i18n';
 import { colores, porTipo, espacio } from '../theme';
 
@@ -17,6 +18,7 @@ export default function DocumentoScreen({ route, navigation }) {
   const { documento } = route.params;
   const meta = porTipo[documento.tipo] || porTipo.otro;
   const [abriendo, setAbriendo] = useState(false);
+  const [favorito, setFavorito] = useState(Boolean(documento.favorito));
   const { t } = useIdioma();
 
   // El original vive en Drive; el backend nos manda la primera página ya
@@ -33,9 +35,27 @@ export default function DocumentoScreen({ route, navigation }) {
     }
   };
 
+  const alternarFavorito = async () => {
+    const nuevo = !favorito;
+    setFavorito(nuevo); // optimista: la estrella responde al instante
+    try {
+      await api.favorito(documento.id, nuevo);
+    } catch {
+      setFavorito(!nuevo);
+    }
+  };
+
   return (
     <ScrollView style={estilos.pantalla} contentContainerStyle={estilos.contenido}>
       <View style={[estilos.vistaPrevia, { backgroundColor: `${meta.color}14` }]}>
+        <TouchableOpacity style={estilos.estrella} onPress={alternarFavorito} hitSlop={12}>
+          <Icono
+            nombre="estrella"
+            tamano={22}
+            color={favorito ? colores.alerta : '#C4CDD5'}
+            grosor={favorito ? 2.4 : 1.8}
+          />
+        </TouchableOpacity>
         <Text style={estilos.vistaPreviaIcono}>{meta.icono}</Text>
         <Text style={estilos.nombreArchivo}>{documento.nombre_archivo}</Text>
       </View>
@@ -98,6 +118,7 @@ const estilos = StyleSheet.create({
     paddingVertical: espacio.xl,
   },
   vistaPreviaIcono: { fontSize: 48 },
+  estrella: { position: 'absolute', top: 12, right: 12 },
   nombreArchivo: { fontSize: 13, color: colores.textoSuave, marginTop: espacio.sm },
   tituloSeccion: {
     fontSize: 13,

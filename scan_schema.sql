@@ -141,3 +141,15 @@ alter table scan_users alter column id set default gen_random_uuid();
 
 -- `scan_links` era el flujo viejo de vinculación por código de 6 dígitos.
 drop table if exists scan_links;
+
+-- Suscripciones de Stripe (agosto 2026): el cobro pasa de pago único a
+-- suscripción anual, así que hay que poder identificar al cliente en las
+-- renovaciones y cancelaciones.
+alter table scan_users add column if not exists stripe_customer_id text;
+alter table scan_users add column if not exists stripe_subscription_id text;
+
+create index if not exists idx_scan_users_stripe_customer on scan_users(stripe_customer_id);
+create index if not exists idx_scan_users_stripe_sub on scan_users(stripe_subscription_id);
+
+-- La pestaña de Favoritos filtraba sobre una columna que no existía.
+alter table scan_documents add column if not exists favorito boolean not null default false;
