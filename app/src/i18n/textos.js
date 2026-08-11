@@ -87,6 +87,10 @@ export const TEXTOS = {
     abrirEnDrive: 'Abrir en Drive',
     compartir: 'Compartir',
     clasificadoComo: 'Clasificado por IA como {tipo}',
+    eliminar: 'Eliminar',
+    eliminarDocumento: '¿Eliminar este documento?',
+    eliminarDocumentoDetalle:
+      'Deja de aparecer en TapptScan, pero el archivo sigue intacto en tu Google Drive — ahí es donde de verdad vive.',
     notaPrivacidad:
       'Este archivo vive en tu Google Drive. Nosotros solo guardamos sus datos para que puedas buscarlo.',
     texto: 'Texto',
@@ -346,6 +350,10 @@ export const TEXTOS = {
     abrirEnDrive: 'Open in Drive',
     compartir: 'Share',
     clasificadoComo: 'Classified by AI as {tipo}',
+    eliminar: 'Delete',
+    eliminarDocumento: 'Delete this document?',
+    eliminarDocumentoDetalle:
+      "It disappears from TapptScan, but the file stays untouched in your Google Drive — that's where it really lives.",
     notaPrivacidad:
       'This file lives in your Google Drive. We only keep its details so you can find it.',
     texto: 'Text',

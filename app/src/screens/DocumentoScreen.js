@@ -1,8 +1,9 @@
 import React, { useState } from 'react';
 import { View, Text, ScrollView, TouchableOpacity, StyleSheet, Linking, Platform, Share } from 'react-native';
 import { api } from '../lib/api';
-import { alertar } from '../lib/alerta';
+import { alertar, alertarConBotones } from '../lib/alerta';
 import Icono from '../components/Icono';
+import HojaAcciones from '../components/HojaAcciones';
 import { useIdioma } from '../i18n';
 import { colores, porTipo, espacio, radio } from '../theme';
 
@@ -43,6 +44,8 @@ export default function DocumentoScreen({ route, navigation }) {
   const meta = porTipo[documento.tipo] || porTipo.otro;
   const [abriendo, setAbriendo] = useState(false);
   const [favorito, setFavorito] = useState(Boolean(documento.favorito));
+  const [masAbierto, setMasAbierto] = useState(false);
+  const [borrando, setBorrando] = useState(false);
   const { t } = useIdioma();
 
   // El original vive en Drive; el backend nos manda la primera página ya
@@ -69,17 +72,45 @@ export default function DocumentoScreen({ route, navigation }) {
     }
   };
 
+  const confirmarBorrado = () => {
+    setMasAbierto(false);
+    // No borra el archivo real de Drive — "TapptScan organiza, no
+    // secuestra archivos": el documento sigue siendo del usuario, solo
+    // deja de aparecer rastreado aquí.
+    alertarConBotones(t('eliminarDocumento'), t('eliminarDocumentoDetalle'), [
+      {
+        text: t('eliminar'),
+        onPress: async () => {
+          setBorrando(true);
+          try {
+            await api.borrarDocumento(documento.id);
+            navigation.goBack();
+          } catch (err) {
+            alertar(t('noSePudo'), err.message);
+            setBorrando(false);
+          }
+        },
+      },
+      { text: t('cancelar') },
+    ]);
+  };
+
   return (
     <ScrollView style={estilos.pantalla} contentContainerStyle={estilos.contenido}>
       <View style={[estilos.vistaPrevia, { backgroundColor: meta.fondo }]}>
-        <TouchableOpacity style={estilos.estrella} onPress={alternarFavorito} hitSlop={12}>
-          <Icono
-            nombre="estrella"
-            tamano={22}
-            color={favorito ? colores.alerta : colores.textoTerciario}
-            grosor={favorito ? 2.4 : 1.8}
-          />
-        </TouchableOpacity>
+        <View style={estilos.accionesEsquina}>
+          <TouchableOpacity onPress={alternarFavorito} hitSlop={12}>
+            <Icono
+              nombre="estrella"
+              tamano={22}
+              color={favorito ? colores.alerta : colores.textoTerciario}
+              grosor={favorito ? 2.4 : 1.8}
+            />
+          </TouchableOpacity>
+          <TouchableOpacity onPress={() => setMasAbierto(true)} hitSlop={12}>
+            <Icono nombre="mas_opciones" tamano={22} color={colores.textoTerciario} />
+          </TouchableOpacity>
+        </View>
         <View style={estilos.vistaPreviaIcono}>
           <Icono nombre={meta.icono} tamano={40} color={meta.trazo} grosor={1.6} />
         </View>
@@ -140,6 +171,28 @@ export default function DocumentoScreen({ route, navigation }) {
       <Text style={estilos.nota}>
         {t('notaPrivacidad')}
       </Text>
+
+      <HojaAcciones
+        visible={masAbierto}
+        titulo={documento.nombre_archivo}
+        acciones={[
+          { id: 'compartir', icono: 'subir', texto: t('compartir') },
+          { id: 'drive', icono: 'nube', texto: t('abrirEnDrive') },
+          { id: 'eliminar', icono: 'cerrar', texto: t('eliminar'), destructiva: true },
+        ]}
+        onCerrar={() => setMasAbierto(false)}
+        onElegir={(id) => {
+          if (id === 'compartir') {
+            setMasAbierto(false);
+            compartir(documento, t);
+          } else if (id === 'drive') {
+            setMasAbierto(false);
+            Linking.openURL(documento.drive_link);
+          } else if (id === 'eliminar') {
+            confirmarBorrado();
+          }
+        }}
+      />
     </ScrollView>
   );
 }
@@ -166,7 +219,13 @@ const estilos = StyleSheet.create({
     marginTop: espacio.sm,
   },
   badgeIATexto: { fontSize: 12, fontWeight: '600', color: colores.primarioClaro },
-  estrella: { position: 'absolute', top: 12, right: 12 },
+  accionesEsquina: {
+    position: 'absolute',
+    top: 12,
+    right: 12,
+    flexDirection: 'row',
+    gap: espacio.md,
+  },
   nombreArchivo: { fontSize: 13, color: colores.textoSuave, marginTop: espacio.sm },
   tituloSeccion: {
     fontSize: 13,
