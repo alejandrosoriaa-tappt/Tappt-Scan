@@ -99,10 +99,10 @@ héroe, iconografía outline uniforme, tipografía sans moderna.
 #3B82F6 — info
 ```
 
-> ⚠️ Esto asume **dark mode como modo principal** — hoy `theme.js` está
-> construido sobre fondo claro (`#F7F9FA`). Es una decisión de producto
-> que hay que confirmar explícitamente antes de rehacer el theme: ¿dark
-> por default, o solo como opción? Cambia bastante el trabajo.
+> ✅ **Resuelto (2026-08-11):** el brief ejecutivo en PDF
+> (`TapptScan_Brief_Ejecutivo_Producto_Diseno_Desarrollo.pdf`) confirma
+> el fondo oscuro como "Dark background **principal**" — no es opcional.
+> `app/src/theme.js` ya se migró a esta paleta.
 
 ### Tipografía
 
@@ -269,28 +269,43 @@ versión firmada creada".
   areas, teclado, dark mode nativo, estados de permisos, offline,
   sincronización con Drive, procesamiento asíncrono de IA.
 
-## Estado de esto en el código hoy (2026-08-10, para retomar)
+## Estado de esto en el código hoy (2026-08-11, para retomar)
 
-- `app/src/theme.js` está en **modo claro**, no oscuro — decidir si el
-  dark-first de este brief reemplaza la paleta actual o convive como
-  opción antes de tocar el theme.
-- `services/imagen.js` ya tiene detección de esquinas + corrección de
-  perspectiva (Otsu + homografía), pero es un solo intento por foto, sin
-  los 3 estados en vivo (baja/parcial/alta confianza) que pide este
-  brief — eso es trabajo de cámara en tiempo real, no de post-proceso.
-- El enderezado automático para fotos de WhatsApp/importación ya se
-  agregó hoy en `services/procesarDocumento.js`.
+- ✅ **Cámara — detección en vivo con 3 estados** (`EscanearScreen.js`):
+  muestreo cada 1.4s contra `/api/documentos/detectar-bordes`, overlay
+  tenue/blanco/verde según confianza, texto de estado, y si captura en
+  "listo" pasa las esquinas directo a Recorte sin re-detectar.
+- ✅ **Theme dark-first** (`app/src/theme.js`): migrado a la paleta del
+  brief ejecutivo (`#0F1720` fondo, `#151B24` superficie, `#F5F7FA`
+  texto, etc.). Los chips de categoría (`porSeccion`/`porTipo`/
+  `porCategoriaGasto`) pasaron de pastel sólido a velo translúcido
+  (`conAlfa(trazo, '20')`) sobre fondo oscuro, mismo trazo saturado de
+  siempre. `app.json` y el manifest de PWA actualizados a juego
+  (`userInterfaceStyle: dark`, splash y `theme-color` oscuros).
+  **Pendiente de confirmar visualmente** — no hay forma de verlo
+  renderizado desde este entorno, solo se auditó que ningún color de
+  texto/fondo esté escrito a mano fuera de los tokens (sí lo está en
+  páginas de documento/firma/cámara, que correctamente siguen blancas
+  siempre — representan papel o son controles de cámara, no la app).
+- `services/imagen.js` sigue con un solo intento por foto en el
+  servidor (Otsu + homografía) — la detección "en vivo" de arriba es
+  aparte, corre en el cliente contra el mismo endpoint, por muestreo.
 - El editor (`EditorScreen.js`) hoy anota sobre el documento pero no
   tiene recorte/reordenar páginas ni el versionado explícito
-  (original/editado/firmado) que pide este brief — es la brecha más
-  grande contra el pilar #4.
-- Falta decidir: ¿el usuario manda las capturas exactas de CamScanner
-  señalando qué replicar primero? (cámara en vivo fue lo que se acordó
-  empezar).
+  (original/editado/firmado) que pide el brief — sigue siendo la
+  brecha más grande contra el pilar #4.
+- Pendiente sin relación al diseño: el número de WhatsApp
+  (`+52 1 56 4417 0712`) sigue registrado en **dos** WABAs de Meta a la
+  vez (`Tappt` y `TapptScan`) — la migración no lo soltó de la vieja, y
+  mensajes reales pueden estar cayendo en la lógica de agenda en vez de
+  TapptScan. Confirmar y quitarlo de la WABA `Tappt`.
 
 ## Siguiente paso
 
-Retomar mañana empezando por la **pantalla de cámara** (prompt 3) —
-overlay de detección en vivo con los 3 estados — que es lo más nuevo y
-lo que más se aleja de lo que hay hoy (que solo enmarca, sin feedback en
-tiempo real de confianza).
+Con la cámara y el theme ya en marcha, seguir con las pantallas del
+brief en orden de impacto: **Home/Dashboard** (chips de IA, estado de
+Drive, CTA de WhatsApp) y **Visor de documento** — ambas ya existen,
+así que es adaptar, no construir desde cero. El **versionado
+original/editado/firmado** del editor es el hueco más grande contra el
+pilar #4 y conviene dejarlo para una sesión aparte por su tamaño
+(toca el editor, el schema de `scan_documents` y probablemente Drive).

@@ -1,73 +1,88 @@
 /**
  * Dirección de arte de TapptScan.
  *
- * Orden · Seguridad · Inteligencia · Rapidez · Privacidad.
- * Referencia: iOS + Notion + Drive + fintech moderna.
+ * Dark-first, benchmark CamScanner. Tokens tomados tal cual del brief
+ * ejecutivo de producto (docs/DIRECCION-DISENO.md) — no inventar matices
+ * nuevos sin actualizar ese documento primero.
  *
  * Regla que gobierna el resto: los colores de categoría nunca compiten con
- * el verde TapptScan — van en pastel de fondo y saturados solo en el ícono.
+ * el verde TapptScan — van en superficie oscura translúcida de fondo y
+ * saturados solo en el ícono.
  */
+
+// Mezcla un hex con alfa (dos dígitos hex, "00"-"ff") para las superficies
+// de categoría: mismo trazo saturado de siempre, pero como velo translúcido
+// sobre fondo oscuro en vez de pastel sólido sobre fondo claro.
+function conAlfa(hex, alfa) {
+  return `${hex}${alfa}`;
+}
 
 export const colores = {
   // Verde TapptScan: CTA, estados activos, indicadores, automatización.
   primario: '#18B875',
-  primarioSuave: '#DDF7EA',
+  primarioPresionado: '#12A56A',
+  primarioClaro: '#37D392',
+  primarioSuave: conAlfa('#18B875', '26'), // ~15% — chips y fondos suaves sobre dark
 
   // Superficies premium con profundidad: hero card, tarjeta de gastos.
   oscuro: '#073B4C',
   oscuroProfundo: '#063746',
 
-  fondo: '#F7F9FA',
-  superficie: '#FFFFFF',
-  texto: '#0D1B2A',
-  textoSuave: '#667587',
-  divisor: '#E8EDF1',
+  fondo: '#0F1720',
+  superficie: '#151B24',
+  superficieElevada: '#1D2430',
+  texto: '#F5F7FA',
+  textoSuave: '#B6C0CC',
+  textoTerciario: '#7F8A98',
+  divisor: '#2A3342',
 
-  exito: '#18B875',
+  exito: '#22C55E',
   alerta: '#F59E0B',
-  peligro: '#E5484D',
+  peligro: '#EF4444',
+  info: '#3B82F6',
 
   blanco: '#FFFFFF',
 };
 
-// Pastel para el fondo del cuadro, saturado para el trazo del ícono.
+// Superficie translúcida del trazo (fondo) + trazo saturado del ícono —
+// mismo par de siempre, adaptado a dark.
 export const porSeccion = {
-  '01 · Personal': { icono: 'usuario', fondo: '#DDF7EA', trazo: '#0EA47A' },
-  '02 · Dinero': { icono: 'dinero', fondo: '#DCF5E7', trazo: '#18B875' },
-  '03 · Casa': { icono: 'casa', fondo: '#FFEEDD', trazo: '#F08C2E' },
-  '04 · Trabajo': { icono: 'maletin', fondo: '#DDEBFB', trazo: '#2F80ED' },
-  '05 · Salud': { icono: 'corazon', fondo: '#FFE4E9', trazo: '#EB5E7C' },
-  '06 · Legal': { icono: 'balanza', fondo: '#EAE4FB', trazo: '#7B61D9' },
-  '07 · Vehículos': { icono: 'auto', fondo: '#DDE9FF', trazo: '#3B6EF5' },
-  '99 · Por revisar': { icono: 'reloj', fondo: '#FFF1D6', trazo: '#E0A32E' },
+  '01 · Personal': { icono: 'usuario', fondo: conAlfa('#2DD4A0', '20'), trazo: '#2DD4A0' },
+  '02 · Dinero': { icono: 'dinero', fondo: conAlfa('#18B875', '20'), trazo: '#18B875' },
+  '03 · Casa': { icono: 'casa', fondo: conAlfa('#F08C2E', '20'), trazo: '#F5A34F' },
+  '04 · Trabajo': { icono: 'maletin', fondo: conAlfa('#3B82F6', '20'), trazo: '#5B9BFA' },
+  '05 · Salud': { icono: 'corazon', fondo: conAlfa('#EB5E7C', '20'), trazo: '#F17E96' },
+  '06 · Legal': { icono: 'balanza', fondo: conAlfa('#7B61D9', '20'), trazo: '#9683E3' },
+  '07 · Vehículos': { icono: 'auto', fondo: conAlfa('#3B6EF5', '20'), trazo: '#6289F7' },
+  '99 · Por revisar': { icono: 'reloj', fondo: conAlfa('#F59E0B', '20'), trazo: '#F5B23D' },
 };
 
 export const porTipo = {
-  identificacion: { clave: 'tipoIdentificacion', icono: 'credencial', fondo: '#DDF7EA', trazo: '#0EA47A' },
-  recibo: { clave: 'tipoRecibo', icono: 'recibo', fondo: '#DCF5E7', trazo: '#18B875' },
-  factura: { clave: 'tipoFactura', icono: 'documento', fondo: '#DDEBFB', trazo: '#2F80ED' },
-  contrato: { clave: 'tipoContrato', icono: 'documento', fondo: '#FFEEDD', trazo: '#F08C2E' },
-  estado_cuenta: { clave: 'tipoEstadoCuenta', icono: 'banco', fondo: '#EAE4FB', trazo: '#7B61D9' },
-  receta: { clave: 'tipoReceta', icono: 'corazon', fondo: '#FFE4E9', trazo: '#EB5E7C' },
-  poliza: { clave: 'tipoPoliza', icono: 'escudo', fondo: '#DDF7EA', trazo: '#0EA47A' },
-  otro: { clave: 'tipoOtro', icono: 'documento', fondo: '#EEF2F5', trazo: '#667587' },
+  identificacion: { clave: 'tipoIdentificacion', icono: 'credencial', fondo: conAlfa('#2DD4A0', '20'), trazo: '#2DD4A0' },
+  recibo: { clave: 'tipoRecibo', icono: 'recibo', fondo: conAlfa('#18B875', '20'), trazo: '#18B875' },
+  factura: { clave: 'tipoFactura', icono: 'documento', fondo: conAlfa('#3B82F6', '20'), trazo: '#5B9BFA' },
+  contrato: { clave: 'tipoContrato', icono: 'documento', fondo: conAlfa('#F08C2E', '20'), trazo: '#F5A34F' },
+  estado_cuenta: { clave: 'tipoEstadoCuenta', icono: 'banco', fondo: conAlfa('#7B61D9', '20'), trazo: '#9683E3' },
+  receta: { clave: 'tipoReceta', icono: 'corazon', fondo: conAlfa('#EB5E7C', '20'), trazo: '#F17E96' },
+  poliza: { clave: 'tipoPoliza', icono: 'escudo', fondo: conAlfa('#2DD4A0', '20'), trazo: '#2DD4A0' },
+  otro: { clave: 'tipoOtro', icono: 'documento', fondo: conAlfa('#B6C0CC', '18'), trazo: '#B6C0CC' },
 };
 
 export const porCategoriaGasto = {
-  supermercado: { icono: 'carrito', fondo: '#DCF5E7', trazo: '#18B875' },
-  restaurantes: { icono: 'cubiertos', fondo: '#FFEEDD', trazo: '#F08C2E' },
-  gasolina: { icono: 'gasolina', fondo: '#DDEBFB', trazo: '#2F80ED' },
-  transporte: { icono: 'auto', fondo: '#DDE9FF', trazo: '#3B6EF5' },
-  servicios: { icono: 'rayo', fondo: '#EAE4FB', trazo: '#7B61D9' },
-  salud: { icono: 'corazon', fondo: '#FFE4E9', trazo: '#EB5E7C' },
-  hogar: { icono: 'casa', fondo: '#FFEEDD', trazo: '#F08C2E' },
-  entretenimiento: { icono: 'estrella', fondo: '#FFE4E9', trazo: '#EB5E7C' },
-  ropa: { icono: 'etiqueta', fondo: '#DDF7EA', trazo: '#0EA47A' },
-  educacion: { icono: 'documento', fondo: '#DDEBFB', trazo: '#2F80ED' },
-  seguros: { icono: 'escudo', fondo: '#DDF7EA', trazo: '#0EA47A' },
-  impuestos: { icono: 'banco', fondo: '#EEF2F5', trazo: '#667587' },
-  trabajo: { icono: 'maletin', fondo: '#DDEBFB', trazo: '#2F80ED' },
-  otros: { icono: 'mas_opciones', fondo: '#EEF2F5', trazo: '#667587' },
+  supermercado: { icono: 'carrito', fondo: conAlfa('#18B875', '20'), trazo: '#18B875' },
+  restaurantes: { icono: 'cubiertos', fondo: conAlfa('#F08C2E', '20'), trazo: '#F5A34F' },
+  gasolina: { icono: 'gasolina', fondo: conAlfa('#3B82F6', '20'), trazo: '#5B9BFA' },
+  transporte: { icono: 'auto', fondo: conAlfa('#3B6EF5', '20'), trazo: '#6289F7' },
+  servicios: { icono: 'rayo', fondo: conAlfa('#7B61D9', '20'), trazo: '#9683E3' },
+  salud: { icono: 'corazon', fondo: conAlfa('#EB5E7C', '20'), trazo: '#F17E96' },
+  hogar: { icono: 'casa', fondo: conAlfa('#F08C2E', '20'), trazo: '#F5A34F' },
+  entretenimiento: { icono: 'estrella', fondo: conAlfa('#EB5E7C', '20'), trazo: '#F17E96' },
+  ropa: { icono: 'etiqueta', fondo: conAlfa('#2DD4A0', '20'), trazo: '#2DD4A0' },
+  educacion: { icono: 'documento', fondo: conAlfa('#3B82F6', '20'), trazo: '#5B9BFA' },
+  seguros: { icono: 'escudo', fondo: conAlfa('#2DD4A0', '20'), trazo: '#2DD4A0' },
+  impuestos: { icono: 'banco', fondo: conAlfa('#B6C0CC', '18'), trazo: '#B6C0CC' },
+  trabajo: { icono: 'maletin', fondo: conAlfa('#3B82F6', '20'), trazo: '#5B9BFA' },
+  otros: { icono: 'mas_opciones', fondo: conAlfa('#B6C0CC', '18'), trazo: '#B6C0CC' },
 };
 
 export const espacio = { xs: 4, sm: 8, md: 16, lg: 24, xl: 32 };
@@ -93,11 +108,13 @@ export const tipo = {
   metricaGrande: { fontSize: 34, fontWeight: '700', letterSpacing: -0.8 },
 };
 
-// Sombra muy ligera: la separación la da el espacio, no el borde.
+// Sobre fondo oscuro la sombra casi no se ve — la separación real la da el
+// contraste entre `superficie` y `superficieElevada`, no la sombra. Se deja
+// muy tenue solo para no perder algo de profundidad en iOS nativo.
 export const sombra = {
-  shadowColor: '#0F2332',
-  shadowOpacity: 0.06,
-  shadowRadius: 18,
+  shadowColor: '#000000',
+  shadowOpacity: 0.35,
+  shadowRadius: 14,
   shadowOffset: { width: 0, height: 4 },
   elevation: 2,
 };

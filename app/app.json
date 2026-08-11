@@ -4,13 +4,13 @@
     "slug": "tappt-scan",
     "version": "0.1.0",
     "orientation": "portrait",
-    "userInterfaceStyle": "light",
+    "userInterfaceStyle": "dark",
     "primaryColor": "#18B875",
     "icon": "./assets/icon.png",
     "splash": {
       "image": "./assets/icon.png",
       "resizeMode": "contain",
-      "backgroundColor": "#18B875"
+      "backgroundColor": "#0F1720"
     },
     "assetBundlePatterns": [
       "**/*"
@@ -52,7 +52,7 @@
       "name": "TapptScan",
       "shortName": "TapptScan",
       "themeColor": "#18B875",
-      "backgroundColor": "#F8FAFC",
+      "backgroundColor": "#0F1720",
       "display": "standalone",
       "favicon": "./assets/favicon.png"
     }

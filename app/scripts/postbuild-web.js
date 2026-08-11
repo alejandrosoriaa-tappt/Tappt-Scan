@@ -26,7 +26,7 @@ fs.writeFileSync(
       short_name: 'TapptScan',
       start_url: '/',
       display: 'standalone',
-      background_color: '#F8FAFC',
+      background_color: '#0F1720',
       theme_color: '#18B875',
       icons: [{ src: '/icon-512.png', sizes: '512x512', type: 'image/png', purpose: 'any maskable' }],
     },
