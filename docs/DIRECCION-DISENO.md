@@ -300,6 +300,25 @@ versión firmada creada".
   mensajes reales pueden estar cayendo en la lógica de agenda en vez de
   TapptScan. Confirmar y quitarlo de la WABA `Tappt`.
 
+## Idea guardada para después del rediseño: cámara continua (celular ↔ web)
+
+Propuesta del usuario (2026-08-11): cuando alguien usa la web app en
+computadora y toca "Escanear con cámara", en vez de pedir la cámara
+(mala) de la laptop, mostrar un **QR de emparejamiento temporal**. Se
+escanea con la cámara normal del celular (sin abrir ninguna app), abre
+una páginita web ligera ya autenticada por ese token de un solo uso,
+usa ahí la cámara real del teléfono (misma detección en vivo que ya
+existe), y el documento aparece en la sesión de escritorio casi al
+instante para seguir organizando/editando/firmando en pantalla grande
+— justo el caso de quien lleva las finanzas del negocio y necesita ver
+bien las cifras, pero la cámara de la laptop no sirve para documentos.
+
+Es una pieza de arquitectura nueva, no un ajuste de pantalla: tokens de
+emparejamiento temporales, una ruta pública ligera para el celular, y
+sincronización en tiempo real (WebSocket o polling) entre las dos
+sesiones. Explícitamente **para después de terminar el rediseño
+completo** — no priorizarlo antes sin que el usuario lo pida.
+
 ## Estado — segunda pasada, misma noche (2026-08-11, tarde)
 
 Confirmado con el usuario que el dark theme se ve bien (capturas reales

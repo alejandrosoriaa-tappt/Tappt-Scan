@@ -42,12 +42,23 @@ function AccionPrincipal({ icono, fondo, trazo, titulo, detalle, onPress, destac
   );
 }
 
-function Tile({ valor, etiqueta, acento }) {
+// Sin onPress se queda como una vista normal (no todo el grid es tocable,
+// solo la tarjeta de gastos lleva a Gastos con su gráfica) — por eso el
+// tamaño del grid (width 48%) vive en el elemento de afuera siempre, y la
+// Tarjeta de adentro solo pone el fondo/borde, para no aplicarlo dos veces.
+function Tile({ valor, etiqueta, acento, onPress }) {
   return (
-    <Tarjeta style={estilos.tile}>
-      <Text style={[estilos.tileValor, acento && { color: acento }]}>{valor}</Text>
-      <Text style={estilos.tileEtiqueta}>{etiqueta}</Text>
-    </Tarjeta>
+    <TouchableOpacity
+      style={estilos.tile}
+      onPress={onPress}
+      disabled={!onPress}
+      activeOpacity={onPress ? 0.75 : 1}
+    >
+      <Tarjeta style={estilos.tileInterior}>
+        <Text style={[estilos.tileValor, acento && { color: acento }]}>{valor}</Text>
+        <Text style={estilos.tileEtiqueta}>{etiqueta}</Text>
+      </Tarjeta>
+    </TouchableOpacity>
   );
 }
 
@@ -164,6 +175,7 @@ export default function DashboardScreen({ navigation }) {
             <Tile
               valor={formatoDinero(datos?.gastoDelMes ?? 0)}
               etiqueta={t('gastosEsteMes')}
+              onPress={() => navigation.navigate('Gastos')}
             />
             <Tile
               valor={datos?.porRevisar ?? 0}
@@ -294,7 +306,8 @@ const estilos = StyleSheet.create({
   verTodo: { ...tipo.secundario, fontWeight: '600', color: colores.primario },
 
   rejilla: { flexDirection: 'row', flexWrap: 'wrap', gap: espacio.sm },
-  tile: { width: '48%', flexGrow: 1, paddingVertical: espacio.md + 2 },
+  tile: { width: '48%', flexGrow: 1 },
+  tileInterior: { paddingVertical: espacio.md + 2 },
   tileValor: { ...tipo.metrica, color: colores.texto },
   tileEtiqueta: { ...tipo.menor, color: colores.textoSuave, marginTop: 4, lineHeight: 16 },
 
