@@ -48,16 +48,18 @@ export default function DocumentoScreen({ route, navigation }) {
 
   return (
     <ScrollView style={estilos.pantalla} contentContainerStyle={estilos.contenido}>
-      <View style={[estilos.vistaPrevia, { backgroundColor: `${meta.color}14` }]}>
+      <View style={[estilos.vistaPrevia, { backgroundColor: meta.fondo }]}>
         <TouchableOpacity style={estilos.estrella} onPress={alternarFavorito} hitSlop={12}>
           <Icono
             nombre="estrella"
             tamano={22}
-            color={favorito ? colores.alerta : '#C4CDD5'}
+            color={favorito ? colores.alerta : colores.textoTerciario}
             grosor={favorito ? 2.4 : 1.8}
           />
         </TouchableOpacity>
-        <Text style={estilos.vistaPreviaIcono}>{meta.icono}</Text>
+        <View style={estilos.vistaPreviaIcono}>
+          <Icono nombre={meta.icono} tamano={40} color={meta.trazo} grosor={1.6} />
+        </View>
         <Text style={estilos.nombreArchivo}>{documento.nombre_archivo}</Text>
       </View>
 
@@ -118,7 +120,7 @@ const estilos = StyleSheet.create({
     justifyContent: 'center',
     paddingVertical: espacio.xl,
   },
-  vistaPreviaIcono: { fontSize: 48 },
+  vistaPreviaIcono: { marginBottom: espacio.xs },
   estrella: { position: 'absolute', top: 12, right: 12 },
   nombreArchivo: { fontSize: 13, color: colores.textoSuave, marginTop: espacio.sm },
   tituloSeccion: {
