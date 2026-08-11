@@ -53,16 +53,22 @@ router.post('/', async (req, res) => {
 
   res.sendStatus(200); // ack inmediato, Meta reintenta si tardamos
 
+  let msg, from;
   try {
     // El cuerpo llega crudo (Buffer) porque la firma se calcula sobre él.
     const cuerpo = JSON.parse(req.body.toString('utf8'));
     const entry = cuerpo.entry?.[0];
     const change = entry?.changes?.[0];
     const value = change?.value;
-    const msg = value?.messages?.[0];
+    msg = value?.messages?.[0];
     if (!msg) return;
 
-    const from = msg.from;
+    from = msg.from;
+
+    // Palomita azul + "escribiendo..." mientras procesamos. Antes no se
+    // llamaba nunca, por eso nunca se veía ni el leído ni el typing.
+    const mostrarTyping = msg.type === 'image' || msg.type === 'document';
+    await whatsapp.markAsRead(msg.id, mostrarTyping);
 
     if (msg.type === 'image') {
       await handleImage(from, msg.image);
@@ -74,7 +80,26 @@ router.post('/', async (req, res) => {
       await handleButton(from, msg.interactive);
     }
   } catch (err) {
-    console.error('[webhook] error procesando mensaje', err);
+    // Antes esto solo se logueaba y el usuario se quedaba sin ninguna
+    // respuesta — ni confirmación ni error — sin forma de saber que su
+    // archivo no se procesó. Ahora: log con más contexto + aviso al usuario.
+    console.error('[webhook] error procesando mensaje', {
+      tipo: msg?.type,
+      from,
+      error: err.message,
+      stack: err.stack,
+    });
+
+    if (from) {
+      try {
+        await whatsapp.sendText(
+          from,
+          'Algo falló al procesar tu archivo 😕 Ya quedó registrado, ¿puedes intentar mandarlo de nuevo?'
+        );
+      } catch (_) {
+        // si ni el aviso de error se pudo mandar, no hay más que hacer aquí
+      }
+    }
   }
 });
 
