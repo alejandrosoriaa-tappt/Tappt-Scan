@@ -28,10 +28,15 @@ const EMOJIS = ['✅', '❌', '⭐', '🔴', '➡️', '📌', '✍️', '⚠️
 const HERRAMIENTAS = [
   { id: 'texto', icono: 'documento' },
   { id: 'firma', icono: 'etiqueta' },
+  { id: 'firma_foto', icono: 'subir' },
   { id: 'emoji', icono: 'estrella' },
   { id: 'imagen', icono: 'camara' },
   { id: 'tapar', icono: 'recibo' },
 ];
+
+// Mismo azul por default que FirmaPad — una firma importada de una foto
+// no pasa por el selector de color, así que usa este directo.
+const COLOR_FIRMA_IMPORTADA = '#2563EB';
 
 export default function EditorScreen({ route, navigation }) {
   const { documento, paginaInicial } = route.params;
@@ -68,6 +73,7 @@ export default function EditorScreen({ route, navigation }) {
   const totalPaginas = vista?.paginas || documento.paginas || 1;
 
   const [firmaAbierta, setFirmaAbierta] = useState(false);
+  const [procesandoFirma, setProcesandoFirma] = useState(false);
   const [emojisAbiertos, setEmojisAbiertos] = useState(false);
   const [textoAbierto, setTextoAbierto] = useState(false);
   const [textoNuevo, setTextoNuevo] = useState('');
@@ -106,6 +112,30 @@ export default function EditorScreen({ route, navigation }) {
           ancho: 0.25,
           datos: `data:image/jpeg;base64,${activo.base64}`,
         });
+      }
+    } else if (herramienta === 'firma_foto') {
+      const resultado = await ImagePicker.launchImageLibraryAsync({ base64: true, quality: 0.9 });
+      if (resultado.canceled) return;
+
+      const activo = resultado.assets[0];
+      setProcesandoFirma(true);
+      try {
+        // El servidor recorta al trazo, quita el fondo (sin importar de
+        // qué color sea el papel) y lo tiñe del color por default — el
+        // mismo resultado que dibujarla a mano, pero partiendo de una
+        // firma que ya existe en papel.
+        const { firma } = await api.firmaDesdeFoto(
+          `data:image/jpeg;base64,${activo.base64}`,
+          COLOR_FIRMA_IMPORTADA
+        );
+        agregar({ tipo: 'firma', ...posicion, ancho: 0.35, datos: firma });
+      } catch (err) {
+        alertar(
+          t('noSePudo'),
+          err.message === 'firma_no_detectada' ? t('firmaNoDetectada') : err.message
+        );
+      } finally {
+        setProcesandoFirma(false);
       }
     }
   };
@@ -155,9 +185,12 @@ export default function EditorScreen({ route, navigation }) {
               />
             ) : null}
 
-            {cargandoPagina ? (
+            {cargandoPagina || procesandoFirma ? (
               <View style={estilos.capaCargando}>
                 <ActivityIndicator color={colores.primario} />
+                {procesandoFirma ? (
+                  <Text style={estilos.capaCargandoTexto}>{t('extrayendoFirma')}</Text>
+                ) : null}
               </View>
             ) : null}
 
@@ -362,6 +395,7 @@ const estilos = StyleSheet.create({
     justifyContent: 'center',
     backgroundColor: 'rgba(255,255,255,0.7)',
   },
+  capaCargandoTexto: { color: '#0F172A', fontSize: 13, fontWeight: '600', marginTop: espacio.sm },
   paginador: {
     flexDirection: 'row',
     alignItems: 'center',

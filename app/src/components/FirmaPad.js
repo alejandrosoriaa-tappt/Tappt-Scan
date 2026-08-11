@@ -1,9 +1,19 @@
-import React, { useRef } from 'react';
+import React, { useRef, useState } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, Modal } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { WebView } from 'react-native-webview';
 import { useIdioma } from '../i18n';
-import { colores, espacio } from '../theme';
+import { colores, espacio, radio } from '../theme';
+
+// Azul por default: la firma se distingue de una fotocopia en blanco y
+// negro y es el color que más se usa en documentos reales.
+export const COLORES_FIRMA = [
+  { nombre: 'azul', hex: '#2563EB' },
+  { nombre: 'negro', hex: '#0F172A' },
+  { nombre: 'rojo', hex: '#DC2626' },
+  { nombre: 'verde', hex: '#18B875' },
+];
+export const GROSORES_FIRMA = [1.5, 2.5, 4];
 
 // Lienzo de firma dentro de un WebView: el trazo a dedo se maneja mucho
 // mejor con canvas que reconstruyéndolo con vistas nativas. Devuelve un PNG
@@ -27,7 +37,7 @@ const HTML = `<!doctype html><html><head>
     ctx.lineWidth = 2.5;
     ctx.lineCap = 'round';
     ctx.lineJoin = 'round';
-    ctx.strokeStyle = '#0F172A';
+    ctx.strokeStyle = '#2563EB';
   }
   ajustar();
 
@@ -75,11 +85,18 @@ const HTML = `<!doctype html><html><head>
     if (!huboTrazo) return mensaje({ tipo: 'vacio' });
     mensaje({ tipo: 'firma', datos: c.toDataURL('image/png') });
   };
+
+  // Cambiar color/grosor a medio trazo no debe perder lo ya dibujado —
+  // solo se aplica al siguiente trazo, igual que en la versión web.
+  window.setColor = function (hex) { ctx.strokeStyle = hex; };
+  window.setGrosor = function (px) { ctx.lineWidth = px; };
 </script></body></html>`;
 
 export default function FirmaPad({ visible, onCerrar, onFirmar }) {
   const { t } = useIdioma();
   const web = useRef(null);
+  const [color, setColorState] = useState(COLORES_FIRMA[0].hex);
+  const [grosor, setGrosorState] = useState(GROSORES_FIRMA[1]);
 
   const recibir = (evento) => {
     const mensaje = JSON.parse(evento.nativeEvent.data);
@@ -87,6 +104,16 @@ export default function FirmaPad({ visible, onCerrar, onFirmar }) {
       onFirmar(mensaje.datos);
       onCerrar();
     }
+  };
+
+  const elegirColor = (hex) => {
+    setColorState(hex);
+    web.current?.injectJavaScript(`window.setColor(${JSON.stringify(hex)});true;`);
+  };
+
+  const elegirGrosor = (px) => {
+    setGrosorState(px);
+    web.current?.injectJavaScript(`window.setGrosor(${px});true;`);
   };
 
   return (
@@ -110,6 +137,41 @@ export default function FirmaPad({ visible, onCerrar, onFirmar }) {
             scrollEnabled={false}
             style={estilos.web}
           />
+        </View>
+
+        <View style={estilos.controles}>
+          <View style={estilos.swatches}>
+            {COLORES_FIRMA.map((c) => (
+              <TouchableOpacity
+                key={c.hex}
+                onPress={() => elegirColor(c.hex)}
+                style={[
+                  estilos.swatch,
+                  { backgroundColor: c.hex },
+                  color === c.hex && estilos.swatchActivo,
+                ]}
+              />
+            ))}
+          </View>
+
+          <View style={estilos.grosores}>
+            {GROSORES_FIRMA.map((g, i) => (
+              <TouchableOpacity
+                key={g}
+                onPress={() => elegirGrosor(g)}
+                style={[estilos.grosorBoton, grosor === g && estilos.grosorBotonActivo]}
+              >
+                <View
+                  style={{
+                    width: 6 + i * 4,
+                    height: 6 + i * 4,
+                    borderRadius: 99,
+                    backgroundColor: grosor === g ? color : colores.textoTerciario,
+                  }}
+                />
+              </TouchableOpacity>
+            ))}
+          </View>
         </View>
 
         <TouchableOpacity
@@ -143,6 +205,33 @@ const estilos = StyleSheet.create({
     overflow: 'hidden',
   },
   web: { flex: 1, backgroundColor: '#FFFFFF' },
+  controles: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: espacio.md,
+    paddingTop: espacio.md,
+  },
+  swatches: { flexDirection: 'row', gap: espacio.sm },
+  swatch: {
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    borderWidth: 2,
+    borderColor: 'transparent',
+  },
+  swatchActivo: { borderColor: colores.texto },
+  grosores: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: espacio.sm,
+    backgroundColor: colores.superficie,
+    borderRadius: radio.chip,
+    paddingHorizontal: espacio.sm,
+    paddingVertical: espacio.xs,
+  },
+  grosorBoton: { width: 28, height: 28, alignItems: 'center', justifyContent: 'center' },
+  grosorBotonActivo: { backgroundColor: colores.superficieElevada, borderRadius: 14 },
   limpiar: { padding: espacio.md, alignItems: 'center' },
   limpiarTexto: { color: colores.textoSuave, fontSize: 14 },
 });

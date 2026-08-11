@@ -1,8 +1,19 @@
-import React, { useRef, useEffect } from 'react';
+import React, { useRef, useEffect, useState } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, Modal } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useIdioma } from '../i18n';
-import { colores, espacio } from '../theme';
+import { colores, espacio, radio } from '../theme';
+
+// Azul por default: la firma se distingue de una fotocopia en blanco y
+// negro y es el color que más se usa en documentos reales. El usuario
+// puede cambiarlo antes o durante el trazo.
+export const COLORES_FIRMA = [
+  { nombre: 'azul', hex: '#2563EB' },
+  { nombre: 'negro', hex: '#0F172A' },
+  { nombre: 'rojo', hex: '#DC2626' },
+  { nombre: 'verde', hex: '#18B875' },
+];
+export const GROSORES_FIRMA = [1.5, 2.5, 4];
 
 /**
  * Versión web del lienzo de firma.
@@ -19,7 +30,20 @@ export default function FirmaPad({ visible, onCerrar, onFirmar }) {
   const { t } = useIdioma();
   const contenedor = useRef(null);
   const canvas = useRef(null);
+  const ctxRef = useRef(null);
   const huboTrazo = useRef(false);
+
+  const [color, setColor] = useState(COLORES_FIRMA[0].hex);
+  const [grosor, setGrosor] = useState(GROSORES_FIRMA[1]);
+
+  // El color/grosor se aplican al ctx ya existente sin reiniciar el
+  // lienzo — así no se pierde lo ya dibujado al cambiarlos a medias.
+  useEffect(() => {
+    if (ctxRef.current) {
+      ctxRef.current.strokeStyle = color;
+      ctxRef.current.lineWidth = grosor;
+    }
+  }, [color, grosor]);
 
   useEffect(() => {
     if (!visible || !contenedor.current) return;
@@ -36,16 +60,17 @@ export default function FirmaPad({ visible, onCerrar, onFirmar }) {
     nodo.appendChild(lienzo);
 
     const ctx = lienzo.getContext('2d');
+    ctxRef.current = ctx;
 
     const ajustar = () => {
       const { width, height } = nodo.getBoundingClientRect();
       lienzo.width = Math.max(1, width * escala);
       lienzo.height = Math.max(1, height * escala);
       ctx.setTransform(escala, 0, 0, escala, 0, 0);
-      ctx.lineWidth = 2.5;
       ctx.lineCap = 'round';
       ctx.lineJoin = 'round';
-      ctx.strokeStyle = '#0F172A';
+      ctx.lineWidth = grosor;
+      ctx.strokeStyle = color;
     };
     ajustar();
 
@@ -85,6 +110,7 @@ export default function FirmaPad({ visible, onCerrar, onFirmar }) {
       window.removeEventListener('resize', ajustar);
       lienzo.remove();
       canvas.current = null;
+      ctxRef.current = null;
       huboTrazo.current = false;
     };
   }, [visible]);
@@ -117,6 +143,41 @@ export default function FirmaPad({ visible, onCerrar, onFirmar }) {
 
         <View ref={contenedor} style={estilos.lienzo} />
 
+        <View style={estilos.controles}>
+          <View style={estilos.swatches}>
+            {COLORES_FIRMA.map((c) => (
+              <TouchableOpacity
+                key={c.hex}
+                onPress={() => setColor(c.hex)}
+                style={[
+                  estilos.swatch,
+                  { backgroundColor: c.hex },
+                  color === c.hex && estilos.swatchActivo,
+                ]}
+              />
+            ))}
+          </View>
+
+          <View style={estilos.grosores}>
+            {GROSORES_FIRMA.map((g, i) => (
+              <TouchableOpacity
+                key={g}
+                onPress={() => setGrosor(g)}
+                style={[estilos.grosorBoton, grosor === g && estilos.grosorBotonActivo]}
+              >
+                <View
+                  style={{
+                    width: 6 + i * 4,
+                    height: 6 + i * 4,
+                    borderRadius: 99,
+                    backgroundColor: grosor === g ? color : colores.textoTerciario,
+                  }}
+                />
+              </TouchableOpacity>
+            ))}
+          </View>
+        </View>
+
         <TouchableOpacity onPress={limpiar} style={estilos.limpiar}>
           <Text style={estilos.limpiarTexto}>{t('borrarFirma')}</Text>
         </TouchableOpacity>
@@ -145,6 +206,33 @@ const estilos = StyleSheet.create({
     backgroundColor: '#FFFFFF',
     overflow: 'hidden',
   },
+  controles: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: espacio.md,
+    paddingTop: espacio.md,
+  },
+  swatches: { flexDirection: 'row', gap: espacio.sm },
+  swatch: {
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    borderWidth: 2,
+    borderColor: 'transparent',
+  },
+  swatchActivo: { borderColor: colores.texto },
+  grosores: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: espacio.sm,
+    backgroundColor: colores.superficie,
+    borderRadius: radio.chip,
+    paddingHorizontal: espacio.sm,
+    paddingVertical: espacio.xs,
+  },
+  grosorBoton: { width: 28, height: 28, alignItems: 'center', justifyContent: 'center' },
+  grosorBotonActivo: { backgroundColor: colores.superficieElevada, borderRadius: 14 },
   limpiar: { padding: espacio.md, alignItems: 'center' },
   limpiarTexto: { color: colores.textoSuave, fontSize: 14 },
 });

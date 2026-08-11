@@ -34,6 +34,27 @@ router.post('/detectar-bordes', requireAuth, async (req, res) => {
   }
 });
 
+// De una foto de una firma en papel (cualquier fondo) devuelve solo el
+// trazo, recortado a su contorno, transparente y teñido del color elegido
+// — para poder pegarla sobre cualquier documento igual que si se hubiera
+// dibujado a mano con FirmaPad.
+router.post('/firma-desde-foto', requireAuth, async (req, res) => {
+  try {
+    const { imagen, color } = req.body;
+    if (!imagen) return res.status(400).json({ error: 'falta_imagen' });
+
+    const buffer = Buffer.from(imagen.replace(/^data:[^;]+;base64,/, ''), 'base64');
+    const png = await imagenServicio.extraerFirma(buffer, color);
+    res.json({ firma: `data:image/png;base64,${png.toString('base64')}` });
+  } catch (err) {
+    if (err.message === 'firma_no_detectada') {
+      return res.status(422).json({ error: 'firma_no_detectada' });
+    }
+    console.error('[documentos] error extrayendo firma', err);
+    res.status(500).json({ error: 'error_firma' });
+  }
+});
+
 // Entrada desde la app: cámara (`/escanear`) o importación de un archivo
 // del dispositivo (`/importar`). Ambas comparten validaciones y tubería.
 async function recibirDesdeApp(req, res, mimePorDefecto) {

@@ -1,10 +1,33 @@
 import React, { useState } from 'react';
-import { View, Text, ScrollView, TouchableOpacity, StyleSheet, Linking } from 'react-native';
+import { View, Text, ScrollView, TouchableOpacity, StyleSheet, Linking, Platform, Share } from 'react-native';
 import { api } from '../lib/api';
 import { alertar } from '../lib/alerta';
 import Icono from '../components/Icono';
 import { useIdioma } from '../i18n';
-import { colores, porTipo, espacio } from '../theme';
+import { colores, porTipo, espacio, radio } from '../theme';
+
+// En web, react-native-web no implementa Share — se usa la Web Share API
+// del navegador si existe (Safari/Chrome en celular la traen), y si no,
+// simplemente se abre el link de Drive, igual que el botón de al lado.
+async function compartir(documento, t) {
+  if (Platform.OS === 'web') {
+    if (navigator.share) {
+      try {
+        await navigator.share({ title: documento.nombre_archivo, url: documento.drive_link });
+      } catch {
+        // El usuario canceló el share sheet — no es un error que avisar.
+      }
+    } else {
+      Linking.openURL(documento.drive_link);
+    }
+    return;
+  }
+  try {
+    await Share.share({ message: documento.nombre_archivo, url: documento.drive_link });
+  } catch (err) {
+    alertar(t('noSePudo'), err.message);
+  }
+}
 
 function Campo({ etiqueta, valor }) {
   return (
@@ -63,6 +86,13 @@ export default function DocumentoScreen({ route, navigation }) {
         <Text style={estilos.nombreArchivo}>{documento.nombre_archivo}</Text>
       </View>
 
+      <View style={estilos.badgeIA}>
+        <Icono nombre="verificado" tamano={13} color={colores.primarioClaro} />
+        <Text style={estilos.badgeIATexto}>
+          {t('clasificadoComo', { tipo: t(meta.clave) })}
+        </Text>
+      </View>
+
       <Text style={estilos.tituloSeccion}>{t('datosExtraidos')}</Text>
       <View style={estilos.tarjeta}>
         <Campo etiqueta={t('tipo')} valor={t(meta.clave)} />
@@ -96,6 +126,9 @@ export default function DocumentoScreen({ route, navigation }) {
             {abriendo ? t('abriendo') : t('editarFirmar')}
           </Text>
         </TouchableOpacity>
+        <TouchableOpacity style={estilos.boton} onPress={() => compartir(documento, t)}>
+          <Text style={estilos.botonTexto}>{t('compartir')}</Text>
+        </TouchableOpacity>
         <TouchableOpacity
           style={[estilos.boton, estilos.botonPrimario]}
           onPress={() => Linking.openURL(documento.drive_link)}
@@ -121,6 +154,18 @@ const estilos = StyleSheet.create({
     paddingVertical: espacio.xl,
   },
   vistaPreviaIcono: { marginBottom: espacio.xs },
+  badgeIA: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    alignSelf: 'center',
+    gap: 6,
+    backgroundColor: colores.primarioSuave,
+    borderRadius: radio.chip,
+    paddingHorizontal: espacio.sm,
+    paddingVertical: 5,
+    marginTop: espacio.sm,
+  },
+  badgeIATexto: { fontSize: 12, fontWeight: '600', color: colores.primarioClaro },
   estrella: { position: 'absolute', top: 12, right: 12 },
   nombreArchivo: { fontSize: 13, color: colores.textoSuave, marginTop: espacio.sm },
   tituloSeccion: {

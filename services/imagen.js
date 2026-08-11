@@ -261,4 +261,88 @@ async function corregirPerspectiva(buffer, esquinasFraccion) {
   return salida.toBuffer('image/png');
 }
 
-module.exports = { detectarDocumento, corregirPerspectiva };
+const ANCHO_FIRMA = 900; // suficiente para el trazo de una firma, sin cargar el proceso
+
+function hexARgb(hex) {
+  const limpio = hex.replace('#', '');
+  return {
+    r: parseInt(limpio.slice(0, 2), 16),
+    g: parseInt(limpio.slice(2, 4), 16),
+    b: parseInt(limpio.slice(4, 6), 16),
+  };
+}
+
+/**
+ * De una foto de una firma en papel (cualquier fondo) saca solo el trazo:
+ * lo recorta a su propio contorno y lo deja con fondo transparente, ya
+ * teñido del color elegido — listo para pegarse sobre cualquier documento
+ * sin importar de qué color sea el papel de fondo.
+ *
+ * Mismo principio que `detectarDocumento` (Otsu separa claro/oscuro) pero
+ * al revés: aquí lo oscuro es la tinta que sí queremos conservar, no el
+ * fondo.
+ */
+async function extraerFirma(buffer, colorHex = '#2563EB') {
+  const original = await cargar(buffer);
+  const escala = Math.min(1, ANCHO_FIRMA / original.width);
+  const ancho = Math.max(1, Math.round(original.width * escala));
+  const alto = Math.max(1, Math.round(original.height * escala));
+
+  const datos = pixelesDe(original, ancho, alto);
+  const grises = aGrises(datos, ancho * alto);
+  const umbral = umbralOtsu(grises);
+
+  const { r, g, b } = hexARgb(colorHex);
+  const alfa = new Uint8ClampedArray(ancho * alto);
+
+  let minX = ancho;
+  let minY = alto;
+  let maxX = -1;
+  let maxY = -1;
+
+  for (let y = 0; y < alto; y++) {
+    for (let x = 0; x < ancho; x++) {
+      const i = y * ancho + x;
+      // Tinta = más oscuro que el umbral. Un margen chico evita que el
+      // grano del papel o una sombra leve se cuelen como trazo.
+      const esTinta = grises[i] < umbral - 10;
+      alfa[i] = esTinta ? 255 : 0;
+      if (esTinta) {
+        if (x < minX) minX = x;
+        if (x > maxX) maxX = x;
+        if (y < minY) minY = y;
+        if (y > maxY) maxY = y;
+      }
+    }
+  }
+
+  if (maxX < 0) throw new Error('firma_no_detectada');
+
+  // Encuadre ajustado al trazo con un margen chico, para que no quede
+  // pegada al borde del PNG.
+  const margen = Math.round(Math.max(ancho, alto) * 0.03);
+  const recX = Math.max(0, minX - margen);
+  const recY = Math.max(0, minY - margen);
+  const recAncho = Math.min(ancho, maxX + margen) - recX;
+  const recAlto = Math.min(alto, maxY + margen) - recY;
+
+  const salida = canvasLib.createCanvas(recAncho, recAlto);
+  const ctxSalida = salida.getContext('2d');
+  const imagenSalida = ctxSalida.createImageData(recAncho, recAlto);
+
+  for (let y = 0; y < recAlto; y++) {
+    for (let x = 0; x < recAncho; x++) {
+      const iOrigen = (y + recY) * ancho + (x + recX);
+      const iDestino = (y * recAncho + x) * 4;
+      imagenSalida.data[iDestino] = r;
+      imagenSalida.data[iDestino + 1] = g;
+      imagenSalida.data[iDestino + 2] = b;
+      imagenSalida.data[iDestino + 3] = alfa[iOrigen];
+    }
+  }
+
+  ctxSalida.putImageData(imagenSalida, 0, 0);
+  return salida.toBuffer('image/png');
+}
+
+module.exports = { detectarDocumento, corregirPerspectiva, extraerFirma };

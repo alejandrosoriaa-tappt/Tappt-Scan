@@ -46,6 +46,11 @@ export const api = {
       method: 'POST',
       body: JSON.stringify({ imagen }),
     }),
+  firmaDesdeFoto: (imagen, color) =>
+    request('/api/documentos/firma-desde-foto', {
+      method: 'POST',
+      body: JSON.stringify({ imagen, color }),
+    }),
   importar: (archivo, mimeType, nombre) =>
     request('/api/documentos/importar', {
       method: 'POST',

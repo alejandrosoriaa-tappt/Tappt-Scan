@@ -85,6 +85,8 @@ export const TEXTOS = {
     editarFirmar: 'Editar y firmar',
     abriendo: 'Abriendo…',
     abrirEnDrive: 'Abrir en Drive',
+    compartir: 'Compartir',
+    clasificadoComo: 'Clasificado por IA como {tipo}',
     notaPrivacidad:
       'Este archivo vive en tu Google Drive. Nosotros solo guardamos sus datos para que puedas buscarlo.',
     texto: 'Texto',
@@ -104,6 +106,8 @@ export const TEXTOS = {
     notaEmojis:
       'Los emojis a color se ven en pantalla, pero en el PDF salen en negro salvo que se incrusten como imagen.',
     firmaAqui: 'Firma aquí',
+    extrayendoFirma: 'Sacando tu firma de la foto…',
+    firmaNoDetectada: 'No encontré ninguna firma en esa foto. Prueba con más luz y que se vea bien el trazo.',
     listo: 'Listo',
     borrarFirma: 'Borrar y volver a empezar',
     sinCambios: 'Sin cambios',
@@ -335,6 +339,8 @@ export const TEXTOS = {
     editarFirmar: 'Edit and sign',
     abriendo: 'Opening…',
     abrirEnDrive: 'Open in Drive',
+    compartir: 'Share',
+    clasificadoComo: 'Classified by AI as {tipo}',
     notaPrivacidad:
       'This file lives in your Google Drive. We only keep its details so you can find it.',
     texto: 'Text',
@@ -354,6 +360,8 @@ export const TEXTOS = {
     notaEmojis:
       "Color emojis show on screen, but come out black in the PDF unless they're embedded as an image.",
     firmaAqui: 'Sign here',
+    extrayendoFirma: 'Extracting your signature…',
+    firmaNoDetectada: "I couldn't find a signature in that photo. Try again with better light and a clear stroke.",
     listo: 'Done',
     borrarFirma: 'Clear and start over',
     sinCambios: 'No changes',
