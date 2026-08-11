@@ -402,20 +402,25 @@ editor → firma de punta a punta.
 
 ## Siguiente paso
 
-1. **🐛 Bug abierto — 502 al abrir "Editar y firmar" en móvil.** Reportado
-   2026-08-11 tarde, no diagnosticado todavía (la sesión se pausó antes
-   de investigar). Sospecha: `GET /api/documentos/:id/pagina/:n`
-   (`routes/documentos.js`) → `pdf.renderizarPagina()` (pdfjs-dist +
-   `@napi-rs/canvas`) tronando o tardando más de lo que Railway tolera
-   en su proxy — revisar Deploy Logs de Railway en el momento exacto
-   del error para confirmar antes de tocar código. Reproducido también
-   en escritorio (Chrome), con el mensaje de error ya visible gracias
-   al fix de `alertar()` de hoy: `"Couldn't do that — error_502"`.
-2. **Versionado original/editado/firmado** del editor — el hueco más
-   grande contra el pilar #4, y el más riesgoso de construir sin poder
-   ver el resultado: toca `EditorScreen.js`, el schema de
-   `scan_documents` (o una tabla nueva `scan_versiones`) y
-   probablemente subir múltiples archivos a Drive por documento.
+1. **🐛 Bug abierto — 502 al abrir "Editar y firmar" en móvil.** Mitigado
+   2026-08-11 noche sin poder confirmar la causa exacta (no hubo acceso
+   a Deploy Logs de Railway): se agregaron handlers `unhandledRejection`
+   / `uncaughtException` a nivel de proceso en `server.js` — antes, una
+   promesa sin capturar en cualquier request (sospecha: `pdf.renderizarPagina()`
+   con `@napi-rs/canvas`) podía tumbar el proceso entero, y eso es lo que
+   Railway mostraba como 502 intermitente. Ahora se loguea en vez de
+   tumbar el servidor. Si vuelve a aparecer, revisar logs — ya quedan
+   con el id del documento (`routes/documentos.js`).
+2. **✅ Versionado original/editado/firmado** del editor — hecho
+   2026-08-11 noche. Tabla nueva `scan_versiones` (documento_id,
+   nombre_archivo, drive_file_id, drive_link, created_at); cada guardado
+   en `POST /:id/editar` inserta una fila ahí, sin tocar el original.
+   `DocumentoScreen` muestra el historial con acceso directo a cada
+   versión en Drive, y se refresca solo al volver del editor
+   (`useFocusEffect`). **Pendiente del usuario:** correr el SQL de
+   `scan_versiones` en Supabase (ver `scan_schema.sql`) — sin eso el
+   guardado en el editor sigue funcionando pero el historial no
+   aparecerá.
 3. Pendiente sin relación al diseño: el número de WhatsApp
    (`+52 1 56 4417 0712`) seguía registrado en dos WABAs de Meta a la
    vez la última vez que se confirmó — el login por WhatsApp falla al
