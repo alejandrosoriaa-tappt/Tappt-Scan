@@ -2,6 +2,50 @@
 
 _Definido: 2026-08-10_
 
+## Notas de estrategia de producto (2026-08-11, para considerar más adelante)
+
+Ideas del usuario, sin acción todavía — capturadas tal cual para no
+perderlas antes de la siguiente sesión.
+
+**1. Comisión de las tiendas (App Store / Play Store) — aceptarla, no
+evadirla.** Si le das a Apple/Google la oportunidad de cobrar (pagos
+dentro de la app), cobran su comisión — pero a cambio tratan mejor a la
+app (mejor posicionamiento, features, confianza del usuario). Evadirlo
+(cobrar solo por fuera, como hoy con el link de WhatsApp) puede ahorrar
+la comisión, pero si la app funciona bien y crece, "se van a dar cuenta"
+— no es sostenible como estrategia de largo plazo. Postura propuesta:
+tratar esa comisión como costo de negocio/marketing, no como algo que
+evadir para siempre. Repensar la estrategia de pago (hoy: precios fuera
+de la app por la guía 3.1.1) cuando el producto esté más maduro.
+
+**2. Sincronización cross-dispositivo — Drive ya es la respuesta.**
+Experiencia personal del usuario: CamScanner en iPhone funciona perfecto
+con su nube propia, pero la misma cuenta en Android nunca sincronizaba
+igual de bien. TapptScan ya resuelve esto de raíz al usar **Google
+Drive del usuario** como la capa de sincronización (no una nube propia)
+— confirmar que esto se sostiene bien en la práctica según vayamos
+probando multi-dispositivo.
+
+**3. La web tiene que ser de primer nivel, no un "también existe".**
+La versión web de CamScanner es mala, y aun así mucha gente trabaja
+desde web, no solo desde la app. TapptScan no se puede dar ese lujo:
+**mismo look and feel entre web app y app nativa**, ambas de calidad
+real — no una app cuidada y una web de segunda. Ya vamos en esa
+dirección (mismo código con React Native Web, mismo theme), pero
+mantenerlo como criterio explícito de aceptación al revisar cada
+pantalla nueva.
+
+**4. Activación cross-dispositivo por QR/token.** Si el usuario ya
+inició sesión con WhatsApp en su iPhone y quiere la misma cuenta en un
+Android o en la web de su compu, no debería repetir todo el flujo de
+OTP por WhatsApp cada vez — un mecanismo tipo QR/token para "activar
+este dispositivo con la sesión que ya tengo abierta en otro" (misma
+familia de idea que la cámara continua celular↔web ya guardada abajo,
+pero para *sesión completa*, no solo para la cámara). Evaluar si
+conviene resolver ambas necesidades (emparejar cámara y emparejar
+sesión) con el mismo mecanismo de token temporal + QR, en vez de dos
+sistemas separados.
+
 Brief de producto y diseño para el rediseño pantalla por pantalla de la
 app, usando CamScanner como benchmark funcional. Es la referencia a seguir
 en las próximas sesiones — no reinventar lo que ya está bien resuelto en
