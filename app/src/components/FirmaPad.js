@@ -2,6 +2,7 @@ import React, { useRef, useState } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, Modal } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { WebView } from 'react-native-webview';
+import { alertar } from '../lib/alerta';
 import { useIdioma } from '../i18n';
 import { colores, espacio, radio } from '../theme';
 
@@ -42,7 +43,11 @@ const HTML = `<!doctype html><html><head>
   ajustar();
 
   let dibujando = false;
-  let huboTrazo = false;
+  // Cada trazo se guarda completo (no solo si "hubo algo") para poder
+  // deshacer uno a la vez sin perder los anteriores — antes "borrar" solo
+  // podía tirar todo el dibujo entero.
+  let trazos = [];
+  let trazoActual = null;
 
   function punto(e) {
     const r = c.getBoundingClientRect();
@@ -53,8 +58,8 @@ const HTML = `<!doctype html><html><head>
   c.addEventListener('touchstart', (e) => {
     e.preventDefault();
     dibujando = true;
-    huboTrazo = true;
     const p = punto(e);
+    trazoActual = { color: ctx.strokeStyle, grosor: ctx.lineWidth, puntos: [p] };
     ctx.beginPath();
     ctx.moveTo(p.x, p.y);
   });
@@ -63,26 +68,55 @@ const HTML = `<!doctype html><html><head>
     e.preventDefault();
     if (!dibujando) return;
     const p = punto(e);
+    trazoActual.puntos.push(p);
     ctx.lineTo(p.x, p.y);
     ctx.stroke();
   });
 
   c.addEventListener('touchend', (e) => {
     e.preventDefault();
+    if (!dibujando) return;
     dibujando = false;
+    if (trazoActual.puntos.length > 1) {
+      trazos.push(trazoActual);
+      mensaje({ tipo: 'estado', hayTrazo: true });
+    }
+    trazoActual = null;
   });
 
   function mensaje(datos) {
     window.ReactNativeWebView.postMessage(JSON.stringify(datos));
   }
 
-  window.limpiar = function () {
+  function redibujar() {
     ctx.clearRect(0, 0, c.width, c.height);
-    huboTrazo = false;
+    const colorPrevio = ctx.strokeStyle;
+    const grosorPrevio = ctx.lineWidth;
+    trazos.forEach((trazo) => {
+      ctx.strokeStyle = trazo.color;
+      ctx.lineWidth = trazo.grosor;
+      ctx.beginPath();
+      trazo.puntos.forEach((p, i) => (i === 0 ? ctx.moveTo(p.x, p.y) : ctx.lineTo(p.x, p.y)));
+      ctx.stroke();
+    });
+    ctx.strokeStyle = colorPrevio;
+    ctx.lineWidth = grosorPrevio;
+  }
+
+  window.limpiar = function () {
+    trazos = [];
+    redibujar();
+    mensaje({ tipo: 'estado', hayTrazo: false });
+  };
+
+  window.deshacer = function () {
+    trazos.pop();
+    redibujar();
+    mensaje({ tipo: 'estado', hayTrazo: trazos.length > 0 });
   };
 
   window.exportar = function () {
-    if (!huboTrazo) return mensaje({ tipo: 'vacio' });
+    if (!trazos.length) return mensaje({ tipo: 'vacio' });
     mensaje({ tipo: 'firma', datos: c.toDataURL('image/png') });
   };
 
@@ -97,12 +131,17 @@ export default function FirmaPad({ visible, onCerrar, onFirmar }) {
   const web = useRef(null);
   const [color, setColorState] = useState(COLORES_FIRMA[0].hex);
   const [grosor, setGrosorState] = useState(GROSORES_FIRMA[1]);
+  const [hayTrazo, setHayTrazo] = useState(false);
 
   const recibir = (evento) => {
     const mensaje = JSON.parse(evento.nativeEvent.data);
     if (mensaje.tipo === 'firma') {
       onFirmar(mensaje.datos);
       onCerrar();
+    } else if (mensaje.tipo === 'vacio') {
+      alertar(t('firmaVacia'));
+    } else if (mensaje.tipo === 'estado') {
+      setHayTrazo(mensaje.hayTrazo);
     }
   };
 
@@ -125,7 +164,7 @@ export default function FirmaPad({ visible, onCerrar, onFirmar }) {
           </TouchableOpacity>
           <Text style={estilos.titulo}>{t('firmaAqui')}</Text>
           <TouchableOpacity onPress={() => web.current?.injectJavaScript('window.exportar();true;')}>
-            <Text style={estilos.listo}>{t('listo')}</Text>
+            <Text style={[estilos.listo, !hayTrazo && estilos.listoInactivo]}>{t('listo')}</Text>
           </TouchableOpacity>
         </View>
 
@@ -174,12 +213,26 @@ export default function FirmaPad({ visible, onCerrar, onFirmar }) {
           </View>
         </View>
 
-        <TouchableOpacity
-          onPress={() => web.current?.injectJavaScript('window.limpiar();true;')}
-          style={estilos.limpiar}
-        >
-          <Text style={estilos.limpiarTexto}>{t('borrarFirma')}</Text>
-        </TouchableOpacity>
+        <View style={estilos.filaInferior}>
+          <TouchableOpacity
+            onPress={() => web.current?.injectJavaScript('window.deshacer();true;')}
+            disabled={!hayTrazo}
+            style={estilos.limpiar}
+          >
+            <Text style={[estilos.limpiarTexto, !hayTrazo && estilos.limpiarTextoInactivo]}>
+              {t('deshacer')}
+            </Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            onPress={() => web.current?.injectJavaScript('window.limpiar();true;')}
+            disabled={!hayTrazo}
+            style={estilos.limpiar}
+          >
+            <Text style={[estilos.limpiarTexto, !hayTrazo && estilos.limpiarTextoInactivo]}>
+              {t('borrarFirma')}
+            </Text>
+          </TouchableOpacity>
+        </View>
       </SafeAreaView>
     </Modal>
   );
@@ -196,6 +249,7 @@ const estilos = StyleSheet.create({
   cancelar: { color: colores.textoSuave, fontSize: 15 },
   titulo: { fontSize: 16, fontWeight: '600', color: colores.texto },
   listo: { color: colores.primario, fontSize: 15, fontWeight: '700' },
+  listoInactivo: { color: colores.textoTerciario },
   lienzo: {
     flex: 1,
     marginHorizontal: espacio.md,
@@ -232,6 +286,8 @@ const estilos = StyleSheet.create({
   },
   grosorBoton: { width: 28, height: 28, alignItems: 'center', justifyContent: 'center' },
   grosorBotonActivo: { backgroundColor: colores.superficieElevada, borderRadius: 14 },
+  filaInferior: { flexDirection: 'row', justifyContent: 'center', gap: espacio.xl },
   limpiar: { padding: espacio.md, alignItems: 'center' },
   limpiarTexto: { color: colores.textoSuave, fontSize: 14 },
+  limpiarTextoInactivo: { color: colores.divisor },
 });

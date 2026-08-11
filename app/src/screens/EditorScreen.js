@@ -14,7 +14,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import * as ImagePicker from 'expo-image-picker';
-import FirmaPad from '../components/FirmaPad';
+import FirmaPad, { COLORES_FIRMA } from '../components/FirmaPad';
 import HojaFirmas from '../components/HojaFirmas';
 import Icono from '../components/Icono';
 import useCargar from '../hooks/useCargar';
@@ -34,10 +34,6 @@ const HERRAMIENTAS = [
   { id: 'imagen', icono: 'camara' },
   { id: 'tapar', icono: 'recibo' },
 ];
-
-// Mismo azul por default que FirmaPad — una firma importada de una foto
-// no pasa por el selector de color, así que usa este directo.
-const COLOR_FIRMA_IMPORTADA = '#2563EB';
 
 export default function EditorScreen({ route, navigation }) {
   const { documento, paginaInicial } = route.params;
@@ -75,6 +71,7 @@ export default function EditorScreen({ route, navigation }) {
 
   const [firmaAbierta, setFirmaAbierta] = useState(false);
   const [firmasAbierta, setFirmasAbierta] = useState(false);
+  const [colorImportarAbierto, setColorImportarAbierto] = useState(false);
   const [procesandoFirma, setProcesandoFirma] = useState(false);
   const [emojisAbiertos, setEmojisAbiertos] = useState(false);
   const [textoAbierto, setTextoAbierto] = useState(false);
@@ -130,23 +127,34 @@ export default function EditorScreen({ route, navigation }) {
     api.guardarFirma(datos, color).then(() => firmas.recargar()).catch(() => {});
   };
 
+  // La foto se elige primero; el color se pregunta después (con el azul
+  // como default visual — es el primero de la lista) porque antes de ver
+  // la firma extraída no tiene caso preguntar el color.
+  const [fotoFirmaPendiente, setFotoFirmaPendiente] = useState(null);
+
   const importarFirmaDeFoto = async () => {
-    const posicion = posicionPendiente;
     const resultado = await ImagePicker.launchImageLibraryAsync({ base64: true, quality: 0.9 });
     if (resultado.canceled) return;
 
-    const activo = resultado.assets[0];
+    setFotoFirmaPendiente(resultado.assets[0]);
+    setColorImportarAbierto(true);
+  };
+
+  const extraerFirmaConColor = async (colorHex) => {
+    const posicion = posicionPendiente;
+    const activo = fotoFirmaPendiente;
+    setColorImportarAbierto(false);
+    setFotoFirmaPendiente(null);
+    if (!activo) return;
+
     setProcesandoFirma(true);
     try {
       // El servidor recorta al trazo, quita el fondo (sin importar de qué
-      // color sea el papel) y lo tiñe del color por default — el mismo
+      // color sea el papel) y lo tiñe del color elegido — el mismo
       // resultado que dibujarla a mano, pero partiendo de una firma que
       // ya existe en papel.
-      const { firma } = await api.firmaDesdeFoto(
-        `data:image/jpeg;base64,${activo.base64}`,
-        COLOR_FIRMA_IMPORTADA
-      );
-      guardarYColocarFirma(firma, posicion, COLOR_FIRMA_IMPORTADA);
+      const { firma } = await api.firmaDesdeFoto(`data:image/jpeg;base64,${activo.base64}`, colorHex);
+      guardarYColocarFirma(firma, posicion, colorHex);
     } catch (err) {
       alertar(
         t('noSePudo'),
@@ -344,6 +352,30 @@ export default function EditorScreen({ route, navigation }) {
         }}
       />
 
+      <Modal visible={colorImportarAbierto} transparent animationType="fade">
+        <TouchableOpacity
+          style={estilos.fondoModal}
+          activeOpacity={1}
+          onPress={() => {
+            setColorImportarAbierto(false);
+            setFotoFirmaPendiente(null);
+          }}
+        >
+          <View style={estilos.hojaColor}>
+            <Text style={estilos.tituloModal}>{t('eligeColorFirma')}</Text>
+            <View style={estilos.filaColores}>
+              {COLORES_FIRMA.map((c) => (
+                <TouchableOpacity
+                  key={c.hex}
+                  style={[estilos.swatchColor, { backgroundColor: c.hex }]}
+                  onPress={() => extraerFirmaConColor(c.hex)}
+                />
+              ))}
+            </View>
+          </View>
+        </TouchableOpacity>
+      </Modal>
+
       <Modal visible={emojisAbiertos} transparent animationType="fade">
         <TouchableOpacity
           style={estilos.fondoModal}
@@ -489,6 +521,9 @@ const estilos = StyleSheet.create({
     padding: espacio.lg,
   },
   hojaEmojis: { backgroundColor: colores.superficie, borderRadius: 16, padding: espacio.md },
+  hojaColor: { backgroundColor: colores.superficie, borderRadius: 16, padding: espacio.md },
+  filaColores: { flexDirection: 'row', gap: espacio.md, justifyContent: 'center', marginTop: espacio.sm },
+  swatchColor: { width: 40, height: 40, borderRadius: 20 },
   hojaTexto: { backgroundColor: colores.superficie, borderRadius: 16, padding: espacio.md },
   tituloModal: { fontSize: 16, fontWeight: '700', color: colores.texto, marginBottom: espacio.md },
   rejilla: { flexDirection: 'row', flexWrap: 'wrap', gap: espacio.sm },

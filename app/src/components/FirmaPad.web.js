@@ -1,6 +1,7 @@
 import React, { useRef, useEffect, useState } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, Modal } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { alertar } from '../lib/alerta';
 import { useIdioma } from '../i18n';
 import { colores, espacio, radio } from '../theme';
 
@@ -31,10 +32,15 @@ export default function FirmaPad({ visible, onCerrar, onFirmar }) {
   const contenedor = useRef(null);
   const canvas = useRef(null);
   const ctxRef = useRef(null);
-  const huboTrazo = useRef(false);
+  // Cada trazo se guarda completo (no solo si "hubo algo") para poder
+  // deshacer uno a la vez sin perder los anteriores — antes "borrar" solo
+  // podía tirar todo el dibujo entero.
+  const trazos = useRef([]);
+  const trazoActual = useRef(null);
 
   const [color, setColor] = useState(COLORES_FIRMA[0].hex);
   const [grosor, setGrosor] = useState(GROSORES_FIRMA[1]);
+  const [hayTrazo, setHayTrazo] = useState(false);
 
   // El color/grosor se aplican al ctx ya existente sin reiniciar el
   // lienzo — así no se pierde lo ya dibujado al cambiarlos a medias.
@@ -82,20 +88,27 @@ export default function FirmaPad({ visible, onCerrar, onFirmar }) {
 
     const abajo = (e) => {
       dibujando = true;
-      huboTrazo.current = true;
       lienzo.setPointerCapture(e.pointerId);
       const p = punto(e);
+      trazoActual.current = { color: ctx.strokeStyle, grosor: ctx.lineWidth, puntos: [p] };
       ctx.beginPath();
       ctx.moveTo(p.x, p.y);
     };
     const mover = (e) => {
       if (!dibujando) return;
       const p = punto(e);
+      trazoActual.current.puntos.push(p);
       ctx.lineTo(p.x, p.y);
       ctx.stroke();
     };
     const arriba = () => {
+      if (!dibujando) return;
       dibujando = false;
+      if (trazoActual.current.puntos.length > 1) {
+        trazos.current.push(trazoActual.current);
+        setHayTrazo(true);
+      }
+      trazoActual.current = null;
     };
 
     lienzo.addEventListener('pointerdown', abajo);
@@ -111,19 +124,47 @@ export default function FirmaPad({ visible, onCerrar, onFirmar }) {
       lienzo.remove();
       canvas.current = null;
       ctxRef.current = null;
-      huboTrazo.current = false;
+      trazos.current = [];
+      trazoActual.current = null;
+      setHayTrazo(false);
     };
   }, [visible]);
 
-  const limpiar = () => {
+  // Redibuja todo desde cero a partir de `trazos` — es lo que permite
+  // "deshacer" un trazo a la vez en vez de perder el dibujo completo.
+  const redibujar = () => {
     const lienzo = canvas.current;
-    if (!lienzo) return;
-    lienzo.getContext('2d').clearRect(0, 0, lienzo.width, lienzo.height);
-    huboTrazo.current = false;
+    const ctx = ctxRef.current;
+    if (!lienzo || !ctx) return;
+    ctx.clearRect(0, 0, lienzo.width, lienzo.height);
+    trazos.current.forEach((trazo) => {
+      ctx.strokeStyle = trazo.color;
+      ctx.lineWidth = trazo.grosor;
+      ctx.beginPath();
+      trazo.puntos.forEach((p, i) => (i === 0 ? ctx.moveTo(p.x, p.y) : ctx.lineTo(p.x, p.y)));
+      ctx.stroke();
+    });
+    ctx.strokeStyle = color;
+    ctx.lineWidth = grosor;
+  };
+
+  const deshacer = () => {
+    trazos.current.pop();
+    setHayTrazo(trazos.current.length > 0);
+    redibujar();
+  };
+
+  const limpiar = () => {
+    trazos.current = [];
+    setHayTrazo(false);
+    redibujar();
   };
 
   const exportar = () => {
-    if (!canvas.current || !huboTrazo.current) return;
+    if (!canvas.current || !hayTrazo) {
+      alertar(t('firmaVacia'));
+      return;
+    }
     onFirmar(canvas.current.toDataURL('image/png'));
     onCerrar();
   };
@@ -136,8 +177,8 @@ export default function FirmaPad({ visible, onCerrar, onFirmar }) {
             <Text style={estilos.cancelar}>{t('cancelar')}</Text>
           </TouchableOpacity>
           <Text style={estilos.titulo}>{t('firmaAqui')}</Text>
-          <TouchableOpacity onPress={exportar}>
-            <Text style={estilos.listo}>{t('listo')}</Text>
+          <TouchableOpacity onPress={exportar} disabled={!hayTrazo}>
+            <Text style={[estilos.listo, !hayTrazo && estilos.listoInactivo]}>{t('listo')}</Text>
           </TouchableOpacity>
         </View>
 
@@ -178,9 +219,18 @@ export default function FirmaPad({ visible, onCerrar, onFirmar }) {
           </View>
         </View>
 
-        <TouchableOpacity onPress={limpiar} style={estilos.limpiar}>
-          <Text style={estilos.limpiarTexto}>{t('borrarFirma')}</Text>
-        </TouchableOpacity>
+        <View style={estilos.filaInferior}>
+          <TouchableOpacity onPress={deshacer} disabled={!hayTrazo} style={estilos.limpiar}>
+            <Text style={[estilos.limpiarTexto, !hayTrazo && estilos.limpiarTextoInactivo]}>
+              {t('deshacer')}
+            </Text>
+          </TouchableOpacity>
+          <TouchableOpacity onPress={limpiar} disabled={!hayTrazo} style={estilos.limpiar}>
+            <Text style={[estilos.limpiarTexto, !hayTrazo && estilos.limpiarTextoInactivo]}>
+              {t('borrarFirma')}
+            </Text>
+          </TouchableOpacity>
+        </View>
       </SafeAreaView>
     </Modal>
   );
@@ -197,6 +247,7 @@ const estilos = StyleSheet.create({
   cancelar: { color: colores.textoSuave, fontSize: 15 },
   titulo: { fontSize: 16, fontWeight: '600', color: colores.texto },
   listo: { color: colores.primario, fontSize: 15, fontWeight: '700' },
+  listoInactivo: { color: colores.textoTerciario },
   lienzo: {
     flex: 1,
     marginHorizontal: espacio.md,
@@ -233,6 +284,8 @@ const estilos = StyleSheet.create({
   },
   grosorBoton: { width: 28, height: 28, alignItems: 'center', justifyContent: 'center' },
   grosorBotonActivo: { backgroundColor: colores.superficieElevada, borderRadius: 14 },
+  filaInferior: { flexDirection: 'row', justifyContent: 'center', gap: espacio.xl },
   limpiar: { padding: espacio.md, alignItems: 'center' },
   limpiarTexto: { color: colores.textoSuave, fontSize: 14 },
+  limpiarTextoInactivo: { color: colores.divisor },
 });
