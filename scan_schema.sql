@@ -72,6 +72,24 @@ create table if not exists scan_documents (
   created_at timestamptz not null default now()
 );
 
+-- ------------------------------------------------------------ versiones
+-- Cada vez que se guarda una edición/firma se sube un PDF nuevo a Drive
+-- (junto al original, nunca lo pisa) y queda una fila aquí. El original
+-- vive en `scan_documents.drive_file_id` y no se toca — esta tabla es el
+-- historial de lo que se derivó de él.
+create table if not exists scan_versiones (
+  id uuid primary key default gen_random_uuid(),
+  documento_id uuid not null references scan_documents(id) on delete cascade,
+  user_id uuid not null references scan_users(id) on delete cascade,
+
+  nombre_archivo text not null,
+  drive_file_id text not null,
+  drive_link text,
+
+  created_at timestamptz not null default now()
+);
+create index if not exists idx_scan_versiones_documento on scan_versiones(documento_id, created_at desc);
+
 -- --------------------------------------------- vinculación de WhatsApp
 -- Código de un solo uso que amarra número <-> cuenta.
 create table if not exists scan_links (

@@ -205,10 +205,43 @@ router.post('/:id/editar', requireAuth, async (req, res) => {
       buffer: pdfFinal,
     });
 
+    // El original en `scan_documents` no se toca — esto solo agrega un
+    // renglón al historial. El editor siempre parte del original (arriba),
+    // así que reeditar no se acumula sobre una versión previa.
+    const { error: errorVersion } = await supabase.from('scan_versiones').insert({
+      documento_id: documento.id,
+      user_id: req.usuario.id,
+      nombre_archivo: nombre,
+      drive_file_id: subido.id,
+      drive_link: subido.webViewLink,
+    });
+    if (errorVersion) console.error('[documentos] no se pudo registrar la versión', errorVersion);
+
     res.json({ nombre, driveLink: subido.webViewLink, omitidas });
   } catch (err) {
     console.error('[documentos] error editando', err);
     res.status(500).json({ error: 'error_edicion' });
+  }
+});
+
+// Historial de versiones (ediciones/firmas) de un documento, más reciente
+// primero. El original queda fuera de esta lista — vive en el documento.
+router.get('/:id/versiones', requireAuth, async (req, res) => {
+  try {
+    const documento = await traerDocumento(req);
+    if (!documento) return res.status(404).json({ error: 'documento_no_encontrado' });
+
+    const { data, error } = await supabase
+      .from('scan_versiones')
+      .select('id, nombre_archivo, drive_link, created_at')
+      .eq('documento_id', documento.id)
+      .order('created_at', { ascending: false });
+    if (error) throw error;
+
+    res.json(data || []);
+  } catch (err) {
+    console.error('[documentos] error listando versiones', err);
+    res.status(500).json({ error: 'error_versiones' });
   }
 });
 

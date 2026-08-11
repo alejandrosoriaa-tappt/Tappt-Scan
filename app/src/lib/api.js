@@ -67,6 +67,7 @@ export const api = {
       method: 'POST',
       body: JSON.stringify({ anotaciones }),
     }),
+  versiones: (id) => request(`/api/documentos/${id}/versiones`),
   gastos: (mes) => request(`/api/documentos/gastos${mes ? `?mes=${mes}` : ''}`),
   resumen: () => request('/api/documentos/resumen'),
   borrarDocumento: (id) => request(`/api/documentos/${id}`, { method: 'DELETE' }),

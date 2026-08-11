@@ -1,11 +1,22 @@
-import React, { useState } from 'react';
+import React, { useState, useCallback } from 'react';
 import { View, Text, ScrollView, TouchableOpacity, StyleSheet, Linking, Platform, Share } from 'react-native';
+import { useFocusEffect } from '@react-navigation/native';
 import { api } from '../lib/api';
 import { alertar, alertarConBotones } from '../lib/alerta';
 import Icono from '../components/Icono';
 import HojaAcciones from '../components/HojaAcciones';
+import useCargar from '../hooks/useCargar';
 import { useIdioma } from '../i18n';
 import { colores, porTipo, espacio, radio } from '../theme';
+
+function formatoFecha(iso, idioma) {
+  return new Date(iso).toLocaleDateString(idioma === 'en' ? 'en-US' : 'es-MX', {
+    day: 'numeric',
+    month: 'short',
+    hour: '2-digit',
+    minute: '2-digit',
+  });
+}
 
 // En web, react-native-web no implementa Share — se usa la Web Share API
 // del navegador si existe (Safari/Chrome en celular la traen), y si no,
@@ -46,7 +57,17 @@ export default function DocumentoScreen({ route, navigation }) {
   const [favorito, setFavorito] = useState(Boolean(documento.favorito));
   const [masAbierto, setMasAbierto] = useState(false);
   const [borrando, setBorrando] = useState(false);
-  const { t } = useIdioma();
+  const { t, idioma } = useIdioma();
+  const versiones = useCargar(() => api.versiones(documento.id).catch(() => []), [documento.id]);
+
+  // Al volver del editor (guardaste una firma/edición) ya hay una versión
+  // nueva — se refresca sola en vez de dejar la lista desactualizada.
+  useFocusEffect(
+    useCallback(() => {
+      versiones.recargar();
+      // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [documento.id])
+  );
 
   // El original vive en Drive; el backend nos manda la primera página ya
   // lista para mostrar (rasterizada si es PDF).
@@ -168,6 +189,30 @@ export default function DocumentoScreen({ route, navigation }) {
         </TouchableOpacity>
       </View>
 
+      {versiones.datos?.length ? (
+        <>
+          <Text style={estilos.tituloSeccion}>{t('versiones')}</Text>
+          <View style={estilos.tarjeta}>
+            {versiones.datos.map((version, indice) => (
+              <TouchableOpacity
+                key={version.id}
+                style={estilos.versionFila}
+                onPress={() => Linking.openURL(version.drive_link)}
+              >
+                <Icono nombre="verificado" tamano={16} color={colores.primarioClaro} />
+                <View style={estilos.versionTextos}>
+                  <Text style={estilos.versionNombre} numberOfLines={1}>
+                    {indice === 0 ? t('ultimaVersion') : version.nombre_archivo}
+                  </Text>
+                  <Text style={estilos.versionFecha}>{formatoFecha(version.created_at, idioma)}</Text>
+                </View>
+                <Icono nombre="nube" tamano={16} color={colores.textoTerciario} />
+              </TouchableOpacity>
+            ))}
+          </View>
+        </>
+      ) : null}
+
       <Text style={estilos.nota}>
         {t('notaPrivacidad')}
       </Text>
@@ -252,6 +297,17 @@ const estilos = StyleSheet.create({
   },
   campoEtiqueta: { fontSize: 14, color: colores.textoSuave },
   campoValor: { fontSize: 14, fontWeight: '500', color: colores.texto },
+  versionFila: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: espacio.sm,
+    paddingVertical: espacio.md,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderBottomColor: colores.divisor,
+  },
+  versionTextos: { flex: 1 },
+  versionNombre: { fontSize: 14, fontWeight: '500', color: colores.texto },
+  versionFecha: { fontSize: 12, color: colores.textoSuave, marginTop: 2 },
   acciones: { gap: espacio.sm },
   boton: {
     backgroundColor: colores.superficie,

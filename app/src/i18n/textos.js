@@ -91,6 +91,8 @@ export const TEXTOS = {
     eliminarDocumento: '¿Eliminar este documento?',
     eliminarDocumentoDetalle:
       'Deja de aparecer en TapptScan, pero el archivo sigue intacto en tu Google Drive — ahí es donde de verdad vive.',
+    versiones: 'Versiones',
+    ultimaVersion: 'Última versión',
     notaPrivacidad:
       'Este archivo vive en tu Google Drive. Nosotros solo guardamos sus datos para que puedas buscarlo.',
     texto: 'Texto',
@@ -354,6 +356,8 @@ export const TEXTOS = {
     eliminarDocumento: 'Delete this document?',
     eliminarDocumentoDetalle:
       "It disappears from TapptScan, but the file stays untouched in your Google Drive — that's where it really lives.",
+    versiones: 'Versions',
+    ultimaVersion: 'Latest version',
     notaPrivacidad:
       'This file lives in your Google Drive. We only keep its details so you can find it.',
     texto: 'Text',
