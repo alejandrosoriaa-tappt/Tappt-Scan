@@ -2,6 +2,7 @@ const vision = require('./vision');
 const naming = require('./naming');
 const drive = require('./drive');
 const pdf = require('./pdf');
+const imagen = require('./imagen');
 const supabase = require('./supabase');
 const taxonomia = require('./taxonomia');
 const sheets = require('./sheets');
@@ -21,6 +22,33 @@ const planes = require('./planes');
  */
 async function procesarArchivo(usuario, buffer, mimeType = 'image/jpeg', nombreOriginal = null) {
   const entradaEsPdf = pdf.esPdf(buffer) || mimeType === 'application/pdf';
+
+  // Enderezado automático para fotos: es lo único que la cámara de la app
+  // ya hace (con esquinas ajustables a mano), pero WhatsApp e importar
+  // archivos no pasan por ninguna pantalla de recorte. Se aplica aquí,
+  // en el único lugar que ven los tres caminos de entrada, para que
+  // también les toque. Si la imagen ya viene recortada de cerca (por
+  // RecorteScreen, o porque el usuario ya la ajustó en WhatsApp antes de
+  // mandarla) `detectarDocumento` lo nota (área > 97%) y no hace nada —
+  // no hay doble recorte.
+  if (!entradaEsPdf) {
+    try {
+      const { esquinas, confiable } = await imagen.detectarDocumento(buffer);
+      if (confiable) {
+        buffer = await imagen.corregirPerspectiva(buffer, esquinas);
+        // corregirPerspectiva siempre devuelve PNG (toBuffer('image/png') en
+        // services/imagen.js) sin importar el formato de entrada — hay que
+        // reflejarlo aquí o pdf.desdeImagen intenta leer estos bytes como
+        // JPEG (revienta) y Claude recibe un media_type que no coincide con
+        // los bytes reales.
+        mimeType = 'image/png';
+      }
+    } catch (err) {
+      // Un fallo aquí no debe tumbar el escaneo completo: seguimos con
+      // la imagen tal cual llegó.
+      console.warn('[procesarDocumento] no se pudo enderezar automáticamente', err.message);
+    }
+  }
 
   // Claude necesita ver algo: de un PDF se rasteriza la primera página.
   let paraVision = buffer;

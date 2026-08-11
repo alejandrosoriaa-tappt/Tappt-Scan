@@ -7,7 +7,6 @@ import {
   TouchableOpacity,
   TouchableWithoutFeedback,
   StyleSheet,
-  Alert,
   ActivityIndicator,
   ScrollView,
   Modal,
@@ -18,6 +17,7 @@ import * as ImagePicker from 'expo-image-picker';
 import FirmaPad from '../components/FirmaPad';
 import Icono from '../components/Icono';
 import { api } from '../lib/api';
+import { alertar, alertarConBotones } from '../lib/alerta';
 import { useIdioma } from '../i18n';
 import { colores, espacio } from '../theme';
 
@@ -56,7 +56,7 @@ export default function EditorScreen({ route, navigation }) {
     api
       .pagina(documento.id, pagina)
       .then((datos) => !cancelado && setVista(datos))
-      .catch((err) => !cancelado && Alert.alert(t('noSePudo'), err.message))
+      .catch((err) => !cancelado && alertar(t('noSePudo'), err.message))
       .finally(() => !cancelado && setCargandoPagina(false));
 
     return () => {
@@ -114,7 +114,7 @@ export default function EditorScreen({ route, navigation }) {
 
   const guardar = async () => {
     if (!anotaciones.length) {
-      Alert.alert(t('sinCambios'), t('sinCambiosDetalle'));
+      alertar(t('sinCambios'), t('sinCambiosDetalle'));
       return;
     }
 
@@ -126,12 +126,12 @@ export default function EditorScreen({ route, navigation }) {
         ? `\n\n${t('avisoOmitidas', { n: omitidas.length })}`
         : '';
 
-      Alert.alert(t('guardado'), `${nombre}${aviso}`, [
+      alertarConBotones(t('guardado'), `${nombre}${aviso}`, [
         { text: t('abrirEnDrive'), onPress: () => Linking.openURL(driveLink) },
         { text: t('listo'), onPress: () => navigation.goBack() },
       ]);
     } catch (err) {
-      Alert.alert(t('noSePudo'), err.message);
+      alertar(t('noSePudo'), err.message);
     } finally {
       setGuardando(false);
     }

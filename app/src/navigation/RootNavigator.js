@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, ActivityIndicator, Alert } from 'react-native';
+import { View, Text, TouchableOpacity, StyleSheet, ActivityIndicator } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
@@ -20,6 +20,7 @@ import Icono from '../components/Icono';
 import HojaCaptura from '../components/HojaCaptura';
 import HojaLimite from '../components/HojaLimite';
 import { importarArchivo, importarDeGaleria } from '../lib/importar';
+import { alertar } from '../lib/alerta';
 import { useSesion } from '../context/SesionContext';
 import { useIdioma } from '../i18n';
 import { colores, espacio, tipo, sombra } from '../theme';
@@ -97,7 +98,7 @@ function Tabs({ navigation }) {
     } catch (err) {
       if (err.message === 'limite_alcanzado') return setLimite(true);
       const mensajes = { drive_sin_conectar: t('driveSinConectar') };
-      Alert.alert(t('noSePudo'), mensajes[err.message] || err.message);
+      alertar(t('noSePudo'), mensajes[err.message] || err.message);
     }
   };
 

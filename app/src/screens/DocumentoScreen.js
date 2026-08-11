@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
-import { View, Text, ScrollView, TouchableOpacity, StyleSheet, Alert, Linking } from 'react-native';
+import { View, Text, ScrollView, TouchableOpacity, StyleSheet, Linking } from 'react-native';
 import { api } from '../lib/api';
+import { alertar } from '../lib/alerta';
 import Icono from '../components/Icono';
 import { useIdioma } from '../i18n';
 import { colores, porTipo, espacio } from '../theme';
@@ -29,7 +30,7 @@ export default function DocumentoScreen({ route, navigation }) {
       const paginaInicial = await api.pagina(documento.id, 0);
       navigation.navigate('Editor', { documento, paginaInicial });
     } catch (err) {
-      Alert.alert(t('noSePudo'), err.message);
+      alertar(t('noSePudo'), err.message);
     } finally {
       setAbriendo(false);
     }

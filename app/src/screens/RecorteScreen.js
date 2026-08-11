@@ -7,10 +7,10 @@ import {
   StyleSheet,
   PanResponder,
   ActivityIndicator,
-  Alert,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { api } from '../lib/api';
+import { alertar } from '../lib/alerta';
 import { useSesion } from '../context/SesionContext';
 import { useIdioma } from '../i18n';
 import HojaLimite from '../components/HojaLimite';
@@ -123,7 +123,7 @@ export default function RecorteScreen({ route, navigation }) {
         drive_sin_conectar: t('driveSinConectar'),
         recorte_demasiado_chico: t('recorteChico'),
       };
-      Alert.alert(t('noSePudo'), mensajes[err.message] || err.message);
+      alertar(t('noSePudo'), mensajes[err.message] || err.message);
     } finally {
       setGuardando(false);
     }

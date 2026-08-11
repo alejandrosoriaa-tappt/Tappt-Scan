@@ -12,3 +12,17 @@ export function alertar(titulo, mensaje) {
   }
   Alert.alert(titulo, mensaje);
 }
+
+// Para el caso de Alert.alert(titulo, mensaje, [boton1, boton2]): en web
+// no hay equivalente con más de un botón con texto propio, así que se
+// aproxima con confirm() — Aceptar dispara el primer botón, Cancelar el
+// segundo (si existe). En nativo se comporta idéntico a Alert.alert.
+export function alertarConBotones(titulo, mensaje, botones = []) {
+  if (Platform.OS === 'web') {
+    const acepta = window.confirm(mensaje ? `${titulo}\n\n${mensaje}` : titulo);
+    const boton = acepta ? botones[0] : botones[1] || botones[0];
+    boton?.onPress?.();
+    return;
+  }
+  Alert.alert(titulo, mensaje, botones);
+}
