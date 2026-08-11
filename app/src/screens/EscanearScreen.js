@@ -55,7 +55,18 @@ export default function EscanearScreen({ navigation }) {
       // La foto no se sube aquí: primero pasa por el recorte, que es quien
       // la manda ya enderezada.
       const foto = await camara.current.takePictureAsync({ quality: 0.8, base64: true });
-      navigation.navigate('Recorte', { fotoBase64: foto.base64 });
+
+      // En nativo, foto.base64 es base64 puro. En web, expo-camera regresa
+      // ahí la data URL completa (node_modules/expo-camera/build/web/
+      // WebCameraUtils.js: capture() hace `{ uri: base64, base64 }` con el
+      // mismo valor en los dos) — sin quitarle el prefijo, Recorte le vuelve
+      // a poner "data:image/jpeg;base64," y queda duplicado: la imagen no
+      // carga y lo que llega al backend está corrupto.
+      const base64Limpio = foto.base64.startsWith('data:')
+        ? foto.base64.slice(foto.base64.indexOf(',') + 1)
+        : foto.base64;
+
+      navigation.navigate('Recorte', { fotoBase64: base64Limpio });
     } catch (err) {
       alertar(t('noSePudo'), err.message);
     } finally {
