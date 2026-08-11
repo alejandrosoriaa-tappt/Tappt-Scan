@@ -258,10 +258,31 @@ async function handleText(from, text) {
 
 async function handleButton(from, interactive) {
   const id = interactive?.button_reply?.id;
-  const idioma = await idiomaDe(await traerUsuario(from));
+  const user = await traerUsuario(from);
+  const idioma = await idiomaDe(user);
 
   if (id === 'app') {
-    await whatsapp.sendText(from, t(idioma, 'verApp'));
+    // El botón no trae el id del documento (WhatsApp solo manda 'app'),
+    // así que se asume que se refiere al más reciente del usuario — es
+    // el que acaba de llegar en el mensaje anterior. Se manda el link
+    // directo a Drive porque siempre funciona; la app todavía no tiene
+    // una ruta por documento a la que enlazar desde fuera.
+    const { data: reciente } = await supabase
+      .from('scan_documents')
+      .select('drive_link')
+      .eq('user_id', user?.id)
+      .order('created_at', { ascending: false })
+      .limit(1)
+      .maybeSingle();
+
+    const appUrl = process.env.RAILWAY_PUBLIC_DOMAIN
+      ? `https://${process.env.RAILWAY_PUBLIC_DOMAIN}`
+      : null;
+
+    await whatsapp.sendText(
+      from,
+      t(idioma, 'verApp', { driveLink: reciente?.drive_link || '', appUrl: appUrl || '' })
+    );
   } else if (id === 'otra_cosa') {
     await whatsapp.sendText(from, t(idioma, 'otraCosa'));
   }

@@ -35,7 +35,8 @@ const MENSAJES = {
       'Tu plan terminó y volviste al gratis: 5 escaneos al mes. Tus documentos siguen intactos en tu Drive. Cuando quieras volver, escríbeme "quiero personal".',
     portalPago: 'Aquí puedes cambiar tu tarjeta o cancelar cuando quieras:\n{link}',
     sinSuscripcion: 'Todavía no tienes un plan de pago activo.',
-    verApp: 'Ábrelo en la app de TapptScan para verlo, editarlo o firmarlo.',
+    verApp:
+      '📂 Tu documento: {driveLink}\n\nPara editarlo o firmarlo, entra a la app:\n{appUrl}',
     gastosEsNegocio:
       'Esa pregunta la contesto con el plan Negocio: llevo tus gastos en una hoja dentro de tu Drive y te respondo aquí mismo. Escríbeme "quiero negocio" y te mando el link.',
     otraCosa: 'Ok, dime qué tipo de documento es o mándame otra foto.',
@@ -69,7 +70,7 @@ const MENSAJES = {
       'Your plan ended and you\'re back on free: 5 scans a month. Your documents are untouched in your Drive. Message me "I want personal" to come back.',
     portalPago: 'Here you can change your card or cancel any time:\n{link}',
     sinSuscripcion: "You don't have a paid plan yet.",
-    verApp: 'Open it in the TapptScan app to view, edit or sign it.',
+    verApp: '📂 Your document: {driveLink}\n\nTo edit or sign it, open the app:\n{appUrl}',
     gastosEsNegocio:
       'That one comes with the Business plan: I keep your expenses in a sheet inside your Drive and answer right here. Reply "I want business" and I\'ll send you the link.',
     otraCosa: "Okay — tell me what kind of document it is, or send me another photo.",
