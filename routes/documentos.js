@@ -146,7 +146,10 @@ router.get('/:id/pagina/:n', requireAuth, async (req, res) => {
       pagina: 0,
     });
   } catch (err) {
-    console.error('[documentos] error sirviendo página', err);
+    console.error(
+      `[documentos] error sirviendo página doc=${req.params.id} n=${req.params.n}`,
+      err
+    );
     res.status(500).json({ error: 'error_pagina' });
   }
 });

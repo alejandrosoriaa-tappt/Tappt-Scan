@@ -23,6 +23,18 @@ if (
   process.exit(1);
 }
 
+// Red de seguridad: sin esto, una promesa rechazada sin catch en cualquier
+// parte (p. ej. dentro de pdf.js/@napi-rs/canvas al rasterizar) tumba TODO
+// el proceso — Node mata el proceso por default desde v15 — y Railway lo
+// ve como 502 hasta que reinicia el contenedor. Logueamos para diagnosticar
+// en vez de dejar que el servidor entero se caiga por una sola request.
+process.on('unhandledRejection', (razon) => {
+  console.error('[proceso] promesa rechazada sin capturar', razon);
+});
+process.on('uncaughtException', (err) => {
+  console.error('[proceso] excepción no capturada', err);
+});
+
 const app = express();
 
 // Los dos webhooks firmados necesitan el cuerpo CRUDO para poder verificar
