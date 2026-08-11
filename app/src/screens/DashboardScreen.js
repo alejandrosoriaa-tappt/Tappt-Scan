@@ -16,7 +16,7 @@ import { useSesion } from '../context/SesionContext';
 import { useIdioma } from '../i18n';
 import Icono, { IconoChip } from '../components/Icono';
 import { Tarjeta, Barra, formatoDinero, formatoBytes } from '../components/comunes';
-import { colores, espacio, radio, tipo, sombra } from '../theme';
+import { colores, porTipo, espacio, radio, tipo, sombra } from '../theme';
 
 /**
  * La Home no es un explorador de archivos: es el centro del asistente.
@@ -51,13 +51,45 @@ function Tile({ valor, etiqueta, acento }) {
   );
 }
 
+// Vista compacta para "Recientes" — misma idea que la fila de
+// DocumentosScreen, pero más chica: aquí solo se quiere reconocer el
+// documento de un vistazo, no leer todos sus datos.
+function Reciente({ documento, onPress }) {
+  const { t } = useIdioma();
+  const meta = porTipo[documento.tipo] || porTipo.otro;
+
+  return (
+    <TouchableOpacity style={estilos.reciente} activeOpacity={0.75} onPress={onPress}>
+      <IconoChip nombre={meta.icono} fondo={meta.fondo} trazo={meta.trazo} tamano={40} />
+      <View style={estilos.recienteCentro}>
+        <Text style={estilos.recienteTitulo} numberOfLines={1}>
+          {documento.nombre_archivo || documento.emisor || t('sinEmisor')}
+        </Text>
+        <View style={estilos.recienteEtiquetas}>
+          <View style={[estilos.chipTipo, { backgroundColor: meta.fondo }]}>
+            <Text style={[estilos.chipTipoTexto, { color: meta.trazo }]}>{t(meta.clave)}</Text>
+          </View>
+          {documento.ruta ? (
+            <Text style={estilos.recienteRuta} numberOfLines={1}>
+              {documento.ruta}
+            </Text>
+          ) : null}
+        </View>
+      </View>
+      <Icono nombre="verificado" tamano={16} color={colores.primario} />
+    </TouchableOpacity>
+  );
+}
+
 export default function DashboardScreen({ navigation }) {
   const { cuenta, refrescarCuenta } = useSesion();
   const { t } = useIdioma();
 
   const resumen = useCargar(() => api.resumen(), []);
   const uso = useCargar(() => api.usoDrive().catch(() => null), []);
+  const recientes = useCargar(() => api.documentos(), []);
   const datos = resumen.datos;
+  const ultimos = (recientes.datos || []).slice(0, 3);
 
   const restantes =
     cuenta?.escaneosLimite != null ? cuenta.escaneosLimite - cuenta.escaneosUsados : null;
@@ -89,10 +121,19 @@ export default function DashboardScreen({ navigation }) {
           </TouchableOpacity>
         </View>
 
+        <TouchableOpacity
+          style={estilos.buscador}
+          activeOpacity={0.8}
+          onPress={() => navigation.navigate('Documentos')}
+        >
+          <Icono nombre="buscar" tamano={18} color={colores.textoTerciario} />
+          <Text style={estilos.buscadorTexto}>{t('buscarDocumentos')}</Text>
+        </TouchableOpacity>
+
         <AccionPrincipal
           icono="whatsapp"
-          fondo="#DDF7EA"
-          trazo="#128C7E"
+          fondo="rgba(37,211,102,0.16)"
+          trazo="#25D366"
           titulo={t('accionWhatsapp')}
           detalle={t('accionWhatsappDetalle')}
           onPress={() => Linking.openURL(`https://wa.me/${cuenta?.numeroTapptScan || ''}`)}
@@ -133,6 +174,26 @@ export default function DashboardScreen({ navigation }) {
           </View>
         )}
 
+        {ultimos.length ? (
+          <>
+            <View style={estilos.filaTitulo}>
+              <Text style={estilos.seccion}>{t('recientes')}</Text>
+              <TouchableOpacity onPress={() => navigation.navigate('Documentos')}>
+                <Text style={estilos.verTodo}>{t('verTodo')}</Text>
+              </TouchableOpacity>
+            </View>
+            <View style={estilos.listaRecientes}>
+              {ultimos.map((documento) => (
+                <Reciente
+                  key={documento.id}
+                  documento={documento}
+                  onPress={() => navigation.navigate('Documento', { documento })}
+                />
+              ))}
+            </View>
+          </>
+        ) : null}
+
         {cuenta?.plan === 'gratis' && restantes != null ? (
           <TouchableOpacity
             style={estilos.banner}
@@ -153,7 +214,7 @@ export default function DashboardScreen({ navigation }) {
             en tu Drive, no en nuestros servidores. */}
         <Tarjeta style={estilos.drive}>
           <View style={estilos.driveFila}>
-            <IconoChip nombre="nube" fondo="#DDEBFB" trazo="#2F80ED" tamano={40} />
+            <IconoChip nombre="nube" fondo="rgba(59,130,246,0.18)" trazo="#5B9BFA" tamano={40} />
             <View style={estilos.driveTexto}>
               <Text style={estilos.driveTitulo}>{t('guardandoEnDrive')}</Text>
               <View style={estilos.driveEstado}>
@@ -194,6 +255,20 @@ const estilos = StyleSheet.create({
   marcaTexto: { ...tipo.tituloChico, color: colores.texto },
   marcaAcento: { color: colores.primario },
 
+  buscador: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: espacio.sm,
+    backgroundColor: colores.superficie,
+    borderWidth: 1,
+    borderColor: colores.divisor,
+    borderRadius: radio.xl,
+    paddingVertical: espacio.sm + 2,
+    paddingHorizontal: espacio.md,
+    marginBottom: espacio.md,
+  },
+  buscadorTexto: { ...tipo.cuerpo, color: colores.textoTerciario },
+
   accion: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -223,14 +298,32 @@ const estilos = StyleSheet.create({
   tileValor: { ...tipo.metrica, color: colores.texto },
   tileEtiqueta: { ...tipo.menor, color: colores.textoSuave, marginTop: 4, lineHeight: 16 },
 
+  listaRecientes: { gap: espacio.sm },
+  reciente: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: colores.superficie,
+    borderRadius: radio.lg,
+    padding: espacio.sm + 2,
+    gap: espacio.sm,
+  },
+  recienteCentro: { flex: 1 },
+  recienteTitulo: { ...tipo.cuerpoFuerte, fontSize: 14, color: colores.texto },
+  recienteEtiquetas: { flexDirection: 'row', alignItems: 'center', gap: espacio.xs, marginTop: 4 },
+  chipTipo: { borderRadius: radio.chip, paddingHorizontal: espacio.xs + 2, paddingVertical: 2 },
+  chipTipoTexto: { fontSize: 11, fontWeight: '700' },
+  recienteRuta: { ...tipo.menor, color: colores.textoTerciario, flexShrink: 1 },
+
   banner: {
     backgroundColor: colores.primarioSuave,
+    borderWidth: 1,
+    borderColor: 'rgba(24,184,117,0.35)',
     borderRadius: radio.lg,
     padding: espacio.md,
     marginTop: espacio.md,
   },
-  bannerTitulo: { ...tipo.cuerpoFuerte, fontSize: 14, color: '#0B6B4F' },
-  bannerTexto: { ...tipo.menor, color: '#0B6B4F', marginTop: 4, lineHeight: 17 },
+  bannerTitulo: { ...tipo.cuerpoFuerte, fontSize: 14, color: colores.primarioClaro },
+  bannerTexto: { ...tipo.menor, color: colores.textoSuave, marginTop: 4, lineHeight: 17 },
 
   drive: { marginTop: espacio.md },
   driveFila: { flexDirection: 'row', alignItems: 'center' },
