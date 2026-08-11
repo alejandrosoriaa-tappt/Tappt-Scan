@@ -35,7 +35,7 @@ export default function App() {
         <IdiomaProvider>
           <SesionProvider>
             <NavigationContainer>
-              <StatusBar style="dark" />
+              <StatusBar style="light" />
               <RootNavigator />
             </NavigationContainer>
           </SesionProvider>

@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, ActivityIndicator } from 'react-native';
+import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
@@ -19,6 +19,7 @@ import OnboardingScreen from '../screens/OnboardingScreen';
 import Icono from '../components/Icono';
 import HojaCaptura from '../components/HojaCaptura';
 import HojaLimite from '../components/HojaLimite';
+import Splash from '../components/Splash';
 import { importarArchivo, importarDeGaleria } from '../lib/importar';
 import { alertar } from '../lib/alerta';
 import { useSesion } from '../context/SesionContext';
@@ -132,11 +133,7 @@ export default function RootNavigator() {
   const { t } = useIdioma();
 
   if (cargando) {
-    return (
-      <View style={estilos.centrado}>
-        <ActivityIndicator color={colores.primario} />
-      </View>
-    );
+    return <Splash />;
   }
 
   // Tres puertas: sin sesión → Login; con sesión pero sin Drive → Onboarding;
@@ -177,12 +174,6 @@ export default function RootNavigator() {
 }
 
 const estilos = StyleSheet.create({
-  centrado: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: colores.fondo,
-  },
   barraContenedor: {
     backgroundColor: colores.superficie,
     borderTopWidth: StyleSheet.hairlineWidth,
