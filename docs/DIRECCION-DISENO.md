@@ -358,7 +358,15 @@ editor → firma de punta a punta.
 
 ## Siguiente paso
 
-1. **Verificación visual de esta tanda** — prioridad antes de seguir.
+1. **🐛 Bug abierto — 502 al abrir "Editar y firmar" en móvil.** Reportado
+   2026-08-11 tarde, no diagnosticado todavía (la sesión se pausó antes
+   de investigar). Sospecha: `GET /api/documentos/:id/pagina/:n`
+   (`routes/documentos.js`) → `pdf.renderizarPagina()` (pdfjs-dist +
+   `@napi-rs/canvas`) tronando o tardando más de lo que Railway tolera
+   en su proxy — revisar Deploy Logs de Railway en el momento exacto
+   del error para confirmar antes de tocar código. Reproducido también
+   en escritorio (Chrome), con el mensaje de error ya visible gracias
+   al fix de `alertar()` de hoy: `"Couldn't do that — error_502"`.
 2. **Versionado original/editado/firmado** del editor — el hueco más
    grande contra el pilar #4, y el más riesgoso de construir sin poder
    ver el resultado: toca `EditorScreen.js`, el schema de
@@ -366,5 +374,10 @@ editor → firma de punta a punta.
    probablemente subir múltiples archivos a Drive por documento.
 3. Pendiente sin relación al diseño: el número de WhatsApp
    (`+52 1 56 4417 0712`) seguía registrado en dos WABAs de Meta a la
-   vez la última vez que se confirmó — falta que el usuario lo quite
-   de la WABA `Tappt` (la vieja) desde su Mac.
+   vez la última vez que se confirmó — el login por WhatsApp falla al
+   azar mientras no se quite de la WABA `Tappt` (la vieja) desde la Mac
+   del usuario. Confirmado 2026-08-11: el login funcionó una vez y
+   falló (expiró) otra, consistente con mensajes cayendo a veces en el
+   webhook equivocado.
+4. Idea guardada para **después** del rediseño completo: cámara
+   continua celular↔web por QR (ver sección arriba).
