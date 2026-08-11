@@ -1,0 +1,296 @@
+# Dirección de diseño — TapptScan (benchmark CamScanner)
+
+_Definido: 2026-08-10_
+
+Brief de producto y diseño para el rediseño pantalla por pantalla de la
+app, usando CamScanner como benchmark funcional. Es la referencia a seguir
+en las próximas sesiones — no reinventar lo que ya está bien resuelto en
+la industria, pero con identidad visual propia y el diferencial de
+TapptScan intacto.
+
+## Lectura estratégica
+
+- CamScanner es el benchmark **funcional** principal — no reinventar sus
+  flujos, que ya están probados a escala de industria.
+- La identidad **visual** sí debe ser propia de TapptScan.
+- El diferenciador de TapptScan **no** es "un scanner más bonito". Es:
+
+  > WhatsApp como canal rápido de entrada + IA que analiza, clasifica,
+  > nombra y guarda en el Google Drive del usuario.
+
+## Pilares obligatorios del producto
+
+1. Escaneo tipo CamScanner (detección viva, recorte, enderezado)
+2. Edición de PDF fuerte
+3. Firma y biblioteca de firmas
+4. **Versionado del documento**: original / firmado / editado — nunca
+   sobrescribir en silencio
+5. Identidad TapptScan con verde protagonista
+
+## Qué tomar de CamScanner, pantalla por pantalla
+
+- **Splash**: sobriedad, contraste, marca centrada, rápida.
+- **Home/Dashboard**: buscador arriba, grid de accesos rápidos, recientes
+  abajo, navegación inferior fija, CTA de cámara al centro.
+- **Cámara**: preview full screen, botón de captura dominante, cambio de
+  modo (individual/lote) discreto. TapptScan mejora esto con detección
+  viva del documento (ver estados abajo), no solo un marco fijo.
+- **Visor de documento**: documento protagonista, barras oscuras,
+  herramientas por contexto, pocas decisiones por pantalla.
+- **Firma**: biblioteca de firmas reusables, inserción con drag/escala/
+  rotación, gestión de firmas guardadas.
+
+## Prompt maestro de dirección de producto
+
+> Diseña TapptScan como una app móvil nativa de escaneo de documentos
+> inspirada en los patrones UX más exitosos de CamScanner, sin reinventar
+> flujos que ya funcionan extraordinariamente bien.
+>
+> La aplicación debe sentirse tan eficiente, clara y confiable como
+> CamScanner en sus módulos principales de: cámara de escaneo, detección
+> y recorte, visualización de documentos, edición PDF, firma y manejo de
+> documentos.
+>
+> Sin embargo, TapptScan debe expresar una identidad visual propia,
+> moderna, limpia y premium, usando como color central un verde de marca
+> basado en `#18B875`, acompañado de neutrales oscuros, superficies
+> sobrias y acentos brillantes.
+>
+> El producto no debe posicionarse como "otro scanner", sino como una
+> evolución del scanner móvil con un diferencial muy claro: **TapptScan =
+> escaneo probado + acceso rápido por WhatsApp + IA que analiza, clasifica,
+> renombra y guarda en Google Drive del usuario.**
+>
+> La UX debe comunicar que existen dos puertas de entrada al mismo
+> sistema:
+>
+> 1. **Desde la app**: abrir cámara → escanear → editar → firmar →
+>    guardar/exportar.
+> 2. **Desde WhatsApp**: enviar foto o PDF → TapptScan procesa con IA →
+>    clasifica → asigna nombre inteligente → guarda en la carpeta correcta
+>    del Drive del usuario → queda listo para revisión en la app.
+>
+> No diseñar solo "pantallas bonitas". Diseñar producto real con estados:
+> vacío, cargando, error, éxito, sin conexión, sin permisos, procesamiento
+> IA, documento guardado, documento firmado, sincronización con Drive.
+
+## Identidad visual
+
+Sensación general: tecnología útil, productividad, orden, precisión,
+inteligencia, confianza, rapidez. Dark UI elegante, verde como color
+héroe, iconografía outline uniforme, tipografía sans moderna.
+
+### Colores (propuesta del brief — contrastar con `app/src/theme.js` antes de aplicar)
+
+```
+#18B875 — primary brand
+#12A56A — primary pressed
+#37D392 — primary light accent
+#0F1720 — background deep
+#151B24 — surface
+#1D2430 — elevated surface
+#2A3342 — borders/dividers
+#F5F7FA — primary text on dark
+#B6C0CC — secondary text
+#7F8A98 — tertiary text
+#22C55E — success
+#F59E0B — warning
+#EF4444 — error
+#3B82F6 — info
+```
+
+> ⚠️ Esto asume **dark mode como modo principal** — hoy `theme.js` está
+> construido sobre fondo claro (`#F7F9FA`). Es una decisión de producto
+> que hay que confirmar explícitamente antes de rehacer el theme: ¿dark
+> por default, o solo como opción? Cambia bastante el trabajo.
+
+### Tipografía
+
+Inter / SF Pro / Plus Jakarta Sans / General Sans.
+
+```
+Display     32  semibold
+H1          28  semibold
+H2          24  semibold
+H3          20  semibold
+Title       18  medium
+Body        16  regular
+Body small  14  regular
+Label       13  medium
+Caption     12  regular
+```
+
+### Espaciado
+
+`4 · 8 · 12 · 16 · 20 · 24 · 32 · 40`
+
+### Radios
+
+`8 · 12 · 16 · 20 · 24 · full pill`
+
+### Sombras
+
+Sobrias, suaves, oscuras, poca elevación — el efecto premium viene del
+contraste y la composición, no de sombras pesadas.
+
+## Prompts por pantalla
+
+### 1 · Splash
+
+Fondo oscuro profundo, logo centrado, patrón sutil de documentos casi
+invisible de fondo, sin ruido visual, pulso discreto de carga. Estados:
+carga normal, carga lenta, error de inicialización, sin conexión.
+
+### 2 · Home / Dashboard
+
+Header con saludo, buscador prominente, grid de accesos rápidos
+(Escanear, Herramientas PDF, Importar imágenes, Importar archivos,
+Documentos, Extraer texto, Identificaciones, Enviar por WhatsApp),
+sección de recientes, bottom nav (Inicio · Documentos · Cámara ·
+Herramientas · Yo).
+
+Cada tarjeta de "recientes" muestra: miniatura, nombre inteligente,
+fecha, páginas, tipo, estado de sincronización, etiqueta de IA
+(Recibo/Contrato/ID/Factura/Oficio).
+
+Módulo de diferenciador: "Escanea más rápido por WhatsApp" / "Conecta tu
+Google Drive" / "IA organiza tus archivos automáticamente".
+
+Estados: usuario nuevo/vacío, con recientes, sincronizando Drive, error
+de conexión, sin archivos, procesamiento IA en curso.
+
+### 3 · Cámara / Escaneo en vivo
+
+Preview full screen, barra superior (cerrar, flash, calidad, ajustes,
+más), overlay de detección en tiempo real, switch individual/lote, botón
+de captura grande al centro.
+
+**Tres estados de detección — el corazón de la mejora sobre lo que hay
+hoy:**
+
+- **Baja confianza**: marco tenue, contorno poco definido, color neutral
+  o verde muy suave, hint "Alinea el documento".
+- **Detección parcial**: algunas esquinas detectadas, líneas vivas
+  intentando cerrar el polígono, feedback dinámico.
+- **Alta confianza**: las 4 esquinas detectadas, polígono estable y
+  brillante en verde TapptScan, mensaje "Listo para capturar", posible
+  auto-captura.
+
+Microinteracciones: flash breve al capturar, congelar preview un
+instante, transición a resultado corregido, haptic feedback en captura
+exitosa (nativo — no aplica en web).
+
+Casos especiales: poca luz, reflejo, documento inclinado, múltiples
+documentos, ningún documento detectado, permisos denegados.
+
+Entrada secundaria clara: "Enviar por WhatsApp en lugar de escanear
+aquí".
+
+### 4 · Visor de documento
+
+Header (back, nombre, acciones), documento paginado, indicador de
+páginas, toolbar inferior (Editar PDF, Firmar, Anotaciones, Añadir
+texto, Compartir, Extraer texto, Guardar en Drive, Procesar con IA).
+
+Info contextual: tipo detectado, carpeta destino en Drive, última
+modificación, si existe versión firmada/editada.
+
+Estados: 1 página, multipágina, escaneado local, recibido por WhatsApp,
+procesando OCR/IA, sin conexión, documento protegido/error.
+
+### 5 · Editor PDF
+
+Herramientas: anotaciones, subrayar, resaltar, texto, formas, insertar
+imagen, ocultar/redactar, reordenar páginas, girar, recortar. El
+documento ocupa la mayor parte de la pantalla; herramientas en barras
+inferiores o modales contextuales, sin saturar.
+
+**Regla clave: nunca sobrescribir en silencio.** Preguntar o manejar
+versionado explícito: guardar como nueva versión / reemplazar versión
+editada previa / mantener original intacto.
+
+Estados: sin editar, edición activa, elemento seleccionado, guardando,
+guardado, error al guardar.
+
+### 6 · Firma / Biblioteca de firmas
+
+Funciones: añadir firma nueva, guardar para uso futuro, ver biblioteca,
+elegir firma guardada, insertar (mover/escalar/rotar/eliminar),
+administrar firmas.
+
+Layout: bottom sheet, pestañas Firma/Sello, miniaturas horizontales,
+botón "Añadir" destacado, "Gestionar firmas".
+
+Estados: sin firmas guardadas, una firma, varias, firma seleccionada,
+insertada, biblioteca vacía, error al guardar.
+
+### 7 · Colocación de firma
+
+Documento visible con firma colocada encima, barra inferior contextual
+(cambiar firmante, firma y sello, fecha, más, confirmar). Interacción:
+drag & drop, pinch para escalar, rotación, snap sutil, CTA de confirmar
+en verde.
+
+**Regla crítica**: al confirmar, genera una **nueva versión** del
+documento — el original sin firma se conserva.
+
+### 8 · Menú "Más" / acciones secundarias
+
+Hojas de acción (bottom sheet): gestionar firmas, eliminar, renombrar,
+duplicar, guardar en otra carpeta, exportar, compartir, ver versiones.
+Iconos outline consistentes, acciones destructivas en rojo, positivas en
+verde.
+
+## Diferencial TapptScan — dónde debe aparecer
+
+WhatsApp + IA + Drive tienen que sentirse **parte central del sistema**,
+no una ocurrencia externa. Presente en: onboarding, home/dashboard, visor
+de documento, confirmación de guardado, detalles del archivo, centro de
+actividad/procesamiento.
+
+Mensajes sugeridos: "Escanea o mándalo por WhatsApp" · "IA lista para
+organizar tu documento" · "Guardado en tu Drive" · "Clasificado
+automáticamente" · "Nombre sugerido por IA" · "Original preservado,
+versión firmada creada".
+
+## Reglas de implementación / handoff
+
+- Figma organizado por flujo, componentes reutilizables, variantes y
+  estados, auto layout, tokens de color/texto.
+- Exportables: SVG (iconos), PNG @1x/@2x/@3x, ícono de app 1024×1024,
+  assets dark mode, estados vacío/loading/error/success.
+- Componentes obligatorios: app bar, bottom nav, cards de recientes,
+  grid de herramientas, action sheets, camera overlay, signature picker,
+  document toolbar, page indicator, CTA buttons, chips de IA.
+- Consistencia: iconografía outline uniforme, mismo grosor de trazo,
+  mismo lenguaje de bordes/radios/sombras — no mezclar paquetes de
+  íconos.
+- Pensar en desarrollo real: iOS first pero adaptable a Android, safe
+  areas, teclado, dark mode nativo, estados de permisos, offline,
+  sincronización con Drive, procesamiento asíncrono de IA.
+
+## Estado de esto en el código hoy (2026-08-10, para retomar)
+
+- `app/src/theme.js` está en **modo claro**, no oscuro — decidir si el
+  dark-first de este brief reemplaza la paleta actual o convive como
+  opción antes de tocar el theme.
+- `services/imagen.js` ya tiene detección de esquinas + corrección de
+  perspectiva (Otsu + homografía), pero es un solo intento por foto, sin
+  los 3 estados en vivo (baja/parcial/alta confianza) que pide este
+  brief — eso es trabajo de cámara en tiempo real, no de post-proceso.
+- El enderezado automático para fotos de WhatsApp/importación ya se
+  agregó hoy en `services/procesarDocumento.js`.
+- El editor (`EditorScreen.js`) hoy anota sobre el documento pero no
+  tiene recorte/reordenar páginas ni el versionado explícito
+  (original/editado/firmado) que pide este brief — es la brecha más
+  grande contra el pilar #4.
+- Falta decidir: ¿el usuario manda las capturas exactas de CamScanner
+  señalando qué replicar primero? (cámara en vivo fue lo que se acordó
+  empezar).
+
+## Siguiente paso
+
+Retomar mañana empezando por la **pantalla de cámara** (prompt 3) —
+overlay de detección en vivo con los 3 estados — que es lo más nuevo y
+lo que más se aleja de lo que hay hoy (que solo enmarca, sin feedback en
+tiempo real de confianza).

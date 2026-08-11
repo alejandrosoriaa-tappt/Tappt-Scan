@@ -241,6 +241,12 @@ Stripe — nombres, IDs, org, sin secretos): **`docs/INVENTARIO-INFRAESTRUCTURA.
 Consultar ahí antes de crear nada nuevo, para no duplicar cuentas ni mezclar
 infraestructura con otra vertical.
 
+**Rediseño de la app (benchmark CamScanner)**: brief completo de producto
+y diseño, pantalla por pantalla, con los prompts exactos a seguir:
+**`docs/DIRECCION-DISENO.md`**. Empezar por la cámara (detección en vivo
+con 3 estados de confianza) — es lo más nuevo y lo que más se aleja de lo
+que hay hoy.
+
 ## Rama de trabajo
 
 Rama activa: **`claude/new-session-9mhtdk`**. Desarrollar, commitear y
