@@ -363,6 +363,45 @@ sincronización en tiempo real (WebSocket o polling) entre las dos
 sesiones. Explícitamente **para después de terminar el rediseño
 completo** — no priorizarlo antes sin que el usuario lo pida.
 
+## Idea guardada: vista de mosaico + manejo de páginas de un PDF
+
+Propuesta del usuario (2026-08-11), benchmark directo de CamScanner:
+cuando un documento (escaneado o importado) tiene varias páginas, dar
+dos formas de verlo:
+
+- **Vista lista** (la actual): una página tras otra, de arriba a abajo.
+- **Vista mosaico**: miniaturas en cuadrícula (ej. 4-6 por fila). Al
+  pararse en una miniatura se puede hacer zoom para verla grande y
+  regresar al mosaico sin perder el lugar.
+
+En modo mosaico, **selección múltiple de páginas**:
+- Seleccionar todas → compartir el PDF completo (ya existe).
+- Seleccionar una o varias → compartir *solo esas páginas* como PDF
+  aparte.
+- Seleccionar una o varias → **eliminar esas páginas** del PDF.
+
+Caso de uso real del usuario (por qué importa, no es solo estética): al
+recibir la ficha técnica comercial de un inmueble por parte de una
+inmobiliaria con la que colabora, la última página suele traer los
+datos de contacto de esa inmobiliaria. Antes de reenviársela a su
+cliente, quiere poder **desarmar el PDF y quitar solo esa hoja**, sin
+tener que rehacer el documento a mano. Osea: TapptScan no solo arma
+PDFs (anotaciones, firma) — también debe poder *desarmarlos*.
+
+Toca: `EditorScreen.js` (nueva vista mosaico + selección), un endpoint
+nuevo tipo `POST /:id/paginas/eliminar` o extender `/:id/editar` para
+aceptar una lista de páginas a excluir (en `services/pdf.js`, con
+`pdf-lib` ya se puede remover páginas de un `PDFDocument` fácilmente),
+y generar un share de solo las páginas seleccionadas (subconjunto ya
+existe con `pdf-lib`, se arma un PDF nuevo con esas páginas nada más).
+Encaja con el trabajo de versionado recién hecho: "eliminar página X"
+también debería quedar como una versión nueva en `scan_versiones`, no
+pisar el original.
+
+**Explícitamente pausado** — el usuario pidió guardarlo en memoria y
+seguir con lo que estaba en curso (firma, versiones, 502) antes de
+construir esto.
+
 ## Estado — segunda pasada, misma noche (2026-08-11, tarde)
 
 Confirmado con el usuario que el dark theme se ve bien (capturas reales
