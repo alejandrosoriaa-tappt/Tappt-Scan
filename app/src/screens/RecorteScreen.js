@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import {
   View,
   Text,
@@ -14,7 +14,49 @@ import { alertar } from '../lib/alerta';
 import { useSesion } from '../context/SesionContext';
 import { useIdioma } from '../i18n';
 import HojaLimite from '../components/HojaLimite';
+import Icono from '../components/Icono';
 import { colores, espacio } from '../theme';
+
+// El guardado es UN solo request que en el servidor sube a Drive, endereza
+// la perspectiva y clasifica con Claude, en ese orden — pero desde la app
+// se ve como una sola llamada sin progreso. Estos pasos son cosméticos
+// (avanzan solos por tiempo, no por eventos reales del servidor) para que
+// la espera se sienta como el brief pide: procesamiento de IA explícito,
+// no un spinner mudo. Los tiempos son aproximados a lo que de verdad tarda
+// cada etapa en un documento típico.
+const PASOS_PROCESANDO = [
+  { icono: 'subir', ms: 900 },
+  { icono: 'documento', ms: 1400 },
+  { icono: 'rayo', ms: 100000 }, // se queda aquí hasta que el request responda
+];
+
+function useProcesando(activo) {
+  const [paso, setPaso] = useState(0);
+
+  useEffect(() => {
+    if (!activo) {
+      setPaso(0);
+      return;
+    }
+    let cancelado = false;
+    let indice = 0;
+    const avanzar = () => {
+      if (cancelado || indice >= PASOS_PROCESANDO.length - 1) return;
+      setTimeout(() => {
+        if (cancelado) return;
+        indice += 1;
+        setPaso(indice);
+        avanzar();
+      }, PASOS_PROCESANDO[indice].ms);
+    };
+    avanzar();
+    return () => {
+      cancelado = true;
+    };
+  }, [activo]);
+
+  return paso;
+}
 
 const MARCO_COMPLETO = [
   { x: 0, y: 0 },
@@ -80,6 +122,11 @@ export default function RecorteScreen({ route, navigation }) {
   const [aviso, setAviso] = useState(null);
   const [guardando, setGuardando] = useState(false);
   const [limite, setLimite] = useState(false);
+  const pasoProcesando = useProcesando(guardando);
+  const textosProcesando = useMemo(
+    () => [t('procesandoSubiendo'), t('procesandoEnderezando'), t('procesandoClasificando')],
+    [t]
+  );
 
   // Si la cámara en vivo ya venía con una detección de confianza alta
   // (EscanearScreen), se usa esa y no hace falta pedirle otra vez al
@@ -191,6 +238,16 @@ export default function RecorteScreen({ route, navigation }) {
             <Text style={estilos.cargandoTexto}>{t('buscandoDocumento')}</Text>
           </View>
         ) : null}
+
+        {guardando ? (
+          <View style={estilos.capaCargando}>
+            <View style={estilos.iconoProcesando}>
+              <Icono nombre={PASOS_PROCESANDO[pasoProcesando].icono} tamano={26} color="#FFFFFF" />
+            </View>
+            <ActivityIndicator color="#FFFFFF" style={{ marginTop: espacio.md }} />
+            <Text style={estilos.cargandoTexto}>{textosProcesando[pasoProcesando]}</Text>
+          </View>
+        ) : null}
       </View>
 
       <Text style={estilos.pista}>
@@ -209,11 +266,7 @@ export default function RecorteScreen({ route, navigation }) {
           onPress={confirmar}
           disabled={guardando || detectando}
         >
-          {guardando ? (
-            <ActivityIndicator color="#FFFFFF" />
-          ) : (
-            <Text style={estilos.botonPrimarioTexto}>{t('enderezarGuardar')}</Text>
-          )}
+          <Text style={estilos.botonPrimarioTexto}>{t('enderezarGuardar')}</Text>
         </TouchableOpacity>
       </View>
 
@@ -253,6 +306,14 @@ const estilos = StyleSheet.create({
     backgroundColor: 'rgba(0,0,0,0.45)',
   },
   cargandoTexto: { color: '#FFFFFF', fontSize: 13, marginTop: espacio.sm },
+  iconoProcesando: {
+    width: 52,
+    height: 52,
+    borderRadius: 26,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: colores.primario,
+  },
   pista: {
     color: 'rgba(255,255,255,0.7)',
     fontSize: 12,
