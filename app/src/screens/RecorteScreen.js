@@ -70,19 +70,23 @@ function Tirador({ indice, esquina, lienzo, onMover }) {
 }
 
 export default function RecorteScreen({ route, navigation }) {
-  const { fotoBase64 } = route.params;
+  const { fotoBase64, esquinasIniciales } = route.params;
   const { refrescarCuenta } = useSesion();
   const { t } = useIdioma();
 
-  const [esquinas, setEsquinas] = useState(MARCO_COMPLETO);
+  const [esquinas, setEsquinas] = useState(esquinasIniciales || MARCO_COMPLETO);
   const [lienzo, setLienzo] = useState({ ancho: 1, alto: 1 });
-  const [detectando, setDetectando] = useState(true);
+  const [detectando, setDetectando] = useState(!esquinasIniciales);
   const [aviso, setAviso] = useState(null);
   const [guardando, setGuardando] = useState(false);
   const [limite, setLimite] = useState(false);
 
-  // El servidor sugiere el marco; el usuario siempre lo puede corregir.
+  // Si la cámara en vivo ya venía con una detección de confianza alta
+  // (EscanearScreen), se usa esa y no hace falta pedirle otra vez al
+  // servidor — solo se detecta aquí cuando llega sin ella (foto importada,
+  // o PDF reenviado que primero pasó por otra pantalla).
   useEffect(() => {
+    if (esquinasIniciales) return;
     let cancelado = false;
 
     api
@@ -100,7 +104,7 @@ export default function RecorteScreen({ route, navigation }) {
     return () => {
       cancelado = true;
     };
-  }, [fotoBase64]);
+  }, [fotoBase64, esquinasIniciales]);
 
   const moverEsquina = (indice, posicion) =>
     setEsquinas((previas) => previas.map((e, i) => (i === indice ? posicion : e)));

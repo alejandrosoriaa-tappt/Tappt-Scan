@@ -1,7 +1,8 @@
-import React, { useRef, useState } from 'react';
+import React, { useRef, useState, useEffect, useCallback } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, Platform, ActivityIndicator } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { CameraView, useCameraPermissions } from 'expo-camera';
+import { api } from '../lib/api';
 import { useIdioma } from '../i18n';
 import { alertar } from '../lib/alerta';
 import Icono from '../components/Icono';
@@ -14,6 +15,28 @@ import { colores, espacio } from '../theme';
 // solo mapea "type", `facing` se cuela sin traducir y se pierde.
 const propsCamaraTrasera = Platform.OS === 'web' ? { type: 'back' } : {};
 
+// En web, foto.base64 de expo-camera viene con el prefijo "data:...,"
+// incluido (a diferencia de nativo, que da base64 puro). Ver el mismo
+// fix en la captura final más abajo.
+function base64Puro(valor) {
+  return valor.startsWith('data:') ? valor.slice(valor.indexOf(',') + 1) : valor;
+}
+
+const INTERVALO_DETECCION_MS = 1400;
+
+// Fórmula del cordón (shoelace) en fracción del cuadro — mismo criterio
+// que services/imagen.js usa en el servidor para decidir si un
+// cuadrilátero es "toda la foto" y por lo tanto no es una detección real.
+function area(esquinas) {
+  let suma = 0;
+  for (let i = 0; i < esquinas.length; i++) {
+    const a = esquinas[i];
+    const b = esquinas[(i + 1) % esquinas.length];
+    suma += a.x * b.y - b.x * a.y;
+  }
+  return Math.abs(suma) / 2;
+}
+
 // Cámara de respaldo: el camino principal sigue siendo WhatsApp, pero la app
 // debe poder escanear por sí sola (requisito de tiendas, guía 4.2 de Apple).
 export default function EscanearScreen({ navigation }) {
@@ -21,6 +44,45 @@ export default function EscanearScreen({ navigation }) {
   const { t } = useIdioma();
   const [capturando, setCapturando] = useState(false);
   const camara = useRef(null);
+
+  // Detección en vivo: mientras el usuario encuadra, se manda una foto de
+  // baja calidad al mismo detector que ya usa Recorte, cada ~1.4s, y el
+  // overlay refleja el resultado. Tres estados, de menos a más confianza:
+  // 'buscando' (nada aún o detección de baja confianza), 'parcial'
+  // (esquinas detectadas pero el propio detector las marca poco fiables)
+  // y 'listo' (4 esquinas con confianza alta — igual que usaría Recorte
+  // para no pedir ajuste manual).
+  const [deteccion, setDeteccion] = useState({ estado: 'buscando', esquinas: null });
+  const analizandoRef = useRef(false);
+  const listaRef = useRef(false); // la cámara ya montó su primer frame
+  const [lienzo, setLienzo] = useState({ ancho: 1, alto: 1 });
+
+  const analizarFrame = useCallback(async () => {
+    if (analizandoRef.current || !camara.current || !listaRef.current) return;
+    analizandoRef.current = true;
+    try {
+      // Calidad baja a propósito: esto no es la foto final, solo alimenta
+      // al detector — cuanto más chica, más rápido el ciclo.
+      const foto = await camara.current.takePictureAsync({ quality: 0.15, base64: true, skipProcessing: true });
+      const { esquinas, confiable } = await api.detectarBordes(base64Puro(foto.base64));
+
+      setDeteccion({
+        esquinas,
+        estado: !esquinas || area(esquinas) > 0.97 ? 'buscando' : confiable ? 'listo' : 'parcial',
+      });
+    } catch {
+      // Un fallo de un solo frame no debe tumbar el overlay — se queda en
+      // el último estado conocido y se reintenta en el próximo ciclo.
+    } finally {
+      analizandoRef.current = false;
+    }
+  }, []);
+
+  useEffect(() => {
+    if (!permiso?.granted || capturando) return;
+    const intervalo = setInterval(analizarFrame, INTERVALO_DETECCION_MS);
+    return () => clearInterval(intervalo);
+  }, [permiso?.granted, capturando, analizarFrame]);
 
   if (!permiso) {
     return (
@@ -56,17 +118,15 @@ export default function EscanearScreen({ navigation }) {
       // la manda ya enderezada.
       const foto = await camara.current.takePictureAsync({ quality: 0.8, base64: true });
 
-      // En nativo, foto.base64 es base64 puro. En web, expo-camera regresa
-      // ahí la data URL completa (node_modules/expo-camera/build/web/
-      // WebCameraUtils.js: capture() hace `{ uri: base64, base64 }` con el
-      // mismo valor en los dos) — sin quitarle el prefijo, Recorte le vuelve
-      // a poner "data:image/jpeg;base64," y queda duplicado: la imagen no
-      // carga y lo que llega al backend está corrupto.
-      const base64Limpio = foto.base64.startsWith('data:')
-        ? foto.base64.slice(foto.base64.indexOf(',') + 1)
-        : foto.base64;
-
-      navigation.navigate('Recorte', { fotoBase64: base64Limpio });
+      // Ver base64Puro() arriba: en web, expo-camera regresa el base64 con
+      // el prefijo de data URL ya incluido; en nativo viene puro.
+      navigation.navigate('Recorte', {
+        fotoBase64: base64Puro(foto.base64),
+        // Si ya había una detección de confianza alta de los frames en
+        // vivo, se la pasamos a Recorte para que abra directo con las
+        // esquinas correctas en vez de tener que detectar otra vez.
+        esquinasIniciales: deteccion.estado === 'listo' ? deteccion.esquinas : null,
+      });
     } catch (err) {
       alertar(t('noSePudo'), err.message);
     } finally {
@@ -74,9 +134,45 @@ export default function EscanearScreen({ navigation }) {
     }
   };
 
+  // Los 4 lados del polígono detectado, en píxeles del lienzo — mismo
+  // criterio que usa RecorteScreen para dibujar su marco ajustable.
+  const lados =
+    deteccion.esquinas && lienzo.ancho > 1
+      ? deteccion.esquinas.map((esquina, i) => {
+          const siguiente = deteccion.esquinas[(i + 1) % 4];
+          const x1 = esquina.x * lienzo.ancho;
+          const y1 = esquina.y * lienzo.alto;
+          const x2 = siguiente.x * lienzo.ancho;
+          const y2 = siguiente.y * lienzo.alto;
+          const largo = Math.hypot(x2 - x1, y2 - y1);
+          const angulo = (Math.atan2(y2 - y1, x2 - x1) * 180) / Math.PI;
+          return { key: i, left: x1, top: y1, width: largo, angulo };
+        })
+      : null;
+
+  const colorPorEstado = {
+    buscando: 'rgba(255,255,255,0.5)',
+    parcial: 'rgba(255,255,255,0.85)',
+    listo: colores.primario,
+  };
+
+  const textoPorEstado = {
+    buscando: t('alineaDocumento'),
+    parcial: t('sigueAjustando'),
+    listo: t('listoParaCapturar'),
+  };
+
   return (
     <View style={estilos.pantalla}>
-      <CameraView ref={camara} style={StyleSheet.absoluteFill} facing="back" {...propsCamaraTrasera} />
+      <CameraView
+        ref={camara}
+        style={StyleSheet.absoluteFill}
+        facing="back"
+        {...propsCamaraTrasera}
+        onCameraReady={() => {
+          listaRef.current = true;
+        }}
+      />
 
       <SafeAreaView style={estilos.capa} edges={['top', 'bottom']}>
         <TouchableOpacity
@@ -88,9 +184,34 @@ export default function EscanearScreen({ navigation }) {
           <Icono nombre="cerrar" tamano={20} color="#FFFFFF" />
         </TouchableOpacity>
 
-        <View style={estilos.visor}>
-          <View style={estilos.marco}>
-            <Text style={estilos.marcoTexto}>{t('colocaDocumento')}</Text>
+        <View
+          style={estilos.visor}
+          onLayout={(e) =>
+            setLienzo({ ancho: e.nativeEvent.layout.width, alto: e.nativeEvent.layout.height })
+          }
+        >
+          {lados ? (
+            lados.map((lado) => (
+              <View
+                key={lado.key}
+                style={[
+                  estilos.lado,
+                  {
+                    left: lado.left,
+                    top: lado.top,
+                    width: lado.width,
+                    backgroundColor: colorPorEstado[deteccion.estado],
+                    transform: [{ rotate: `${lado.angulo}deg` }],
+                  },
+                ]}
+              />
+            ))
+          ) : (
+            <View style={estilos.marco} />
+          )}
+
+          <View style={estilos.pistaCaja} pointerEvents="none">
+            <Text style={estilos.marcoTexto}>{textoPorEstado[deteccion.estado]}</Text>
           </View>
         </View>
 
@@ -161,7 +282,23 @@ const estilos = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  marcoTexto: { color: 'rgba(255,255,255,0.8)', fontSize: 14 },
+  marcoTexto: { color: 'rgba(255,255,255,0.85)', fontSize: 13, fontWeight: '600' },
+  lado: {
+    position: 'absolute',
+    height: 3,
+    borderRadius: 2,
+    transformOrigin: 'left center',
+  },
+  pistaCaja: {
+    position: 'absolute',
+    bottom: espacio.md,
+    left: espacio.lg,
+    right: espacio.lg,
+    alignItems: 'center',
+    backgroundColor: 'rgba(0,0,0,0.5)',
+    borderRadius: 20,
+    paddingVertical: espacio.xs + 2,
+  },
   controles: { alignItems: 'center', paddingBottom: espacio.lg, paddingHorizontal: espacio.lg },
   obturador: {
     width: 72,
