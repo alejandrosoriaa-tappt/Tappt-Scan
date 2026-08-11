@@ -65,10 +65,19 @@ router.post('/', async (req, res) => {
 
     from = msg.from;
 
-    // Palomita azul + "escribiendo..." mientras procesamos. Antes no se
-    // llamaba nunca, por eso nunca se veía ni el leído ni el typing.
-    const mostrarTyping = msg.type === 'image' || msg.type === 'document';
-    await whatsapp.markAsRead(msg.id, mostrarTyping);
+    // Palomita azul + "escribiendo..." mientras procesamos. Esto es
+    // cosmético — si Meta lo rechaza (p. ej. la cuenta aún no tiene
+    // habilitado typing_indicator) NO debe tumbar el procesamiento del
+    // archivo, por eso va en su propio try/catch y nunca se relanza.
+    try {
+      const mostrarTyping = msg.type === 'image' || msg.type === 'document';
+      await whatsapp.markAsRead(msg.id, mostrarTyping);
+    } catch (errRead) {
+      console.warn('[webhook] no se pudo marcar como leído (no bloqueante)', {
+        status: errRead.response?.status,
+        data: errRead.response?.data,
+      });
+    }
 
     if (msg.type === 'image') {
       await handleImage(from, msg.image);
