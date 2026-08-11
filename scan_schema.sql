@@ -153,3 +153,19 @@ create index if not exists idx_scan_users_stripe_sub on scan_users(stripe_subscr
 
 -- La pestaña de Favoritos filtraba sobre una columna que no existía.
 alter table scan_documents add column if not exists favorito boolean not null default false;
+
+-- Biblioteca de firmas reutilizables (agosto 2026, rediseño benchmark
+-- CamScanner): dibujar o importar una firma la deja guardada para no
+-- repetir el trazo cada vez. `datos` es el PNG completo en data URL —
+-- son archivos chicos (unos KB) y así no hace falta tocar Drive para
+-- algo que vive en la cuenta, no en los documentos del usuario.
+create table if not exists scan_firmas (
+  id uuid primary key default gen_random_uuid(),
+  user_id uuid not null references scan_users(id) on delete cascade,
+  datos text not null,
+  color text not null default '#2563EB',
+  created_at timestamptz not null default now()
+);
+
+create index if not exists idx_scan_firmas_user on scan_firmas(user_id, created_at desc);
+alter table scan_firmas enable row level security;

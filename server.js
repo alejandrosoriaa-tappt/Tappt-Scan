@@ -7,6 +7,7 @@ const cuentaRouter = require('./routes/cuenta');
 const documentosRouter = require('./routes/documentos');
 const driveRouter = require('./routes/drive');
 const pagosRouter = require('./routes/pagos');
+const firmasRouter = require('./routes/firmas');
 
 // Guardrail de identidad: aborta si el número configurado no es el de
 // TapptScan. Evita procesar mensajes con las credenciales equivocadas
@@ -44,6 +45,7 @@ app.use('/api/cuenta', cuentaRouter);
 app.use('/api/documentos', documentosRouter);
 app.use('/api/drive', driveRouter);
 app.use('/api/pagos', pagosRouter);
+app.use('/api/firmas', firmasRouter);
 
 // Espejo web de la app nativa (React Native Web), para probar el
 // onboarding completo desde el navegador sin instalar nada. Va al final:

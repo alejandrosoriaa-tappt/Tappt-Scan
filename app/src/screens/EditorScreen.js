@@ -15,7 +15,9 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import * as ImagePicker from 'expo-image-picker';
 import FirmaPad from '../components/FirmaPad';
+import HojaFirmas from '../components/HojaFirmas';
 import Icono from '../components/Icono';
+import useCargar from '../hooks/useCargar';
 import { api } from '../lib/api';
 import { alertar, alertarConBotones } from '../lib/alerta';
 import { useIdioma } from '../i18n';
@@ -28,7 +30,6 @@ const EMOJIS = ['✅', '❌', '⭐', '🔴', '➡️', '📌', '✍️', '⚠️
 const HERRAMIENTAS = [
   { id: 'texto', icono: 'documento' },
   { id: 'firma', icono: 'etiqueta' },
-  { id: 'firma_foto', icono: 'subir' },
   { id: 'emoji', icono: 'estrella' },
   { id: 'imagen', icono: 'camara' },
   { id: 'tapar', icono: 'recibo' },
@@ -73,11 +74,14 @@ export default function EditorScreen({ route, navigation }) {
   const totalPaginas = vista?.paginas || documento.paginas || 1;
 
   const [firmaAbierta, setFirmaAbierta] = useState(false);
+  const [firmasAbierta, setFirmasAbierta] = useState(false);
   const [procesandoFirma, setProcesandoFirma] = useState(false);
   const [emojisAbiertos, setEmojisAbiertos] = useState(false);
   const [textoAbierto, setTextoAbierto] = useState(false);
   const [textoNuevo, setTextoNuevo] = useState('');
   const [posicionPendiente, setPosicionPendiente] = useState(null);
+
+  const firmas = useCargar(() => api.firmas().catch(() => []), []);
 
   // El backend espera fracciones 0-1 con origen arriba-izquierda.
   const aFraccion = (evento) => ({
@@ -97,7 +101,10 @@ export default function EditorScreen({ route, navigation }) {
       setTextoNuevo('');
       setTextoAbierto(true);
     } else if (herramienta === 'firma') {
-      setFirmaAbierta(true);
+      // La biblioteca decide: elegir una guardada, dibujar nueva o
+      // importar de una foto. Directo al lienzo solo si nunca hay nada
+      // que elegir la próxima vez que abran esta hoja.
+      setFirmasAbierta(true);
     } else if (herramienta === 'emoji') {
       setEmojisAbiertos(true);
     } else if (herramienta === 'tapar') {
@@ -113,30 +120,40 @@ export default function EditorScreen({ route, navigation }) {
           datos: `data:image/jpeg;base64,${activo.base64}`,
         });
       }
-    } else if (herramienta === 'firma_foto') {
-      const resultado = await ImagePicker.launchImageLibraryAsync({ base64: true, quality: 0.9 });
-      if (resultado.canceled) return;
+    }
+  };
 
-      const activo = resultado.assets[0];
-      setProcesandoFirma(true);
-      try {
-        // El servidor recorta al trazo, quita el fondo (sin importar de
-        // qué color sea el papel) y lo tiñe del color por default — el
-        // mismo resultado que dibujarla a mano, pero partiendo de una
-        // firma que ya existe en papel.
-        const { firma } = await api.firmaDesdeFoto(
-          `data:image/jpeg;base64,${activo.base64}`,
-          COLOR_FIRMA_IMPORTADA
-        );
-        agregar({ tipo: 'firma', ...posicion, ancho: 0.35, datos: firma });
-      } catch (err) {
-        alertar(
-          t('noSePudo'),
-          err.message === 'firma_no_detectada' ? t('firmaNoDetectada') : err.message
-        );
-      } finally {
-        setProcesandoFirma(false);
-      }
+  // Usada tanto por "Dibujar" (después de FirmaPad) como por "Importar" de
+  // la biblioteca — cualquier firma nueva se guarda sola para la próxima.
+  const guardarYColocarFirma = (datos, posicion, color) => {
+    agregar({ tipo: 'firma', ...posicion, ancho: 0.35, datos });
+    api.guardarFirma(datos, color).then(() => firmas.recargar()).catch(() => {});
+  };
+
+  const importarFirmaDeFoto = async () => {
+    const posicion = posicionPendiente;
+    const resultado = await ImagePicker.launchImageLibraryAsync({ base64: true, quality: 0.9 });
+    if (resultado.canceled) return;
+
+    const activo = resultado.assets[0];
+    setProcesandoFirma(true);
+    try {
+      // El servidor recorta al trazo, quita el fondo (sin importar de qué
+      // color sea el papel) y lo tiñe del color por default — el mismo
+      // resultado que dibujarla a mano, pero partiendo de una firma que
+      // ya existe en papel.
+      const { firma } = await api.firmaDesdeFoto(
+        `data:image/jpeg;base64,${activo.base64}`,
+        COLOR_FIRMA_IMPORTADA
+      );
+      guardarYColocarFirma(firma, posicion, COLOR_FIRMA_IMPORTADA);
+    } catch (err) {
+      alertar(
+        t('noSePudo'),
+        err.message === 'firma_no_detectada' ? t('firmaNoDetectada') : err.message
+      );
+    } finally {
+      setProcesandoFirma(false);
     }
   };
 
@@ -301,7 +318,30 @@ export default function EditorScreen({ route, navigation }) {
       <FirmaPad
         visible={firmaAbierta}
         onCerrar={() => setFirmaAbierta(false)}
-        onFirmar={(datos) => agregar({ tipo: 'firma', ...posicionPendiente, ancho: 0.35, datos })}
+        onFirmar={(datos) => guardarYColocarFirma(datos, posicionPendiente, null)}
+      />
+
+      <HojaFirmas
+        visible={firmasAbierta}
+        firmas={firmas.datos}
+        cargando={firmas.cargando}
+        onCerrar={() => setFirmasAbierta(false)}
+        onElegir={(firma) => {
+          agregar({ tipo: 'firma', ...posicionPendiente, ancho: 0.35, datos: firma.datos });
+          setFirmasAbierta(false);
+        }}
+        onDibujar={() => {
+          setFirmasAbierta(false);
+          setFirmaAbierta(true);
+        }}
+        onImportar={() => {
+          setFirmasAbierta(false);
+          importarFirmaDeFoto();
+        }}
+        onBorrar={async (id) => {
+          await api.borrarFirma(id);
+          firmas.recargar();
+        }}
       />
 
       <Modal visible={emojisAbiertos} transparent animationType="fade">

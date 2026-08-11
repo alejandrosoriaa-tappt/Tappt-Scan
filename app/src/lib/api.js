@@ -75,4 +75,9 @@ export const api = {
   usoDrive: () => request('/api/drive/uso'),
   carpetas: (carpeta) =>
     request(`/api/drive/carpetas${carpeta ? `?carpeta=${carpeta}` : ''}`),
+
+  firmas: () => request('/api/firmas'),
+  guardarFirma: (datos, color) =>
+    request('/api/firmas', { method: 'POST', body: JSON.stringify({ datos, color }) }),
+  borrarFirma: (id) => request(`/api/firmas/${id}`, { method: 'DELETE' }),
 };
