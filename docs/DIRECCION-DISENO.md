@@ -300,12 +300,52 @@ versión firmada creada".
   mensajes reales pueden estar cayendo en la lógica de agenda en vez de
   TapptScan. Confirmar y quitarlo de la WABA `Tappt`.
 
+## Estado — segunda pasada, misma noche (2026-08-11, tarde)
+
+Confirmado con el usuario que el dark theme se ve bien (capturas reales
+del Dashboard). Seguido sin parar por:
+
+- ✅ **Dashboard**: buscador (navega a Documentos), sección "Recientes"
+  con chip de tipo, 3 colores fijos del tema claro corregidos (chip de
+  WhatsApp, chip de Drive, texto del banner de upgrade).
+- ✅ **Visor de documento**: bug real encontrado y arreglado (mostraba
+  el *nombre* del ícono como texto gigante, `meta.color` no existía).
+  Badge "Clasificado por IA como {tipo}" más visible, botón Compartir
+  (Web Share API / Share nativo), menú "Más" con Eliminar conectado de
+  verdad (el endpoint ya existía, nada lo llamaba).
+- ✅ **Firma**: color (azul default) + grosor ajustables en FirmaPad
+  (nativo y web) sin agregar dependencia de slider. **Nueva
+  capacidad**: importar una firma de una foto — `services/imagen.js
+  extraerFirma()` separa tinta/papel con Otsu, recorta al contorno,
+  tiñe del color elegido, fondo transparente. Probado con imagen
+  sintética (firma real + papel en blanco de control, rechazado
+  correctamente).
+- ✅ **Biblioteca de firmas** (brief prompt 6, "must-have"): tabla
+  `scan_firmas` nueva (⚠️ **migración corrida por el usuario**, no
+  pendiente), endpoints `/api/firmas`, `HojaFirmas` — elegir guardada,
+  dibujar nueva o importar de foto; toda firma nueva se autoguarda.
+- ✅ **Splash** (brief prompt 1): wordmark con pulso discreto en vez del
+  spinner suelto de antes. `StatusBar` de `dark` a `light` (quedó del
+  tema claro, invisible sobre fondo oscuro).
+- ✅ **Menú "Más" genérico** (`HojaAcciones`, brief sección 8):
+  reutilizable para cualquier pantalla, primer uso en Documento.
+
+**Todo esto sigue sin confirmación visual del usuario** (solo el
+Dashboard se vio con capturas reales) — es la tanda más grande de
+cambios sin verificar de toda la sesión. Antes de seguir construyendo
+encima (especialmente el versionado, que toca todo lo demás), conviene
+que el usuario abra la app y navegue cámara → recorte → documento →
+editor → firma de punta a punta.
+
 ## Siguiente paso
 
-Con la cámara y el theme ya en marcha, seguir con las pantallas del
-brief en orden de impacto: **Home/Dashboard** (chips de IA, estado de
-Drive, CTA de WhatsApp) y **Visor de documento** — ambas ya existen,
-así que es adaptar, no construir desde cero. El **versionado
-original/editado/firmado** del editor es el hueco más grande contra el
-pilar #4 y conviene dejarlo para una sesión aparte por su tamaño
-(toca el editor, el schema de `scan_documents` y probablemente Drive).
+1. **Verificación visual de esta tanda** — prioridad antes de seguir.
+2. **Versionado original/editado/firmado** del editor — el hueco más
+   grande contra el pilar #4, y el más riesgoso de construir sin poder
+   ver el resultado: toca `EditorScreen.js`, el schema de
+   `scan_documents` (o una tabla nueva `scan_versiones`) y
+   probablemente subir múltiples archivos a Drive por documento.
+3. Pendiente sin relación al diseño: el número de WhatsApp
+   (`+52 1 56 4417 0712`) seguía registrado en dos WABAs de Meta a la
+   vez la última vez que se confirmó — falta que el usuario lo quite
+   de la WABA `Tappt` (la vieja) desde su Mac.
