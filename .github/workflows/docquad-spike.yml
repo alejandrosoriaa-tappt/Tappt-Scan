@@ -8,6 +8,11 @@ on:
     paths:
       - 'scanner/docquad/**'
       - 'scripts/docquad-*.js'
+      - 'services/docquad.js'
+      - 'services/procesarDocumento.js'
+      - 'routes/docquad.js'
+      - 'server.js'
+      - 'app/src/screens/RecorteScreen.js'
       - 'package.json'
       - 'package-lock.json'
       - '.github/workflows/docquad-spike.yml'
@@ -31,6 +36,18 @@ jobs:
 
       - name: Install dependencies
         run: npm ci
+
+      - name: Syntax check product integration
+        run: |
+          node --check server.js
+          node --check routes/docquad.js
+          node --check services/docquad.js
+          node --check services/procesarDocumento.js
+          node --check scanner/docquad/model.js
+          node --check scanner/docquad/preprocess.js
+          node --check scanner/docquad/postprocess.js
+          node --check scanner/docquad/ort-runtime.node.js
+          node --check scanner/docquad/detector.js
 
       - name: Prepare verified DocQuad model
         run: npm run docquad:model
