@@ -68,6 +68,10 @@ organizar) se hace en la app.
      (mxn/usd/eur) para salir a otros países sin tocar código.
 - Idiomas: español e inglés, en la app y en el bot (`services/i18n.js` y
   `app/src/i18n/`). El idioma del usuario vive en `scan_users.idioma`.
+- Scanner nuevo: DocQuadNet-256 vía ONNX. En Node el spike usa
+  `onnxruntime-web@1.27.0` con WASM single-thread para evitar el bloqueo de
+  descarga de binarios de `onnxruntime-node`. Ver `scanner/docquad/` y
+  `docs/HANDOFF-CHATGPT-2026-08-12.md`.
 
 ## Comandos
 
@@ -91,17 +95,23 @@ npm run android # emulador Android
 Health check: `GET /health`. **Guardrail de identidad**: el server NO
 arranca si `WHATSAPP_PHONE_NUMBER_ID` no coincide con
 `EXPECTED_WHATSAPP_PHONE_NUMBER_ID` (aborto a propósito, evita cruzar
-credenciales con otra vertical).
+credenciales con otra vertical). El health también expone el estado de
+warm-up de DocQuad.
 
 ## Estructura
 
-- `server.js` — arranque, guardrail de identidad, montaje de rutas.
+- `server.js` — arranque, guardrail de identidad, montaje de rutas y warm-up
+  no bloqueante de DocQuad.
 - `routes/webhook.js` — verificación + recepción de eventos de WhatsApp
   Cloud API (imagen, texto, botones). Aplica el límite del plan antes de
   procesar y atiende "quiero personal/negocio" mandando el link de pago.
 - `routes/auth.js` — acceso por WhatsApp: pide el código y consulta si ya
   llegó el mensaje. Sin autenticación, a propósito: es el paso previo.
 - `routes/cuenta.js` — perfil, consumo, preferencias y alta de pago.
+- `routes/docquad.js` — `POST /api/documentos/detectar-bordes` del scanner
+  nuevo. Se monta antes que `routes/documentos.js`. Si el modelo todavía
+  calienta responde seguro (`MODEL_WARMING` / `MODEL_RETRYING`) sin bloquear
+  la request ni volver a Otsu.
 - `routes/documentos.js` — lista, gastos del mes, borrado, escaneo desde
   la cámara, importación de archivos, páginas rasterizadas para el editor
   y horneado de anotaciones.
@@ -123,10 +133,20 @@ credenciales con otra vertical).
 - `services/stripe.js` — crea la sesión de Checkout y verifica los webhooks.
 - `services/i18n.js` — textos del bot de WhatsApp y detección de idioma.
 - `services/procesarDocumento.js` — tubería compartida (visión → Drive →
-  DB) que usan los tres caminos de entrada.
-- `services/imagen.js` — detección de las esquinas del documento (Otsu +
-  extremos) y corrección de perspectiva por mapeo inverso. Ver
-  `docs/EDITOR-PDF.md`.
+  DB) que usan los tres caminos de entrada. La integración nueva redetecta
+  el documento en la captura final full-res y tiene guardrail para evitar
+  doble corrección de perspectiva.
+- `services/docquad.js` — singleton/warm-up del detector, contrato de producto
+  para cámara/WhatsApp y traducción de resultado DocQuad a
+  `{esquinas, confiable, razon, diagnostico}`. Un quad geométricamente válido
+  pero de baja confianza se conserva como detección parcial; no se usa para
+  recorte automático.
+- `scanner/docquad/` — modelo, descarga/verificación, letterbox 256×256,
+  runtime ONNX/WASM, postproceso y detector aislado. El modelo queda fijado a
+  un commit conocido de MakeACopy; no seguir `main` silenciosamente.
+- `services/imagen.js` — conserva corrección de perspectiva y utilidades de
+  imagen. **La detección Otsu/extremos está obsoleta y NO debe parcharse ni
+  volver a ser el camino principal.** Ver `docs/ARQUITECTURA-SCANNER.md`.
 - `services/pdf.js` — arma el PDF desde la imagen, hornea las anotaciones
   (texto, firma, imagen, emoji, tapar) con `pdf-lib`, y rasteriza páginas
   con `pdf.js` + `@napi-rs/canvas` para poder mostrarlas en la app. Ver
@@ -168,8 +188,10 @@ App nativa (`app/`, Expo / React Native, JS sin TypeScript):
   propia porque el botón central va elevado sobre ella.
 - `src/screens/DashboardScreen.js` — saludo, stats (documentos, gasto del
   mes), banner de upgrade y lista de recientes.
-- `src/screens/EscanearScreen.js` — cámara de respaldo. Obligatoria por la
-  guía 4.2 de Apple: la app no puede ser solo un puente a WhatsApp.
+- `src/screens/EscanearScreen.js` — cámara de respaldo y overlay live. En web
+  usa frames ~640 px para detección y captura final full-res. El panel ⓘ es
+  diagnóstico temporal; actualmente el tiempo mostrado junto a `DETECTOR`
+  es el tiempo de generar/comprimir el frame local, NO inferencia DocQuad.
 - `src/screens/DriveScreen.js` — explorador del árbol real de Drive, con
   migas de pan. Los archivos propios abren el detalle; el resto va a Drive.
 - `src/screens/DocumentoScreen.js` — detalle, datos extraídos y acciones
@@ -182,9 +204,10 @@ App nativa (`app/`, Expo / React Native, JS sin TypeScript):
 - `src/context/SesionContext.js` — sesión de Supabase + datos de la cuenta.
 - `src/lib/sesion.js`, `src/lib/api.js` — token guardado y cliente del
   backend (toda llamada va firmada con él).
-- `src/screens/RecorteScreen.js` — recorte con cuatro esquinas
-  arrastrables, pre-colocadas por el detector del servidor. Toda foto de la
-  cámara pasa por aquí antes de subirse.
+- `src/screens/RecorteScreen.js` — recorte con cuatro esquinas arrastrables.
+  **Fix 2026-08-12:** las esquinas se proyectan contra el rect real de la foto
+  dentro de `resizeMode="contain"`, no contra todo el lienzo; recibe
+  `fotoAncho/fotoAlto` desde cámara.
 - `src/screens/EditorScreen.js` — editor multipágina: eliges herramienta y
   tocas el documento para colocar texto, firma, emoji, imagen o un tapado.
 - `src/lib/importar.js` — importación desde archivos del dispositivo
@@ -225,9 +248,8 @@ Build, TestFlight y Play Internal Testing).
 | Negocio | $499 | $29 | €28 | + control de gastos, multi-usuario, recordatorios |
 
 Precios en `services/planes.js` (`PRECIOS`): agregar una moneda ahí basta
-para vender en otro país. Cobro por WhatsApp (link de Stripe Checkout),
-nunca dentro de la app nativa. El webhook actualiza `scan_users.plan`; app
-y bot solo lo consultan.
+para vender en otro país. Cobro por WhatsApp/Web con Stripe; app nativa usa
+IAP de tienda según la decisión documentada en `docs/DIRECCION-DISENO.md`.
 
 ## Convenciones
 
@@ -254,57 +276,88 @@ y diseño, pantalla por pantalla, con los prompts exactos a seguir:
 **`docs/DIRECCION-DISENO.md`**. Ahí también está la crónica de qué se
 intentó y qué falló — leerla antes de repetir un enfoque ya descartado.
 
-**Motor de escaneo**: **`docs/ARQUITECTURA-SCANNER.md`** — la arquitectura
-acordada de `TapptScannerCore` (core en TypeScript, DocQuad vía ONNX,
-OpenCV WASM, auto-captura, Worker), el diagnóstico medido contra
-CamScanner y el orden de trabajo. Leerlo ANTES de tocar la detección de
-bordes: el heurístico de Otsu que hay hoy en `services/imagen.js` está
-para reemplazarse, no para parcharse — falló cuatro veces el 2026-08-12
-contra fotos reales y se revirtió a propósito.
+**Motor de escaneo**: **`docs/ARQUITECTURA-SCANNER.md`** — arquitectura,
+benchmark y orden de trabajo. Otsu está para reemplazarse, no para
+parcharse. Para el estado exacto del relevo y los fixes hechos después de la
+sesión de Claude, leer inmediatamente:
+
+**`docs/HANDOFF-CHATGPT-2026-08-12.md`**.
 
 ## Rama de trabajo
 
 Rama activa: **`claude/new-session-9mhtdk`**. Desarrollar, commitear y
 pushear ahí. No abrir PR salvo que se pida explícitamente.
 
-## 👉 Retomando la sesión (última: 2026-08-12)
+## 👉 Retomando la sesión (actualizado 2026-08-12 15:10 CDMX)
 
-**Leer `docs/ARQUITECTURA-SCANNER.md` completo antes de tocar el
-escáner** — sobre todo "Lo primero al retomar" y el bloqueo de ONNX.
+**ORDEN DE LECTURA para retomar scanner:**
 
-Resumen de dónde quedó:
+1. `CLAUDE.md` (este archivo).
+2. `docs/ARQUITECTURA-SCANNER.md`.
+3. **`docs/HANDOFF-CHATGPT-2026-08-12.md`** — contiene los commits exactos,
+   pruebas de Safari, fixes de Recorte, warm-up/502 y el siguiente paso.
 
-- El foco es **iPhone + Web App** (Safari de referencia) y **WhatsApp**.
-  iOS/Android nativos están pospuestos hasta tener las cuentas de
-  desarrollador; no bloquean nada.
-- **Resuelto hoy:** captura a resolución completa (0.25 → 5.35 MP,
-  medido contra los 2.6 MP de CamScanner), overlay alineado con el
-  preview, salida JPEG (5.16 → 0.59 MB), y un bug que llevaba todo el
-  día en producción: los filtros guardaban a ~1% de calidad porque
-  `@napi-rs/canvas` usa escala 0-100, no 0-1.
-- **Lo que sigue sin resolverse:** el documento se guarda sin recortar
-  ni enderezar. El detector de Otsu no da el ancho — falló cuatro veces
-  contra fotos reales y se revirtió a propósito. **No volver a
-  parcharlo**; el plan es reemplazarlo por DocQuad (ONNX).
-- **Esperando del usuario:** las 6 capturas de diagnóstico (botón ⓘ en
-  la pantalla de cámara) para cerrar el Paso 0 Web con evidencia.
-- **Bloqueo técnico:** `onnxruntime-node` no se instala desde el entorno
-  de Claude (el proxy corta la descarga de binarios nativos). El modelo
-  DocQuad sí se descargó y está verificado. Ver las tres salidas
-  posibles en `ARQUITECTURA-SCANNER.md`.
+Estado actual del scanner:
 
-## Estado / pendientes
+- Foco de desarrollo: **iPhone + Web App Safari** y WhatsApp. Nativo
+  iOS/Android se valida después cuando existan cuentas/builds.
+- Captura web medida: `2160×3840` stream/track a 30 fps en el iPhone usado
+  para pruebas; la captura final ya tiene resolución suficiente.
+- Frames de detección medidos: alrededor de `640×1138`, 84–98 KB.
+- Otsu queda **abandonado**. No volver a ajustar ni reparar ese detector.
+- DocQuad ya está integrado en backend/spike y el workflow CI pasó modelo
+  verificado + golden input + smoke test.
+- El 502 observado al iniciar detección se trató con warm-up en background y
+  respuestas no bloqueantes mientras el modelo carga.
+- `RecorteScreen` ya corrige la geometría de `resizeMode="contain"` y usa las
+  dimensiones reales de la captura.
+- Una prueba sin documento correctamente no mostró quad.
+- **Última prueba real:** una hoja grande, clara y casi completa en Safari NO
+  mostró todavía el polígono. Antes de tocar umbrales o algoritmos hay que
+  instrumentar la respuesta real de DocQuad (`razon`, esquinas, confiable,
+  `minConfidenceZ`, máscara, tiempos y latencia HTTP).
+- `services/docquad.js` ya conserva un quad geométricamente válido aunque sea
+  de baja confianza: debe aparecer como parcial/blanco; verde sólo cuando
+  `confiable:true`.
+- Brecha conocida vs MakeACopy: nuestro postproceso usa principalmente las
+  corner heatmaps y la máscara como guardrail; MakeACopy tiene selección/
+  refinamiento adicional basado en máscara. Revisar esa brecha si la
+  instrumentación demuestra que el problema está en postproceso.
 
-Nada se ha probado todavía contra servicios reales — falta configurar el
-número de WhatsApp Cloud API, el proyecto de Supabase, las credenciales de
-Google OAuth y las de MercadoPago, y correr el flujo completo end-to-end.
+Commits del relevo ChatGPT documentados en el handoff:
 
-Pendientes de código:
+- `a449d20` — fix `contain` en RecorteScreen.
+- `30fa042` — dimensiones reales de captura al editor.
+- `9d722c9` — limpieza de workflow temporal.
+- `b675f07` — warm-up/estado DocQuad.
+- `a2218dd` — endpoint no bloquea mientras calienta.
+- `cb968e8` — warm-up al arranque + estado en `/health`.
+- `99cff3d` — conserva quad parcial si la geometría es válida.
 
-- **Mejora de imagen** ("modo documento": contraste, blanco y negro) — es
-  lo que hace ver limpio un escaneo y no está.
-- **Detector de bordes** más robusto: la heurística actual asume papel claro
-  sobre fondo oscuro. Fuera de ese caso pide ajuste manual.
+**Siguiente paso, sin desviarse:** instrumentar el panel de diagnóstico para
+mostrar lo que realmente responde DocQuad sobre la hoja real. No tocar Otsu.
+No bajar guardrails a ciegas.
+
+## Estado / pendientes generales
+
+Pendientes de scanner están gobernados por `docs/ARQUITECTURA-SCANNER.md` y
+el handoff anterior. El orden acordado sigue siendo:
+
+```
+0    Captura full-res + overlay             en validación web / nativo pendiente
+1    PNG → JPEG                             avanzado/resuelto en web actual
+1.5  Spike DocQuad (3 runtimes)            Node avanzado; web/native pendientes
+1.6  scanner-fixtures (20 + ground truth)  pendiente
+2    DocQuad Node / WhatsApp                integración en curso
+3    DocQuad Web + Native                   pendiente
+4    AutoCapture + Quality                  pendiente
+5    Perspectiva + realce                   parcial / pendiente de validar end-to-end
+6    OneEuro + Worker                       pendiente
+7    Benchmark 300–500                      pendiente
+```
+
+Otros pendientes de producto:
+
 - **Editor**: falta arrastrar un elemento ya colocado y reemplazar texto de
   un PDF nativo en su sitio. Ver `docs/EDITOR-PDF.md`.
 - **Fuente Unicode** (`assets/fuente-unicode.ttf`) — sin ella se omiten los
