@@ -7,15 +7,6 @@ let detectorListo = null;
 let ultimoError = null;
 let inicioCarga = null;
 
-/**
- * Inicia la descarga/carga del modelo una sola vez.
- *
- * DocQuad pesa ~13.4 MB y ORT/WASM necesita inicializar su runtime. Ese trabajo
- * NO debe ocurrir por primera vez dentro de una request de cámara: en Railway
- * puede superar el tiempo del proxy y manifestarse como HTTP 502 aunque el
- * código del endpoint tenga try/catch. Lo calentamos en background al arrancar
- * el servidor y dejamos que las requests consulten el estado sin bloquear.
- */
 function prepararDetector() {
   if (detectorListo) return Promise.resolve(detectorListo);
   if (detectorPromise) return detectorPromise;
@@ -69,16 +60,11 @@ function normalizarEsquinas(corners) {
 /**
  * Contrato de producto para cámara/WhatsApp.
  *
- * Regla importante:
- * - geometría inválida => no se devuelve quad;
- * - geometría válida pero confianza baja => se devuelve como detección PARCIAL
- *   (`confiable:false`) para que la cámara pueda mostrar lo que DocQuad está
- *   proponiendo sin usarlo todavía como recorte final;
- * - geometría válida + confianza suficiente => `confiable:true`.
- *
- * Esto mantiene la seguridad del guardado (solo una detección confiable se usa
- * automáticamente) pero evita que el overlay quede completamente ciego cuando
- * el modelo sí ve la hoja y únicamente falla un guardrail de confianza.
+ * Un resultado que los guardrails de DocQuad marcan como sospechoso NO se
+ * muestra en el overlay y NO se usa para recortar. Antes conservábamos el
+ * quad si era geométricamente convexo aunque la confianza fuese baja; eso
+ * hacía visibles franjas internas falsas como si fueran sugerencias útiles.
+ * La UI debe quedarse en BUSCANDO hasta tener un quad realmente válido.
  */
 async function detectarDocumento(buffer) {
   const detector = await obtenerDetector();
@@ -90,14 +76,13 @@ async function detectarDocumento(buffer) {
     mask: resultado.mask,
     timing: resultado.timing,
     validation: resultado.validation,
+    chosenSource: resultado.chosenSource || null,
+    penalties: resultado.penalties || null,
   };
 
   if (!resultado.valid) {
-    const geometriaValida = Boolean(resultado.validation?.geometryValid);
-    const esquinas = geometriaValida ? normalizarEsquinas(resultado.corners) : null;
-
     return {
-      esquinas,
+      esquinas: null,
       confiable: false,
       fuente: 'docquad',
       razon: resultado.suspiciousReason || 'INVALID_GEOMETRY',
