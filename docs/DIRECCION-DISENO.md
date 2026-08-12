@@ -393,7 +393,20 @@ sincronización en tiempo real (WebSocket o polling) entre las dos
 sesiones. Explícitamente **para después de terminar el rediseño
 completo** — no priorizarlo antes sin que el usuario lo pida.
 
-## ✅ Filtros de imagen + detección de bordes para objetos oscuros — hecho (2026-08-13)
+## Filtros de imagen — hecho. Detección para objetos oscuros — revertida (2026-08-13)
+
+**⚠️ Resumen ejecutivo, léase antes que la crónica de abajo:** los 4
+filtros de imagen (Original/Gris/B&N/Mejorar) quedaron y funcionan
+bien, probados contra fotos reales. El intento de extender la
+detección de bordes a objetos oscuros (tarjetas, credenciales) se
+intentó 4 veces distintas en la misma sesión, falló las 4 con fotos
+reales del usuario, y se **revirtió por completo** — `detectarDocumento()`
+volvió a ser exactamente la versión original de antes de esta sesión.
+Detectar objetos oscuros automáticamente sigue sin resolverse; hoy
+caen a "ajusta a mano", igual que siempre. Resolverlo de verdad
+necesita visión por computadora real (un modelo), no otro ajuste al
+mismo heurístico de umbral global — no volver a intentarlo con la
+misma técnica sin ese cambio de enfoque.
 
 Disparado por un caso real: el usuario mandó por WhatsApp la foto de una
 tarjeta Inbursa (Cuenta Black, oscura) y salió sin recortar, sin
