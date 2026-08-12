@@ -117,6 +117,7 @@ export default function AjustesScreen() {
         </TouchableOpacity>
 
         <Text style={estilos.nota}>{t('promesa')}</Text>
+        <Text style={estilos.creditos}>{t('desarrolladoPor')}</Text>
       </ScrollView>
     </SafeAreaView>
   );
@@ -184,5 +185,11 @@ const estilos = StyleSheet.create({
     lineHeight: 18,
     marginTop: espacio.lg,
     textAlign: 'center',
+  },
+  creditos: {
+    fontSize: 11,
+    color: colores.textoTerciario,
+    textAlign: 'center',
+    marginTop: espacio.sm,
   },
 });

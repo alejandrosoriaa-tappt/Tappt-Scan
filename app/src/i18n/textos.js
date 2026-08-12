@@ -10,6 +10,7 @@ export const TEXTOS = {
 
     // Login
     promesa: 'Tus documentos no se guardan en nuestros servidores — viven en tu Google Drive.',
+    desarrolladoPor: 'TapptScan · un desarrollo de Nkuvo Labs',
     correo: 'Correo',
     contrasena: 'Contraseña',
     entrar: 'Entrar',
@@ -294,6 +295,7 @@ export const TEXTOS = {
     nombreIdioma: 'English',
 
     promesa: "Your documents aren't stored on our servers — they live in your Google Drive.",
+    desarrolladoPor: 'TapptScan · a Nkuvo Labs development',
     correo: 'Email',
     contrasena: 'Password',
     entrar: 'Sign in',
