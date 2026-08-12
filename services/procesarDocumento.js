@@ -3,6 +3,7 @@ const naming = require('./naming');
 const drive = require('./drive');
 const pdf = require('./pdf');
 const imagen = require('./imagen');
+const docquad = require('./docquad');
 const supabase = require('./supabase');
 const taxonomia = require('./taxonomia');
 const sheets = require('./sheets');
@@ -23,47 +24,33 @@ const planes = require('./planes');
 async function procesarArchivo(usuario, buffer, mimeType = 'image/jpeg', nombreOriginal = null) {
   const entradaEsPdf = pdf.esPdf(buffer) || mimeType === 'application/pdf';
 
-  // Enderezado automático para fotos: es lo único que la cámara de la app
-  // ya hace (con esquinas ajustables a mano), pero WhatsApp e importar
-  // archivos no pasan por ninguna pantalla de recorte. Se aplica aquí,
-  // en el único lugar que ven los tres caminos de entrada, para que
-  // también les toque. Si la imagen ya viene recortada de cerca (por
-  // RecorteScreen, o porque el usuario ya la ajustó en WhatsApp antes de
-  // mandarla) `detectarDocumento` lo nota (área > 97%) y no hace nada —
-  // no hay doble recorte.
+  // Enderezado automático para fotos de WhatsApp/importación.
+  //
+  // Desde 2026-08-12 este camino usa DocQuad; el heurístico Otsu queda fuera
+  // del flujo de producto. Como aquí no hay pantalla de recorte, aplicamos
+  // perspectiva SOLO cuando DocQuad supera sus guardrails de confianza.
+  // Ante cualquier duda conservamos la foto completa: perder un poco de
+  // estética es preferible a cortar información del documento.
   if (!entradaEsPdf) {
-    // `soloClaro`: aquí no hay pantalla de ajuste (a diferencia de la
-    // cámara de la app) — nadie ve el resultado antes de que se guarde.
-    // Probado en producción (2026-08-12): la hipótesis de "documento =
-    // región oscura" combinada con una foto ya comprimida por WhatsApp
-    // puede armar un cuadrilátero de ruido/artefactos JPEG en vez del
-    // objeto real, y sin nadie viéndolo antes de guardar el resultado
-    // sale irreconocible. Se queda con la hipótesis vieja, conservadora,
-    // acá — la de las dos hipótesis vive en la cámara de la app, donde el
-    // usuario ve y puede ajustar las esquinas antes de confirmar.
     try {
-      const { esquinas, confiable } = await imagen.detectarDocumento(buffer, true);
-      if (confiable) {
+      const { esquinas, confiable, razon } = await docquad.detectarDocumento(buffer);
+      if (confiable && esquinas?.length === 4) {
         buffer = await imagen.corregirPerspectiva(buffer, esquinas);
         // corregirPerspectiva siempre devuelve JPEG sin importar el formato
-        // de entrada — hay que reflejarlo aquí o `pdf.desdeImagen` intenta
-        // decodificar los bytes con el códec equivocado y Claude recibe un
-        // media_type que no coincide con lo que le mandamos.
+        // de entrada; reflejarlo evita declarar un media type incorrecto.
         mimeType = 'image/jpeg';
+      } else if (razon) {
+        console.log(`[procesarDocumento] DocQuad sin confianza: ${razon}`);
       }
     } catch (err) {
-      // Un fallo aquí no debe tumbar el escaneo completo: seguimos con
-      // la imagen tal cual llegó.
-      console.warn('[procesarDocumento] no se pudo enderezar automáticamente', err.message);
+      // Un fallo aquí no debe tumbar el escaneo completo: seguimos con la
+      // imagen tal cual llegó.
+      console.warn('[procesarDocumento] no se pudo enderezar con DocQuad', err.message);
     }
 
-    // El filtro de auto-realce se retiró de este camino automático
-    // (2026-08-12): mismo problema — sin nadie viéndolo antes de
-    // guardar, estirar el contraste de una foto ya comprimida por
-    // WhatsApp puede exagerar artefactos JPEG en vez de mejorar la
-    // imagen. Los filtros siguen disponibles y probados en la cámara de
-    // la app (`RecorteScreen`), donde SÍ hay vista previa antes de
-    // confirmar.
+    // El filtro de auto-realce se mantiene fuera de este camino automático:
+    // sin vista previa, un realce agresivo puede exagerar artefactos JPEG de
+    // WhatsApp. Los presets siguen disponibles en RecorteScreen.
   }
 
   // Claude necesita ver algo: de un PDF se rasteriza la primera página.
