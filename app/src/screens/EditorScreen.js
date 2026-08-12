@@ -16,12 +16,13 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import * as ImagePicker from 'expo-image-picker';
 import FirmaPad, { COLORES_FIRMA } from '../components/FirmaPad';
 import HojaFirmas from '../components/HojaFirmas';
+import VistaMosaico from '../components/VistaMosaico';
 import Icono from '../components/Icono';
 import useCargar from '../hooks/useCargar';
 import { api } from '../lib/api';
 import { alertar, alertarConBotones } from '../lib/alerta';
 import { useIdioma } from '../i18n';
-import { colores, espacio } from '../theme';
+import { colores, espacio, radio } from '../theme';
 
 const EMOJIS = ['✅', '❌', '⭐', '🔴', '➡️', '📌', '✍️', '⚠️'];
 
@@ -77,6 +78,7 @@ export default function EditorScreen({ route, navigation }) {
   const [textoAbierto, setTextoAbierto] = useState(false);
   const [textoNuevo, setTextoNuevo] = useState('');
   const [posicionPendiente, setPosicionPendiente] = useState(null);
+  const [mosaicoAbierto, setMosaicoAbierto] = useState(false);
 
   const firmas = useCargar(() => api.firmas().catch(() => []), []);
 
@@ -283,6 +285,10 @@ export default function EditorScreen({ route, navigation }) {
                 ›
               </Text>
             </TouchableOpacity>
+            <TouchableOpacity onPress={() => setMosaicoAbierto(true)} style={estilos.botonMosaico}>
+              <Icono nombre="mosaico" tamano={16} color={colores.primario} />
+              <Text style={estilos.botonMosaicoTexto}>{t('vistaMosaico')}</Text>
+            </TouchableOpacity>
           </View>
         ) : null}
 
@@ -322,6 +328,20 @@ export default function EditorScreen({ route, navigation }) {
           )}
         </TouchableOpacity>
       </View>
+
+      <VistaMosaico
+        visible={mosaicoAbierto}
+        documentoId={documento.id}
+        totalPaginas={totalPaginas}
+        onCerrar={() => setMosaicoAbierto(false)}
+        onPaginasEliminadas={({ nombre, driveLink }) => {
+          setMosaicoAbierto(false);
+          alertarConBotones(t('guardado'), nombre, [
+            { text: t('abrirEnDrive'), onPress: () => Linking.openURL(driveLink) },
+            { text: t('listo'), onPress: () => navigation.goBack() },
+          ]);
+        }}
+      />
 
       <FirmaPad
         visible={firmaAbierta}
@@ -478,6 +498,17 @@ const estilos = StyleSheet.create({
   flecha: { fontSize: 28, color: colores.primario, paddingHorizontal: espacio.md },
   flechaInactiva: { color: colores.divisor },
   paginaTexto: { fontSize: 14, color: colores.texto, fontWeight: '500' },
+  botonMosaico: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    marginLeft: espacio.md,
+    paddingHorizontal: espacio.sm,
+    paddingVertical: 4,
+    borderRadius: radio.chip,
+    backgroundColor: colores.primarioSuave,
+  },
+  botonMosaicoTexto: { fontSize: 12, fontWeight: '600', color: colores.primario },
   barra: {
     flexDirection: 'row',
     justifyContent: 'space-around',

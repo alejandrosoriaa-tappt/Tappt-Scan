@@ -34,6 +34,14 @@ const FORMAS = {
       <Line x1="5" y1="12" x2="19" y2="12" {...p} />
     </>
   ),
+  mosaico: (p) => (
+    <>
+      <Rect x="3" y="3" width="7.5" height="7.5" rx="1.5" {...p} />
+      <Rect x="13.5" y="3" width="7.5" height="7.5" rx="1.5" {...p} />
+      <Rect x="3" y="13.5" width="7.5" height="7.5" rx="1.5" {...p} />
+      <Rect x="13.5" y="13.5" width="7.5" height="7.5" rx="1.5" {...p} />
+    </>
+  ),
   dinero: (p) => (
     <>
       <Line x1="12" y1="3" x2="12" y2="21" {...p} />

@@ -68,6 +68,16 @@ export const api = {
       body: JSON.stringify({ anotaciones }),
     }),
   versiones: (id) => request(`/api/documentos/${id}/versiones`),
+  eliminarPaginas: (id, paginas) =>
+    request(`/api/documentos/${id}/paginas/eliminar`, {
+      method: 'POST',
+      body: JSON.stringify({ paginas }),
+    }),
+  compartirPaginas: (id, paginas) =>
+    request(`/api/documentos/${id}/paginas/compartir`, {
+      method: 'POST',
+      body: JSON.stringify({ paginas }),
+    }),
   gastos: (mes) => request(`/api/documentos/gastos${mes ? `?mes=${mes}` : ''}`),
   resumen: () => request('/api/documentos/resumen'),
   borrarDocumento: (id) => request(`/api/documentos/${id}`, { method: 'DELETE' }),

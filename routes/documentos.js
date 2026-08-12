@@ -245,6 +245,94 @@ router.get('/:id/versiones', requireAuth, async (req, res) => {
   }
 });
 
+// Vista mosaico: arma un PDF nuevo sin las páginas indicadas (0-based) y lo
+// registra como versión — nunca toca el original. Pensado para el caso de
+// "esta ficha técnica trae al final el contacto de la inmobiliaria, no
+// quiero que mi cliente lo vea": desarma el PDF en vez de solo poder armar
+// uno.
+router.post('/:id/paginas/eliminar', requireAuth, async (req, res) => {
+  try {
+    const documento = await traerDocumento(req);
+    if (!documento) return res.status(404).json({ error: 'documento_no_encontrado' });
+
+    const aEliminar = new Set(req.body.paginas || []);
+    if (!aEliminar.size) return res.status(400).json({ error: 'sin_paginas' });
+
+    const original = await drive.downloadFile(req.usuario.drive_tokens, documento.drive_file_id);
+    if (!pdf.esPdf(original)) return res.status(400).json({ error: 'no_es_pdf' });
+
+    const { paginas: totalPaginas } = await pdf.info(original);
+    const indicesRestantes = Array.from({ length: totalPaginas }, (_, i) => i).filter(
+      (i) => !aEliminar.has(i)
+    );
+    if (!indicesRestantes.length) return res.status(400).json({ error: 'quedaria_vacio' });
+
+    const pdfFinal = await pdf.copiarPaginas(original, indicesRestantes);
+
+    const carpetaId =
+      documento.carpeta_id || (await drive.ensureRuta(req.usuario.drive_tokens, []));
+    const nombre =
+      (documento.nombre_archivo || 'documento').replace(/\.\w+$/, '') + '_editado.pdf';
+
+    const subido = await drive.uploadFile(req.usuario.drive_tokens, {
+      folderId: carpetaId,
+      name: nombre,
+      mimeType: 'application/pdf',
+      buffer: pdfFinal,
+    });
+
+    const { error: errorVersion } = await supabase.from('scan_versiones').insert({
+      documento_id: documento.id,
+      user_id: req.usuario.id,
+      nombre_archivo: nombre,
+      drive_file_id: subido.id,
+      drive_link: subido.webViewLink,
+    });
+    if (errorVersion) console.error('[documentos] no se pudo registrar la versión', errorVersion);
+
+    res.json({ nombre, driveLink: subido.webViewLink, paginas: indicesRestantes.length });
+  } catch (err) {
+    console.error('[documentos] error eliminando páginas', err);
+    res.status(500).json({ error: 'error_eliminar_paginas' });
+  }
+});
+
+// Arma un PDF aparte con solo las páginas seleccionadas, para compartir sin
+// mandar el documento completo. No se registra como versión: es un
+// recorte puntual, no una edición del documento.
+router.post('/:id/paginas/compartir', requireAuth, async (req, res) => {
+  try {
+    const documento = await traerDocumento(req);
+    if (!documento) return res.status(404).json({ error: 'documento_no_encontrado' });
+
+    const indices = req.body.paginas || [];
+    if (!indices.length) return res.status(400).json({ error: 'sin_paginas' });
+
+    const original = await drive.downloadFile(req.usuario.drive_tokens, documento.drive_file_id);
+    if (!pdf.esPdf(original)) return res.status(400).json({ error: 'no_es_pdf' });
+
+    const pdfParcial = await pdf.copiarPaginas(original, indices);
+
+    const carpetaId =
+      documento.carpeta_id || (await drive.ensureRuta(req.usuario.drive_tokens, []));
+    const nombre =
+      (documento.nombre_archivo || 'documento').replace(/\.\w+$/, '') +
+      `_paginas_${indices.map((i) => i + 1).join('-')}.pdf`;
+
+    const subido = await drive.uploadFile(req.usuario.drive_tokens, {
+      folderId: carpetaId,
+      name: nombre,
+      mimeType: 'application/pdf',
+      buffer: pdfParcial,
+    });
+
+    res.json({ nombre, driveLink: subido.webViewLink });
+  } catch (err) {
+    console.error('[documentos] error armando páginas para compartir', err);
+    res.status(500).json({ error: 'error_compartir_paginas' });
+  }
+});
+
 // Lista de documentos del usuario, opcionalmente filtrada por tipo.
 router.get('/', requireAuth, async (req, res) => {
   try {

@@ -173,9 +173,23 @@ async function aplicarAnotaciones(pdfBuffer, anotaciones = []) {
   return { pdf: Buffer.from(await pdf.save()), omitidas };
 }
 
+/**
+ * Arma un PDF nuevo solo con las páginas pedidas (índices 0-based, en el
+ * orden en que vengan). Usada tanto para "eliminar páginas" (se le pasan
+ * las que SÍ quedan) como para "compartir solo estas páginas".
+ */
+async function copiarPaginas(pdfBuffer, indices) {
+  const original = await PDFDocument.load(pdfBuffer);
+  const nuevo = await PDFDocument.create();
+  const copiadas = await nuevo.copyPages(original, indices);
+  copiadas.forEach((pagina) => nuevo.addPage(pagina));
+  return Buffer.from(await nuevo.save());
+}
+
 module.exports = {
   desdeImagen,
   aplicarAnotaciones,
+  copiarPaginas,
   esPdf,
   info,
   renderizarPagina,
