@@ -1,0 +1,61 @@
+name: DocQuad spike
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - claude/new-session-9mhtdk
+    paths:
+      - 'scanner/docquad/**'
+      - 'scripts/docquad-*.js'
+      - 'package.json'
+      - 'package-lock.json'
+      - '.github/workflows/docquad-spike.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  spike:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: claude/new-session-9mhtdk
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Prepare verified DocQuad model
+        run: npm run docquad:model
+
+      - name: Download public MakeACopy fixture
+        run: |
+          curl --fail --location --retry 3 \
+            'https://raw.githubusercontent.com/egdels/makeacopy/f4aaf8fc3a9a96422446600a139f117240d3843b/app/src/androidTest/assets/clean_scan.jpg' \
+            --output /tmp/clean_scan.jpg
+          test -s /tmp/clean_scan.jpg
+
+      - name: Run DocQuad spike
+        run: npm run docquad:spike -- /tmp/clean_scan.jpg /tmp/docquad-result.json
+
+      - name: Show result
+        if: always()
+        run: |
+          if [ -f /tmp/docquad-result.json ]; then
+            cat /tmp/docquad-result.json
+          fi
+
+      - name: Upload spike report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: docquad-spike-result
+          path: /tmp/docquad-result.json
+          if-no-files-found: ignore
