@@ -1,0 +1,44 @@
+name: Apply DocQuad final-redetect patch
+
+on:
+  push:
+    branches:
+      - claude/new-session-9mhtdk
+    paths:
+      - '.github/workflows/docquad-final-redetect.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: claude/new-session-9mhtdk
+      - name: Patch RecorteScreen
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          p = Path('app/src/screens/RecorteScreen.js')
+          s = p.read_text()
+          old = """  const [detectando, setDetectando] = useState(!esquinasIniciales);"""
+          new = """  // La detección live sólo guía. La foto final SIEMPRE se vuelve a analizar\n  // a resolución completa antes de aceptar un recorte.\n  const [detectando, setDetectando] = useState(true);"""
+          assert old in s, 'no se encontró inicialización detectando esperada'
+          s = s.replace(old, new, 1)
+
+          old = """  // Si la cámara en vivo ya venía con una detección de confianza alta\n  // (EscanearScreen), se usa esa y no hace falta pedirle otra vez al\n  // servidor — solo se detecta aquí cuando llega sin ella (foto importada,\n  // o PDF reenviado que primero pasó por otra pantalla).\n  useEffect(() => {\n    if (esquinasIniciales) return;\n    let cancelado = false;"""
+          new = """  // Regla dura del scanner: las esquinas del preview nunca son definitivas.\n  // Siempre re-detectamos sobre la captura full-res; `esquinasIniciales`\n  // sólo pueden servir como guía provisional mientras responde DocQuad.\n  useEffect(() => {\n    let cancelado = false;"""
+          assert old in s, 'no se encontró bloque de detección esperado'
+          s = s.replace(old, new, 1)
+          p.write_text(s)
+          PY
+      - name: Commit patch and remove one-shot workflow
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git rm .github/workflows/docquad-final-redetect.yml
+          git add app/src/screens/RecorteScreen.js
+          git commit -m "fix(docquad): redetecta siempre sobre la captura full-res"
+          git push origin HEAD:claude/new-session-9mhtdk
