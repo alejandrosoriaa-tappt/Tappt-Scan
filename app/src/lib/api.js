@@ -36,10 +36,15 @@ export const api = {
     request('/api/cuenta/upgrade', { method: 'POST', body: JSON.stringify({ plan }) }),
 
   documentos: (tipo) => request(`/api/documentos${tipo ? `?tipo=${tipo}` : ''}`),
-  escanear: (imagen, mimeType = 'image/jpeg', esquinas = null) =>
+  escanear: (imagen, mimeType = 'image/jpeg', esquinas = null, filtro = null) =>
     request('/api/documentos/escanear', {
       method: 'POST',
-      body: JSON.stringify({ imagen, mimeType, esquinas }),
+      body: JSON.stringify({ imagen, mimeType, esquinas, filtro }),
+    }),
+  vistaFiltro: (imagen, filtro) =>
+    request('/api/documentos/vista-filtro', {
+      method: 'POST',
+      body: JSON.stringify({ imagen, filtro }),
     }),
   detectarBordes: (imagen) =>
     request('/api/documentos/detectar-bordes', {

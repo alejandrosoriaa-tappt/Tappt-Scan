@@ -48,6 +48,18 @@ async function procesarArchivo(usuario, buffer, mimeType = 'image/jpeg', nombreO
       // la imagen tal cual llegó.
       console.warn('[procesarDocumento] no se pudo enderezar automáticamente', err.message);
     }
+
+    // Auto niveles leve (mismo motor que los filtros de la app, preset
+    // 'color'): WhatsApp no tiene pantalla para elegir filtro, así que se
+    // aplica el más conservador solo. Sin esto, una foto con poca luz
+    // (una tarjeta oscura, un ticket bajo luz amarilla) se guardaba tal
+    // cual se tomó — es la causa concreta reportada por el usuario.
+    try {
+      buffer = await imagen.aplicarFiltro(buffer, 'color');
+      mimeType = 'image/jpeg';
+    } catch (err) {
+      console.warn('[procesarDocumento] no se pudo auto-realzar', err.message);
+    }
   }
 
   // Claude necesita ver algo: de un PDF se rasteriza la primera página.

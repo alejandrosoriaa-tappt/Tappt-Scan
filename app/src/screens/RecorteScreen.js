@@ -58,6 +58,18 @@ function useProcesando(activo) {
   return paso;
 }
 
+// Mismo orden que `services/imagen.js` FILTROS. La miniatura se genera del
+// lado del servidor sobre la foto sin recortar (recortarla en el cliente
+// necesitaría la misma homografía que ya hace el backend) — es una
+// aproximación de cómo se va a ver, el filtro real se aplica sobre la
+// versión ya recortada al guardar.
+const FILTROS = [
+  { id: 'color', etiqueta: 'original' },
+  { id: 'gris', etiqueta: 'escalaGris' },
+  { id: 'byn', etiqueta: 'blancoYNegro' },
+  { id: 'mejorar', etiqueta: 'mejorar' },
+];
+
 const MARCO_COMPLETO = [
   { x: 0, y: 0 },
   { x: 1, y: 0 },
@@ -122,6 +134,8 @@ export default function RecorteScreen({ route, navigation }) {
   const [aviso, setAviso] = useState(null);
   const [guardando, setGuardando] = useState(false);
   const [limite, setLimite] = useState(false);
+  const [filtro, setFiltro] = useState('color');
+  const [miniaturas, setMiniaturas] = useState({});
   const pasoProcesando = useProcesando(guardando);
   const textosProcesando = useMemo(
     () => [t('procesandoSubiendo'), t('procesandoEnderezando'), t('procesandoClasificando')],
@@ -153,13 +167,31 @@ export default function RecorteScreen({ route, navigation }) {
     };
   }, [fotoBase64, esquinasIniciales]);
 
+  // Las 4 miniaturas se piden una sola vez por foto — son solo vista
+  // previa (chico, rápido), no bloquean el recorte ni el guardado.
+  useEffect(() => {
+    let cancelado = false;
+    setMiniaturas({});
+
+    FILTROS.forEach(({ id }) => {
+      api
+        .vistaFiltro(fotoBase64, id)
+        .then(({ imagen }) => !cancelado && setMiniaturas((previas) => ({ ...previas, [id]: imagen })))
+        .catch(() => {});
+    });
+
+    return () => {
+      cancelado = true;
+    };
+  }, [fotoBase64]);
+
   const moverEsquina = (indice, posicion) =>
     setEsquinas((previas) => previas.map((e, i) => (i === indice ? posicion : e)));
 
   const confirmar = async () => {
     setGuardando(true);
     try {
-      const documento = await api.escanear(fotoBase64, 'image/jpeg', esquinas);
+      const documento = await api.escanear(fotoBase64, 'image/jpeg', esquinas, filtro);
       refrescarCuenta();
       navigation.replace('Documento', { documento });
     } catch (err) {
@@ -254,6 +286,28 @@ export default function RecorteScreen({ route, navigation }) {
         {aviso || t('arrastraEsquinas')}
       </Text>
 
+      <View style={estilos.filtros}>
+        {FILTROS.map(({ id, etiqueta }) => (
+          <TouchableOpacity
+            key={id}
+            style={estilos.filtroCelda}
+            onPress={() => setFiltro(id)}
+            activeOpacity={0.8}
+          >
+            <View style={[estilos.filtroMarco, filtro === id && estilos.filtroMarcoActivo]}>
+              {miniaturas[id] ? (
+                <Image source={{ uri: miniaturas[id] }} style={estilos.filtroImagen} resizeMode="cover" />
+              ) : (
+                <ActivityIndicator size="small" color="rgba(255,255,255,0.6)" />
+              )}
+            </View>
+            <Text style={[estilos.filtroTexto, filtro === id && estilos.filtroTextoActivo]}>
+              {t(etiqueta)}
+            </Text>
+          </TouchableOpacity>
+        ))}
+      </View>
+
       <View style={estilos.acciones}>
         <TouchableOpacity
           style={estilos.botonSecundario}
@@ -320,6 +374,29 @@ const estilos = StyleSheet.create({
     textAlign: 'center',
     paddingHorizontal: espacio.lg,
   },
+  filtros: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    gap: espacio.md,
+    paddingHorizontal: espacio.md,
+    paddingTop: espacio.sm,
+  },
+  filtroCelda: { alignItems: 'center' },
+  filtroMarco: {
+    width: 52,
+    height: 52,
+    borderRadius: 10,
+    borderWidth: 2,
+    borderColor: 'transparent',
+    overflow: 'hidden',
+    backgroundColor: 'rgba(255,255,255,0.08)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  filtroMarcoActivo: { borderColor: colores.primario },
+  filtroImagen: { width: '100%', height: '100%' },
+  filtroTexto: { color: 'rgba(255,255,255,0.6)', fontSize: 11, marginTop: 4 },
+  filtroTextoActivo: { color: colores.primario, fontWeight: '600' },
   acciones: { flexDirection: 'row', gap: espacio.sm, padding: espacio.md },
   botonSecundario: {
     flex: 1,

@@ -34,6 +34,24 @@ router.post('/detectar-bordes', requireAuth, async (req, res) => {
   }
 });
 
+// Miniatura de un filtro aplicado — para la fila de chips "Original / Gris
+// / B&N / Mejorar" en RecorteScreen, mismo espíritu que la fila de presets
+// de CamScanner. Trabaja en chico (400px) porque es solo vista previa; el
+// filtro real se aplica a resolución completa al guardar (`/escanear`).
+router.post('/vista-filtro', requireAuth, async (req, res) => {
+  try {
+    const { imagen, filtro } = req.body;
+    if (!imagen || !filtro) return res.status(400).json({ error: 'falta_imagen_o_filtro' });
+
+    const buffer = Buffer.from(imagen.replace(/^data:[^;]+;base64,/, ''), 'base64');
+    const salida = await imagenServicio.aplicarFiltro(buffer, filtro, 400);
+    res.json({ imagen: `data:image/jpeg;base64,${salida.toString('base64')}` });
+  } catch (err) {
+    console.error('[documentos] error generando vista previa de filtro', err);
+    res.status(500).json({ error: 'error_vista_filtro' });
+  }
+});
+
 // De una foto de una firma en papel (cualquier fondo) devuelve solo el
 // trazo, recortado a su contorno, transparente y teñido del color elegido
 // — para poder pegarla sobre cualquier documento igual que si se hubiera
@@ -63,7 +81,7 @@ async function recibirDesdeApp(req, res, mimePorDefecto) {
   const cupo = await planes.puedeEscanear(req.usuario);
   if (!cupo.permitido) return res.status(402).json({ error: 'limite_alcanzado', ...cupo });
 
-  const { archivo, imagen, mimeType, nombre, esquinas } = req.body;
+  const { archivo, imagen, mimeType, nombre, esquinas, filtro } = req.body;
   const contenido = archivo || imagen;
   if (!contenido) return res.status(400).json({ error: 'falta_archivo' });
 
@@ -75,6 +93,14 @@ async function recibirDesdeApp(req, res, mimePorDefecto) {
   if (esquinas?.length === 4 && !pdf.esPdf(buffer)) {
     buffer = await imagenServicio.corregirPerspectiva(buffer, esquinas);
     mime = 'image/png';
+  }
+
+  // Filtro de imagen (Color/Gris/B&N/Mejorar): siempre después del
+  // recorte, nunca antes — enderezar necesita los colores originales para
+  // que Otsu separe bien documento/fondo.
+  if (filtro && filtro !== 'color' && !pdf.esPdf(buffer)) {
+    buffer = await imagenServicio.aplicarFiltro(buffer, filtro);
+    mime = 'image/jpeg';
   }
 
   const { documento } = await procesarDocumento.procesarArchivo(

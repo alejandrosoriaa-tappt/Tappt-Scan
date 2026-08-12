@@ -71,15 +71,10 @@ function umbralOtsu(grises) {
  * Devuelve fracciones 0-1 en orden: superior-izq, superior-der,
  * inferior-der, inferior-izq.
  */
-async function detectarDocumento(buffer) {
-  const imagen = await cargar(buffer);
-  const escala = ANCHO_ANALISIS / imagen.width;
-  const ancho = Math.max(1, Math.round(imagen.width * escala));
-  const alto = Math.max(1, Math.round(imagen.height * escala));
-
-  const grises = aGrises(pixelesDe(imagen, ancho, alto), ancho * alto);
-  const umbral = umbralOtsu(grises);
-
+// Extremos x+y / x-y de una región (clara u oscura, según `esClaro`) —
+// mismo truco de siempre: las esquinas de un cuadrilátero son los puntos
+// que maximizan/minimizan esas dos combinaciones.
+function extremosDeRegion(grises, ancho, alto, umbral, esClaro) {
   let minSuma = Infinity;
   let maxSuma = -Infinity;
   let minResta = Infinity;
@@ -88,12 +83,14 @@ async function detectarDocumento(buffer) {
   let infDer = null;
   let supDer = null;
   let infIzq = null;
-  let claros = 0;
+  let cuenta = 0;
 
   for (let y = 0; y < alto; y++) {
     for (let x = 0; x < ancho; x++) {
-      if (grises[y * ancho + x] <= umbral) continue;
-      claros++;
+      const valor = grises[y * ancho + x];
+      const enRegion = esClaro ? valor > umbral : valor <= umbral;
+      if (!enRegion) continue;
+      cuenta++;
 
       const suma = x + y;
       const resta = x - y;
@@ -105,28 +102,60 @@ async function detectarDocumento(buffer) {
     }
   }
 
-  // Si el documento ocupa casi todo o casi nada, la detección no aporta:
-  // mejor devolver la imagen completa que un recorte inventado.
-  const proporcion = claros / (ancho * alto);
-  if (!supIzq || proporcion < 0.15 || proporcion > 0.97) {
-    return {
-      esquinas: [
-        { x: 0, y: 0 },
-        { x: 1, y: 0 },
-        { x: 1, y: 1 },
-        { x: 0, y: 1 },
-      ],
-      confiable: false,
-    };
-  }
+  return { supIzq, supDer, infDer, infIzq, proporcion: cuenta / (ancho * alto) };
+}
+
+/**
+ * Detecta las cuatro esquinas del documento dentro de la foto.
+ *
+ * Prueba DOS hipótesis — "el documento es la región clara" (papel sobre
+ * mesa oscura, el caso típico) y "el documento es la región oscura"
+ * (una tarjeta negra, una credencial oscura, sobre mesa clara) — y se
+ * queda con la que da un cuadrilátero más creíble. Antes solo probaba la
+ * primera, así que cualquier objeto oscuro (tarjetas bancarias, fundas
+ * negras) no se recortaba nunca: la detección "no encontraba nada" y la
+ * foto se guardaba completa, mesa alrededor incluida.
+ */
+async function detectarDocumento(buffer) {
+  const imagen = await cargar(buffer);
+  const escala = ANCHO_ANALISIS / imagen.width;
+  const ancho = Math.max(1, Math.round(imagen.width * escala));
+  const alto = Math.max(1, Math.round(imagen.height * escala));
+
+  const grises = aGrises(pixelesDe(imagen, ancho, alto), ancho * alto);
+  const umbral = umbralOtsu(grises);
+
+  const marcoCompleto = {
+    esquinas: [
+      { x: 0, y: 0 },
+      { x: 1, y: 0 },
+      { x: 1, y: 1 },
+      { x: 0, y: 1 },
+    ],
+    confiable: false,
+  };
+
+  const candidatos = [true, false]
+    .map((esClaro) => extremosDeRegion(grises, ancho, alto, umbral, esClaro))
+    // Igual que antes: si la región ocupa casi todo o casi nada, no aporta.
+    .filter((c) => c.supIzq && c.proporcion >= 0.15 && c.proporcion <= 0.97);
+
+  if (!candidatos.length) return marcoCompleto;
+
+  // Entre las dos hipótesis válidas, se prefiere la región más chica: un
+  // documento/tarjeta normalmente ocupa menos foto que la superficie sobre
+  // la que está — es más probable que sea el objeto de interés que el
+  // fondo. Si un solo lado calificó, no hay nada que comparar.
+  const elegido = candidatos.sort((a, b) => a.proporcion - b.proporcion)[0];
 
   const aFraccion = (p) => ({ x: p.x / ancho, y: p.y / alto });
-  const esquinas = [aFraccion(supIzq), aFraccion(supDer), aFraccion(infDer), aFraccion(infIzq)];
+  const esquinas = [
+    aFraccion(elegido.supIzq),
+    aFraccion(elegido.supDer),
+    aFraccion(elegido.infDer),
+    aFraccion(elegido.infIzq),
+  ];
 
-  // Si el cuadrilátero es prácticamente la foto entera, no detectamos el
-  // documento: detectamos el fondo (pasa cuando el documento es oscuro y la
-  // superficie clara, al revés de lo que asume la heurística). Devolvemos el
-  // marco pero sin presumir que es correcto, para que la app pida ajuste.
   return { esquinas, confiable: area(esquinas) < 0.95 };
 }
 
@@ -345,4 +374,115 @@ async function extraerFirma(buffer, colorHex = '#2563EB') {
   return salida.toBuffer('image/png');
 }
 
-module.exports = { detectarDocumento, corregirPerspectiva, extraerFirma };
+// ------------------------------------------------------------- filtros
+// Presets de un toque, benchmark CamScanner (docs/DIRECCION-DISENO.md):
+// el recorte/enderezado ya existía, pero ningún filtro tocaba un solo
+// píxel de color — por eso una foto oscura o con mal contraste (una
+// tarjeta negra, un ticket bajo luz amarilla) se guardaba igual de mal
+// de como se tomó.
+const FILTROS = ['color', 'gris', 'byn', 'mejorar'];
+
+// Encuentra el rango [bajo, alto] que deja fuera el recorte% más oscuro y
+// más claro del histograma — es el corazón del "auto niveles": un pixel
+// outlier no puede arruinar el estiramiento como pasaría con min/max crudo.
+function limitesDeContraste(canal, total, agresivo = false) {
+  const histograma = new Array(256).fill(0);
+  for (let i = 0; i < total; i++) histograma[canal[i]]++;
+
+  const recorte = Math.round(total * (agresivo ? 0.03 : 0.01));
+  let acumulado = 0;
+  let bajo = 0;
+  for (; bajo < 255; bajo++) {
+    acumulado += histograma[bajo];
+    if (acumulado > recorte) break;
+  }
+  acumulado = 0;
+  let alto = 255;
+  for (; alto > 0; alto--) {
+    acumulado += histograma[alto];
+    if (acumulado > recorte) break;
+  }
+  if (alto <= bajo) return { bajo: 0, alto: 255 }; // imagen plana — no hay nada que estirar
+
+  return { bajo, alto };
+}
+
+// Estiramiento de histograma por percentiles ("auto niveles") de un solo
+// canal — usado para 'gris'/'byn', que no tienen el problema de tinte
+// porque solo hay un canal.
+function estirarContraste(canal, total, agresivo = false) {
+  const { bajo, alto } = limitesDeContraste(canal, total, agresivo);
+  const rango = alto - bajo;
+  const salida = new Uint8ClampedArray(total);
+  for (let i = 0; i < total; i++) {
+    salida[i] = ((canal[i] - bajo) / rango) * 255;
+  }
+  return salida;
+}
+
+/**
+ * Aplica un preset de imagen a un documento ya recortado/enderezado.
+ *
+ * Trabaja a resolución completa por default (a diferencia de
+ * `detectarDocumento`, que analiza en chico) porque esto SÍ es lo que se
+ * guarda — no un análisis intermedio. `anchoMax` existe para las miniaturas
+ * de vista previa de los 4 filtros a la vez (`vista-filtro`): a resolución
+ * completa sería lento repetirlo 4 veces solo para mostrar chips chicos.
+ */
+async function aplicarFiltro(buffer, filtro = 'color', anchoMax = null) {
+  if (!FILTROS.includes(filtro)) throw new Error(`filtro_desconocido: ${filtro}`);
+
+  const original = await cargar(buffer);
+  const escala = anchoMax ? Math.min(1, anchoMax / original.width) : 1;
+  const ancho = Math.max(1, Math.round(original.width * escala));
+  const alto = Math.max(1, Math.round(original.height * escala));
+  const total = ancho * alto;
+
+  const canvas = canvasLib.createCanvas(ancho, alto);
+  const ctx = canvas.getContext('2d');
+  ctx.drawImage(original, 0, 0, ancho, alto);
+  const imagenDatos = ctx.getImageData(0, 0, ancho, alto);
+  const datos = imagenDatos.data;
+
+  if (filtro === 'gris' || filtro === 'byn') {
+    const grises = aGrises(datos, total);
+    const estirados = estirarContraste(grises, total, filtro === 'byn');
+
+    if (filtro === 'byn') {
+      const umbral = umbralOtsu(estirados);
+      for (let i = 0; i < total; i++) {
+        const valor = estirados[i] >= umbral ? 255 : 0;
+        const j = i * 4;
+        datos[j] = datos[j + 1] = datos[j + 2] = valor;
+      }
+    } else {
+      for (let i = 0; i < total; i++) {
+        const j = i * 4;
+        datos[j] = datos[j + 1] = datos[j + 2] = estirados[i];
+      }
+    }
+  } else {
+    // 'color' y 'mejorar': el rango de estiramiento se calcula sobre el
+    // BRILLO (luminancia), no canal por canal — estirar cada canal RGB
+    // por separado tuerce el balance de color (se nota como un tinte
+    // verdoso/anaranjado en fotos con poca luz). Con un solo rango
+    // aplicado a los tres canales, sube exposición y contraste sin
+    // cambiar el tono. 'mejorar' recorta el histograma más agresivo:
+    // más contraste, el look "de escáner" en vez de "foto retocada".
+    const grises = aGrises(datos, total);
+    const { bajo, alto: techo } = limitesDeContraste(grises, total, filtro === 'mejorar');
+    const rango = Math.max(1, techo - bajo);
+
+    for (let i = 0; i < total; i++) {
+      const j = i * 4;
+      datos[j] = ((datos[j] - bajo) / rango) * 255;
+      datos[j + 1] = ((datos[j + 1] - bajo) / rango) * 255;
+      datos[j + 2] = ((datos[j + 2] - bajo) / rango) * 255;
+    }
+  }
+
+  ctx.putImageData(imagenDatos, 0, 0);
+  return canvas.toBuffer('image/jpeg', 0.9);
+}
+
+module.exports = { detectarDocumento, corregirPerspectiva, extraerFirma, aplicarFiltro, FILTROS };
