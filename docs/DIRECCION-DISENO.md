@@ -393,6 +393,29 @@ sincronización en tiempo real (WebSocket o polling) entre las dos
 sesiones. Explícitamente **para después de terminar el rediseño
 completo** — no priorizarlo antes sin que el usuario lo pida.
 
+## 🐛✅ Calidad borrosa al guardar — encontrado y arreglado (2026-08-13, después del revert)
+
+Después de revertir el detector (sección de abajo), el usuario reportó
+que un documento normal salió borroso al guardar. Diagnosticado con
+evidencia real: mandó el PDF que generó TapptScan y el mismo documento
+capturado con CamScanner para comparar. CamScanner: imagen de
+1356×1920px. TapptScan: **335×410px — 16 veces menos píxeles**.
+
+Causa, en `RecorteScreen.js`: cuando el detector no confía en lo que
+encontró (`confiable:false`), la pantalla igual usaba esa región como
+punto de partida del recorte — solo agregaba un aviso de texto. En esta
+foto había un teclado con luces de fondo en el cuadro, que confundió al
+detector (el mismo tipo de objeto brillante que rompe la heurística de
+Otsu); la región chica y equivocada que devolvió se aplicó igual, se
+estiró para llenar la pantalla, y salió borrosa.
+
+**Arreglado**: sin confianza, ya no se usa la región sugerida — se
+arranca del cuadro completo (sin recortar nada), con el aviso
+"ajusta a mano" para que el usuario dibuje su propio recorte si
+quiere uno. No se tocó el detector otra vez (ya se revirtió abajo,
+no volver a tocarlo sin CV real) — el fix fue en cómo la pantalla
+*usa* el resultado, no en el detector en sí.
+
 ## Filtros de imagen — hecho. Detección para objetos oscuros — revertida (2026-08-13)
 
 **⚠️ Resumen ejecutivo, léase antes que la crónica de abajo:** los 4
