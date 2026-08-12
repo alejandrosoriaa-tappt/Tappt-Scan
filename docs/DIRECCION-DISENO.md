@@ -393,6 +393,51 @@ sincronización en tiempo real (WebSocket o polling) entre las dos
 sesiones. Explícitamente **para después de terminar el rediseño
 completo** — no priorizarlo antes sin que el usuario lo pida.
 
+## ✅ Filtros de imagen + detección de bordes para objetos oscuros — hecho (2026-08-13)
+
+Disparado por un caso real: el usuario mandó por WhatsApp la foto de una
+tarjeta Inbursa (Cuenta Black, oscura) y salió sin recortar, sin
+enderezar y sin ningún ajuste — se veía la mesa de madera alrededor y la
+tarjeta casi negra. Comparado en vivo contra capturas de CamScanner del
+mismo objeto: su cámara sí detecta el marco de una tarjeta oscura, y
+tiene una fila de filtros de un toque (Mejorar/Eco/Escala Gris/B&N/
+Invertir/Sombra/Sin Manuscritos/Aclarar) que nosotros no teníamos
+ninguno.
+
+**Construido:**
+- `services/imagen.js` → `aplicarFiltro(buffer, filtro, anchoMax?)`:
+  4 presets (`color`, `gris`, `byn`, `mejorar`) con estiramiento de
+  histograma por percentiles ("auto niveles"). Probado contra la foto
+  real de la tarjeta — el primer intento estiraba cada canal RGB por
+  separado y torcía el color (se veía verdoso/anaranjado); corregido
+  para calcular el rango sobre luminancia y aplicarlo igual a los 3
+  canales.
+- `detectarDocumento` ahora prueba dos hipótesis (documento = región
+  clara, o documento = región oscura) y se queda con la más chica y
+  creíble de las dos — antes solo probaba "documento = región clara",
+  así que un objeto oscuro (tarjeta, credencial) nunca se recortaba.
+- `POST /api/documentos/vista-filtro` (miniatura rápida) y
+  `POST /api/documentos/escanear` acepta el filtro elegido.
+- `RecorteScreen.js`: fila de 4 chips con miniatura real antes de
+  guardar.
+- WhatsApp/importar (`procesarDocumento.js`): aplica `'color'` (auto
+  niveles leve) automáticamente — no hay pantalla ahí para elegir, así
+  que se usa el preset más conservador solo.
+
+**Explícitamente NO incluido en esta tanda** (para no fingir que ya
+está resuelto):
+- **Detección de obstrucciones** (dedo tapando el documento — el aviso
+  "Dedo detectado, prueba Omnifix" de CamScanner). Esto necesita
+  reconocer piel/dedos sobre el documento, que es visión por
+  computadora real (un modelo entrenado), no una heurística de
+  colores como las que ya tenemos. Evaluar si conviene una API de
+  visión de terceros o esperar a tener presupuesto/tiempo para
+  entrenar algo propio.
+- **Modo de captura por lotes** (varias páginas seguidas sin salir de
+  la cámara, "Individual"/"Lote" en CamScanner). Es una feature de
+  flujo completa (EscanearScreen + acumular fotos + armar un PDF
+  multi-página al final), no una extensión chica.
+
 ## ✅ Vista de mosaico + manejo de páginas de un PDF — hecho (2026-08-12)
 
 Propuesta del usuario (2026-08-11), benchmark directo de CamScanner:
