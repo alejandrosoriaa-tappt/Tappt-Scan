@@ -32,8 +32,17 @@ async function procesarArchivo(usuario, buffer, mimeType = 'image/jpeg', nombreO
   // mandarla) `detectarDocumento` lo nota (área > 97%) y no hace nada —
   // no hay doble recorte.
   if (!entradaEsPdf) {
+    // `soloClaro`: aquí no hay pantalla de ajuste (a diferencia de la
+    // cámara de la app) — nadie ve el resultado antes de que se guarde.
+    // Probado en producción (2026-08-13): la hipótesis de "documento =
+    // región oscura" combinada con una foto ya comprimida por WhatsApp
+    // puede armar un cuadrilátero de ruido/artefactos JPEG en vez del
+    // objeto real, y sin nadie viéndolo antes de guardar el resultado
+    // sale irreconocible. Se queda con la hipótesis vieja, conservadora,
+    // acá — la de las dos hipótesis vive en la cámara de la app, donde el
+    // usuario ve y puede ajustar las esquinas antes de confirmar.
     try {
-      const { esquinas, confiable } = await imagen.detectarDocumento(buffer);
+      const { esquinas, confiable } = await imagen.detectarDocumento(buffer, true);
       if (confiable) {
         buffer = await imagen.corregirPerspectiva(buffer, esquinas);
         // corregirPerspectiva siempre devuelve PNG (toBuffer('image/png') en
@@ -49,17 +58,13 @@ async function procesarArchivo(usuario, buffer, mimeType = 'image/jpeg', nombreO
       console.warn('[procesarDocumento] no se pudo enderezar automáticamente', err.message);
     }
 
-    // Auto niveles leve (mismo motor que los filtros de la app, preset
-    // 'color'): WhatsApp no tiene pantalla para elegir filtro, así que se
-    // aplica el más conservador solo. Sin esto, una foto con poca luz
-    // (una tarjeta oscura, un ticket bajo luz amarilla) se guardaba tal
-    // cual se tomó — es la causa concreta reportada por el usuario.
-    try {
-      buffer = await imagen.aplicarFiltro(buffer, 'color');
-      mimeType = 'image/jpeg';
-    } catch (err) {
-      console.warn('[procesarDocumento] no se pudo auto-realzar', err.message);
-    }
+    // El filtro de auto-realce se retiró de este camino automático
+    // (2026-08-13): mismo problema — sin nadie viéndolo antes de
+    // guardar, estirar el contraste de una foto ya comprimida por
+    // WhatsApp puede exagerar artefactos JPEG en vez de mejorar la
+    // imagen. Los filtros siguen disponibles y probados en la cámara de
+    // la app (`RecorteScreen`), donde SÍ hay vista previa antes de
+    // confirmar.
   }
 
   // Claude necesita ver algo: de un PDF se rasteriza la primera página.

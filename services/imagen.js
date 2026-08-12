@@ -115,8 +115,16 @@ function extremosDeRegion(grises, ancho, alto, umbral, esClaro) {
  * primera, así que cualquier objeto oscuro (tarjetas bancarias, fundas
  * negras) no se recortaba nunca: la detección "no encontraba nada" y la
  * foto se guardaba completa, mesa alrededor incluida.
+ *
+ * `soloClaro` fuerza la hipótesis vieja (conservadora) nada más. Se usa en
+ * el camino automático (WhatsApp/importar, sin pantalla de ajuste): ahí un
+ * cuadrilátero mal armado por ruido/artefactos JPEG se guarda directo, sin
+ * que nadie lo vea antes ni pueda corregirlo — probado en producción y
+ * salió una foto irreconocible (2026-08-13). En la cámara de la app SÍ hay
+ * pantalla de ajuste con las esquinas visibles, así que ahí puede
+ * arriesgar con las dos hipótesis.
  */
-async function detectarDocumento(buffer) {
+async function detectarDocumento(buffer, soloClaro = false) {
   const imagen = await cargar(buffer);
   const escala = ANCHO_ANALISIS / imagen.width;
   const ancho = Math.max(1, Math.round(imagen.width * escala));
@@ -135,7 +143,7 @@ async function detectarDocumento(buffer) {
     confiable: false,
   };
 
-  const candidatos = [true, false]
+  const candidatos = (soloClaro ? [true] : [true, false])
     .map((esClaro) => extremosDeRegion(grises, ancho, alto, umbral, esClaro))
     // Igual que antes: si la región ocupa casi todo o casi nada, no aporta.
     .filter((c) => c.supIzq && c.proporcion >= 0.15 && c.proporcion <= 0.97);
