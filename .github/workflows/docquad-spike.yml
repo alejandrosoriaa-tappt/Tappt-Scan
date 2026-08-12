@@ -55,10 +55,6 @@ jobs:
       - name: Verify runtime against MakeACopy golden input
         run: node scripts/docquad-golden.js
 
-      # Esta es la misma fotografía que MakeACopy usa en su test E2E
-      # CompositeCornerDetectorE2eInstrumentedTest y donde exige que la fuente
-      # ganadora sea DOCQUAD. A diferencia de clean_scan.jpg, sí es una fixture
-      # destinada explícitamente a validar el detector de esquinas.
       - name: Download MakeACopy DocQuad E2E fixture
         run: |
           curl --fail --location --retry 3 \
@@ -76,10 +72,12 @@ jobs:
             cat /tmp/docquad-result.json
           fi
 
-      - name: Upload spike report
+      - name: Upload spike diagnostics
         if: always()
         uses: actions/upload-artifact@v4
         with:
           name: docquad-spike-result
-          path: /tmp/docquad-result.json
+          path: |
+            /tmp/docquad-result.json
+            /tmp/docquad-e2e.jpg
           if-no-files-found: ignore
