@@ -31,6 +31,7 @@ class DocQuadDetector {
 
     const post = postprocesarEsquinas(
       outputs.cornerHeatmaps,
+      outputs.maskLogits,
       preparado.letterbox,
       preparado.srcW,
       preparado.srcH
