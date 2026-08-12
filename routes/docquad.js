@@ -4,11 +4,11 @@ const express = require('express');
 const router = express.Router();
 
 const { requireAuth } = require('../services/auth');
-const docquad = require('../services/docquad');
+const scanner = require('../services/docquad');
 
 /**
- * Detector nuevo del scanner. Este router se monta ANTES de documentos.js,
- * por lo que reemplaza de facto el endpoint Otsu sin mezclar ambos motores.
+ * Detector compuesto del scanner. Este router se monta ANTES de
+ * documentos.js, por lo que reemplaza de facto el endpoint Otsu legado.
  *
  * Contrato conservado para la app:
  *   { esquinas: [{x,y} x4] | null, confiable: boolean }
@@ -18,33 +18,42 @@ router.post('/detectar-bordes', requireAuth, async (req, res) => {
     const { imagen } = req.body;
     if (!imagen) return res.status(400).json({ error: 'falta_imagen' });
 
-    const estado = docquad.estadoDetector();
-    if (!estado.listo) {
-      // No bloquear el request de cámara mientras ORT descarga/carga el
-      // modelo. Si se hiciera aquí, el proxy de Railway puede cortar la
-      // conexión y mostrar 502. Disparamos/reintentamos el warm-up y la UI
-      // permanece en BUSCANDO hasta que el siguiente frame encuentre listo.
-      docquad.prepararDetector().catch(() => {});
+    const estado = scanner.estadoDetector();
+    const algunMotorListo = estado.listo || estado.opencv?.listo;
+
+    if (!algunMotorListo) {
+      // Ambos motores se calientan fuera del request. No esperamos aquí para
+      // evitar que Railway corte la conexión con 502. En cuanto uno esté
+      // listo, el siguiente frame ya podrá detectar.
+      scanner.prepararMotores().catch(() => {});
       return res.json({
         esquinas: null,
         confiable: false,
-        fuente: 'docquad',
-        razon: estado.error ? 'MODEL_RETRYING' : 'MODEL_WARMING',
+        fuente: 'scanner',
+        razon:
+          estado.error && estado.opencv?.error
+            ? 'DETECTORS_RETRYING'
+            : 'DETECTORS_WARMING',
       });
     }
+
+    // Si DocQuad aún no está listo pero OpenCV sí, seguimos de inmediato con
+    // OpenCV. En paralelo se mantiene/reintenta el warm-up de DocQuad.
+    if (!estado.listo) scanner.prepararDetector().catch(() => {});
+    if (!estado.opencv?.listo) scanner.prepararFallback().catch(() => {});
 
     const limpio = imagen.replace(/^data:[^;]+;base64,/, '');
     const buffer = Buffer.from(limpio, 'base64');
     if (!buffer.length) return res.status(400).json({ error: 'imagen_vacia' });
 
-    const resultado = await docquad.detectarDocumento(buffer);
+    const resultado = await scanner.detectarDocumento(buffer);
     res.json(resultado);
   } catch (err) {
-    console.error('[docquad] error detectando bordes', err);
+    console.error('[scanner] error detectando bordes', err);
     res.json({
       esquinas: null,
       confiable: false,
-      fuente: 'docquad',
+      fuente: 'scanner',
       razon: 'DETECTION_ERROR',
     });
   }
