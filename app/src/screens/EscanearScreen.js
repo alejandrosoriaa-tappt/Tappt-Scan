@@ -117,14 +117,9 @@ export default function EscanearScreen({ navigation }) {
     return (
       <SafeAreaView style={estilos.centrado}>
         <Text style={estilos.permisoTitulo}>{t('permisoCamara')}</Text>
-        <Text style={estilos.permisoTexto}>
-          {t('permisoCamaraDetalle')}
-        </Text>
+        <Text style={estilos.permisoTexto}>{t('permisoCamaraDetalle')}</Text>
         <TouchableOpacity
           style={estilos.botonPermiso}
-          // En web no hay a quién "pedirle" de nuevo desde JS: si lo negaron,
-          // se reintenta remontando la cámara (y el navegador vuelve a
-          // preguntar si el usuario cambió el permiso del sitio).
           onPress={() => (esWeb ? setErrorCamara(false) : pedirPermiso())}
           activeOpacity={0.8}
         >
@@ -151,9 +146,15 @@ export default function EscanearScreen({ navigation }) {
 
       navigation.navigate('Recorte', {
         fotoBase64: foto.base64,
-        // Si ya había una detección de confianza alta de los frames en
-        // vivo, se la pasamos a Recorte para que abra directo con las
-        // esquinas correctas en vez de tener que detectar otra vez.
+        // RecorteScreen necesita las dimensiones REALES de la foto para
+        // proyectar correctamente las esquinas dentro de resizeMode="contain".
+        // Sin esto, un marco normalizado contra la foto se dibuja contra todo
+        // el lienzo y queda corrido cuando hay bandas vacías.
+        fotoAncho: foto.ancho,
+        fotoAlto: foto.alto,
+        // Temporal hasta DocQuad: si el detector live venía con confianza
+        // alta, se usa como sugerencia inicial. La arquitectura final volverá
+        // a detectar siempre sobre la captura full-res antes del recorte.
         esquinasIniciales: deteccion.estado === 'listo' ? deteccion.esquinas : null,
       });
     } catch (err) {
@@ -183,8 +184,6 @@ export default function EscanearScreen({ navigation }) {
     };
   };
 
-  // Polígono relleno sobre el preview (benchmark CamScanner: el encuadre en
-  // vivo se "ilumina" con una capa translúcida, no solo una línea).
   const puntos =
     deteccion.esquinas && cuadro && pantalla.ancho > 1
       ? deteccion.esquinas
@@ -202,7 +201,7 @@ export default function EscanearScreen({ navigation }) {
   const rellenoPorEstado = {
     buscando: 'rgba(255,255,255,0.08)',
     parcial: 'rgba(255,255,255,0.16)',
-    listo: 'rgba(24,184,117,0.25)', // colores.primario en rgba — SVG no acepta variables ni conAlfa()
+    listo: 'rgba(24,184,117,0.25)',
   };
 
   const textoPorEstado = {
@@ -214,9 +213,6 @@ export default function EscanearScreen({ navigation }) {
   return (
     <View
       style={estilos.pantalla}
-      // El rect de la cámara es la pantalla completa: el overlay se mide
-      // contra ESTE, no contra la caja con padding de adentro. Medirlo mal
-      // era exactamente el bug del marco corrido.
       onLayout={(e) =>
         setPantalla({ ancho: e.nativeEvent.layout.width, alto: e.nativeEvent.layout.height })
       }
