@@ -16,7 +16,6 @@ function timeout(ms, codigo) {
 
 async function cargarCv() {
   let cv = cvModule?.default || cvModule;
-
   if (cv && typeof cv.then === 'function') {
     cv = await Promise.race([cv, timeout(30_000, 'opencv_init_timeout_promise')]);
   } else if (!cv?.Mat) {
@@ -27,7 +26,6 @@ async function cargarCv() {
       timeout(30_000, 'opencv_init_timeout_callback'),
     ]);
   }
-
   if (!cv?.Mat) throw new Error('opencv_not_initialized');
   return cv;
 }
@@ -38,7 +36,6 @@ function ordenarPuntos(points) {
   const arr = points.slice().sort(
     (a, b) => Math.atan2(a.y - cy, a.x - cx) - Math.atan2(b.y - cy, b.x - cx)
   );
-
   let start = 0;
   let best = Infinity;
   for (let i = 0; i < 4; i++) {
@@ -48,7 +45,6 @@ function ordenarPuntos(points) {
       start = i;
     }
   }
-
   return [0, 1, 2, 3].map((i) => arr[(start + i) % 4]);
 }
 
@@ -95,39 +91,26 @@ async function bufferAImageData(buffer, maxEdge = MAX_EDGE) {
   const scale = Math.min(1, maxEdge / Math.max(srcW, srcH));
   const width = Math.max(1, Math.round(srcW * scale));
   const height = Math.max(1, Math.round(srcH * scale));
-
   const canvas = createCanvas(width, height);
   const ctx = canvas.getContext('2d');
   ctx.imageSmoothingEnabled = true;
   ctx.drawImage(image, 0, 0, width, height);
   const raw = ctx.getImageData(0, 0, width, height);
   const data = new Uint8ClampedArray(raw.data);
-
-  return {
-    imageData: new ImageData(data, width, height),
-    width,
-    height,
-    srcW,
-    srcH,
-    scale,
-  };
+  return { imageData: new ImageData(data, width, height), width, height, srcW, srcH, scale };
 }
 
 function matPointVectorToArray(approx) {
   const data32S = approx.data32S;
   if (!data32S?.length) throw new Error(`opencv_approx_not_int:${approx.type()}`);
-
   const out = [];
-  for (let i = 0; i < data32S.length; i += 2) {
-    out.push({ x: data32S[i], y: data32S[i + 1] });
-  }
+  for (let i = 0; i < data32S.length; i += 2) out.push({ x: data32S[i], y: data32S[i + 1] });
   return out;
 }
 
 function evaluarQuad(quad, areaContour, imgArea, opciones) {
   if (!quad || quad.length !== 4) return null;
   const q = ordenarPuntos(quad);
-
   const w1 = distancia(q[0], q[1]);
   const w2 = distancia(q[2], q[3]);
   const h1 = distancia(q[1], q[2]);
@@ -136,9 +119,7 @@ function evaluarQuad(quad, areaContour, imgArea, opciones) {
   const avgHeight = (h1 + h2) / 2;
   const aspect = avgHeight / (avgWidth + 1e-9);
   const rectRaw = rectScore(q, opciones.minAngle, opciones.maxAngle);
-
   if (rectRaw < 0 || aspect <= opciones.minAspect || aspect >= opciones.maxAspect) return null;
-
   const areaNorm = areaContour / imgArea;
   const score = 0.7 * areaNorm + 0.3 * (rectRaw / 120);
   return { quad: q, score, areaNorm, aspect, angles: angulosQuad(q) };
@@ -147,29 +128,20 @@ function evaluarQuad(quad, areaContour, imgArea, opciones) {
 function mejorQuadDeContornos(cv, contours, imgArea, opciones) {
   let best = null;
   const total = contours.size();
-
   for (let i = 0; i < total; i++) {
     const contour = contours.get(i);
     try {
       const area = cv.contourArea(contour, false);
       const areaNorm = area / imgArea;
       if (areaNorm < opciones.minArea) continue;
-
       const perimeter = cv.arcLength(contour, true);
       for (const eps of EPSILONS) {
         const approx = new cv.Mat();
         try {
           cv.approxPolyDP(contour, approx, perimeter * eps, true);
           if (approx.rows !== 4 || !cv.isContourConvex(approx)) continue;
-
-          const candidate = evaluarQuad(
-            matPointVectorToArray(approx),
-            area,
-            imgArea,
-            opciones
-          );
+          const candidate = evaluarQuad(matPointVectorToArray(approx), area, imgArea, opciones);
           if (!candidate) continue;
-
           candidate.epsilon = eps;
           if (!best || candidate.score > best.score) best = candidate;
         } finally {
@@ -180,14 +152,12 @@ function mejorQuadDeContornos(cv, contours, imgArea, opciones) {
       contour.delete();
     }
   }
-
   return { best, total };
 }
 
 function detectarPorPapelClaro(cv, gray, imgArea) {
   const thresholds = [120, 140, 160, 180];
   let best = null;
-
   for (const thresholdValue of thresholds) {
     const mask = new cv.Mat();
     const closed = new cv.Mat();
@@ -196,7 +166,6 @@ function detectarPorPapelClaro(cv, gray, imgArea) {
     const contours = new cv.MatVector();
     let closeKernel = null;
     let openKernel = null;
-
     try {
       cv.threshold(gray, mask, thresholdValue, 255, cv.THRESH_BINARY);
       closeKernel = cv.getStructuringElement(cv.MORPH_RECT, new cv.Size(15, 15));
@@ -204,7 +173,6 @@ function detectarPorPapelClaro(cv, gray, imgArea) {
       cv.morphologyEx(mask, closed, cv.MORPH_CLOSE, closeKernel);
       cv.morphologyEx(closed, opened, cv.MORPH_OPEN, openKernel);
       cv.findContours(opened, contours, hierarchy, cv.RETR_EXTERNAL, cv.CHAIN_APPROX_SIMPLE);
-
       const result = mejorQuadDeContornos(cv, contours, imgArea, {
         minArea: 0.15,
         minAngle: 20,
@@ -212,17 +180,9 @@ function detectarPorPapelClaro(cv, gray, imgArea) {
         minAspect: 0.3,
         maxAspect: 4.0,
       });
-
       if (result.best) {
-        const candidate = {
-          ...result.best,
-          source: 'opencv-paper',
-          thresholdValue,
-        };
-
-        if (candidate.areaNorm < 0.95 && (!best || candidate.score > best.score)) {
-          best = candidate;
-        }
+        const candidate = { ...result.best, source: 'opencv-paper', thresholdValue };
+        if (candidate.areaNorm < 0.95 && (!best || candidate.score > best.score)) best = candidate;
       }
     } finally {
       contours.delete();
@@ -234,19 +194,72 @@ function detectarPorPapelClaro(cv, gray, imgArea) {
       mask.delete();
     }
   }
-
   return best;
 }
 
-function elegirMejorCandidato(canny, paper) {
-  if (!canny) return paper;
-  if (!paper) return canny;
+function detectarPorPapelNeutro(cv, src, imgArea) {
+  const rgb = new cv.Mat();
+  const hsv = new cv.Mat();
+  const canales = new cv.MatVector();
+  const satMask = new cv.Mat();
+  const valMask = new cv.Mat();
+  const mask = new cv.Mat();
+  const closed = new cv.Mat();
+  const opened = new cv.Mat();
+  const hierarchy = new cv.Mat();
+  const contours = new cv.MatVector();
+  let closeKernel = null;
+  let openKernel = null;
+  try {
+    cv.cvtColor(src, rgb, cv.COLOR_RGBA2RGB);
+    cv.cvtColor(rgb, hsv, cv.COLOR_RGB2HSV);
+    cv.split(hsv, canales);
+    const saturation = canales.get(1);
+    const value = canales.get(2);
+    try {
+      cv.threshold(saturation, satMask, 25, 255, cv.THRESH_BINARY_INV);
+      cv.threshold(value, valMask, 100, 255, cv.THRESH_BINARY);
+      cv.bitwise_and(satMask, valMask, mask);
+    } finally {
+      saturation.delete();
+      value.delete();
+    }
+    closeKernel = cv.getStructuringElement(cv.MORPH_RECT, new cv.Size(15, 15));
+    openKernel = cv.getStructuringElement(cv.MORPH_RECT, new cv.Size(5, 5));
+    cv.morphologyEx(mask, closed, cv.MORPH_CLOSE, closeKernel);
+    cv.morphologyEx(closed, opened, cv.MORPH_OPEN, openKernel);
+    cv.findContours(opened, contours, hierarchy, cv.RETR_EXTERNAL, cv.CHAIN_APPROX_SIMPLE);
+    const result = mejorQuadDeContornos(cv, contours, imgArea, {
+      minArea: 0.15,
+      minAngle: 20,
+      maxAngle: 160,
+      minAspect: 0.3,
+      maxAspect: 4.0,
+    });
+    return result.best
+      ? { ...result.best, source: 'opencv-neutral-paper', saturationMax: 25, valueMin: 100 }
+      : null;
+  } finally {
+    contours.delete();
+    hierarchy.delete();
+    if (openKernel) openKernel.delete();
+    if (closeKernel) closeKernel.delete();
+    opened.delete();
+    closed.delete();
+    mask.delete();
+    valMask.delete();
+    satMask.delete();
+    canales.delete();
+    hsv.delete();
+    rgb.delete();
+  }
+}
 
-  // Los dos motores compiten siempre. Esto evita que un rectángulo interno
-  // encontrado por Canny (tabla, recuadro, etiqueta) impida considerar el
-  // contorno exterior del papel. El score ya pondera 70% área y 30%
-  // rectangularidad, así que el documento exterior convincente debe ganar.
-  return paper.score > canny.score ? paper : canny;
+function elegirMejorCandidato(...candidatos) {
+  return candidatos.filter(Boolean).reduce(
+    (best, candidate) => (!best || candidate.score > best.score ? candidate : best),
+    null
+  );
 }
 
 class OpenCvDocumentDetector {
@@ -254,20 +267,16 @@ class OpenCvDocumentDetector {
     this.maxEdge = maxEdge;
     this.cv = null;
   }
-
   async init() {
     if (!this.cv) this.cv = await cargarCv();
     return this;
   }
-
   async detectarBuffer(buffer) {
     if (!Buffer.isBuffer(buffer) || !buffer.length) throw new Error('opencv_buffer_vacio');
     if (!this.cv) await this.init();
-
     const inicio = Date.now();
     const img = await bufferAImageData(buffer, this.maxEdge);
     const cv = this.cv;
-
     const src = cv.matFromImageData(img.imageData);
     const gray = new cv.Mat();
     const blur = new cv.Mat();
@@ -283,44 +292,24 @@ class OpenCvDocumentDetector {
     const contours = new cv.MatVector();
     let kernel = null;
     let edgeKernel = null;
-
     try {
       cv.cvtColor(src, gray, cv.COLOR_RGBA2GRAY);
       cv.GaussianBlur(gray, blur, new cv.Size(5, 5), 0, 0, cv.BORDER_DEFAULT);
-
       cv.medianBlur(blur, med, 3);
       const meanGray = cv.mean(med)[0];
-      cv.Canny(
-        med,
-        edgesDirect,
-        Math.max(0, 0.67 * meanGray),
-        Math.min(255, 1.33 * meanGray),
-        3,
-        true
-      );
+      cv.Canny(med, edgesDirect, Math.max(0, 0.67 * meanGray), Math.min(255, 1.33 * meanGray), 3, true);
       cv.Canny(blur, edgesFixed, 30, 100, 3, true);
-
       cv.threshold(blur, threshold, 0, 255, cv.THRESH_BINARY + cv.THRESH_OTSU);
       let kernelSize = Math.max(5, Math.floor(Math.min(src.cols, src.rows) / 50));
       if (kernelSize % 2 === 0) kernelSize++;
       kernel = cv.getStructuringElement(cv.MORPH_RECT, new cv.Size(kernelSize, kernelSize));
       cv.morphologyEx(threshold, morph, cv.MORPH_CLOSE, kernel);
-      cv.Canny(
-        morph,
-        edgesMorph,
-        Math.max(0, 0.66 * meanGray),
-        Math.min(255, 1.33 * meanGray),
-        3,
-        true
-      );
-
+      cv.Canny(morph, edgesMorph, Math.max(0, 0.66 * meanGray), Math.min(255, 1.33 * meanGray), 3, true);
       cv.bitwise_or(edgesDirect, edgesMorph, edges);
       cv.bitwise_or(edges, edgesFixed, edges);
-
       edgeKernel = cv.getStructuringElement(cv.MORPH_RECT, new cv.Size(3, 3));
       cv.morphologyEx(edges, edgesClosed, cv.MORPH_CLOSE, edgeKernel);
       cv.findContours(edgesClosed, contours, hierarchy, cv.RETR_LIST, cv.CHAIN_APPROX_SIMPLE);
-
       const imgArea = src.cols * src.rows;
       const contourResult = mejorQuadDeContornos(cv, contours, imgArea, {
         minArea: 0.02,
@@ -329,29 +318,18 @@ class OpenCvDocumentDetector {
         minAspect: 0.3,
         maxAspect: 4.0,
       });
-
-      const cannyCandidate = contourResult.best
-        ? { ...contourResult.best, source: 'opencv-canny' }
-        : null;
+      const cannyCandidate = contourResult.best ? { ...contourResult.best, source: 'opencv-canny' } : null;
       const paperCandidate = detectarPorPapelClaro(cv, gray, imgArea);
-      const candidate = elegirMejorCandidato(cannyCandidate, paperCandidate);
-
+      const neutralPaperCandidate = detectarPorPapelNeutro(cv, src, imgArea);
+      const candidate = elegirMejorCandidato(cannyCandidate, paperCandidate, neutralPaperCandidate);
       if (!candidate) {
-        return {
-          valid: false,
-          source: 'opencv',
-          reason: 'NO_QUAD',
-          area: 0,
-          timing: { totalMs: Date.now() - inicio },
-        };
+        return { valid: false, source: 'opencv', reason: 'NO_QUAD', area: 0, timing: { totalMs: Date.now() - inicio } };
       }
-
       const corners = candidate.quad.map((p) => ({ x: p.x / img.width, y: p.y / img.height }));
       const area = areaQuad(corners);
       const finite = corners.every((p) => Number.isFinite(p.x) && Number.isFinite(p.y));
       const inside = corners.every((p) => p.x >= 0 && p.x <= 1 && p.y >= 0 && p.y <= 1);
       const valid = finite && inside && area >= MIN_AREA_CONFIABLE && area < 0.95;
-
       return {
         valid,
         source: candidate.source,
@@ -365,20 +343,13 @@ class OpenCvDocumentDetector {
         epsilon: candidate.epsilon,
         thresholdValue: candidate.thresholdValue || null,
         candidates: {
-          canny: cannyCandidate
-            ? { area: cannyCandidate.areaNorm, score: cannyCandidate.score }
-            : null,
-          paper: paperCandidate
-            ? { area: paperCandidate.areaNorm, score: paperCandidate.score }
+          canny: cannyCandidate ? { area: cannyCandidate.areaNorm, score: cannyCandidate.score } : null,
+          paper: paperCandidate ? { area: paperCandidate.areaNorm, score: paperCandidate.score } : null,
+          neutralPaper: neutralPaperCandidate
+            ? { area: neutralPaperCandidate.areaNorm, score: neutralPaperCandidate.score }
             : null,
         },
-        image: {
-          width: img.width,
-          height: img.height,
-          srcW: img.srcW,
-          srcH: img.srcH,
-          scale: img.scale,
-        },
+        image: { width: img.width, height: img.height, srcW: img.srcW, srcH: img.srcH, scale: img.scale },
         timing: { totalMs: Date.now() - inicio },
       };
     } finally {
