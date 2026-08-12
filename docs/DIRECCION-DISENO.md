@@ -7,16 +7,23 @@ _Definido: 2026-08-10_
 Ideas del usuario, sin acción todavía — capturadas tal cual para no
 perderlas antes de la siguiente sesión.
 
-**1. Comisión de las tiendas (App Store / Play Store) — aceptarla, no
-evadirla.** Si le das a Apple/Google la oportunidad de cobrar (pagos
-dentro de la app), cobran su comisión — pero a cambio tratan mejor a la
-app (mejor posicionamiento, features, confianza del usuario). Evadirlo
-(cobrar solo por fuera, como hoy con el link de WhatsApp) puede ahorrar
-la comisión, pero si la app funciona bien y crece, "se van a dar cuenta"
-— no es sostenible como estrategia de largo plazo. Postura propuesta:
-tratar esa comisión como costo de negocio/marketing, no como algo que
-evadir para siempre. Repensar la estrategia de pago (hoy: precios fuera
-de la app por la guía 3.1.1) cuando el producto esté más maduro.
+**1. Comisión de las tiendas (App Store / Play Store) — ✅ DECIDIDO
+(2026-08-13).** Estrategia de pago con dos canales:
+- **App nativa (iOS/Android):** In-App Purchases de la tienda —
+  aceptar la comisión (15-30%) como costo de negocio/marketing en vez
+  de evadirla. Pendiente de construir (`expo-in-app-purchases` o
+  `react-native-iap` + validación de recibos en el backend); es una
+  capa nueva completa, no una extensión del flujo de Stripe.
+- **Clientes que llegan directo o contratan vía Web App:** siguen con
+  **Stripe**, igual que hoy (WhatsApp + `scan.tappt.lat`). No se
+  toca — Stripe no desaparece, solo deja de ser el único camino.
+
+Racional original: si le das a Apple/Google la oportunidad de cobrar
+dentro de la app, tratan mejor a la app (posicionamiento, confianza del
+usuario) — evadirlo cobrando siempre por fuera no es sostenible a largo
+plazo si la app crece y "se dan cuenta". La guía 3.1.1 de Apple sigue
+aplicando igual: adentro de la app nativa, el pago tiene que ser IAP,
+no una pasarela externa — por eso Stripe queda acotado a WhatsApp/Web.
 
 **2. Sincronización cross-dispositivo — Drive ya es la respuesta.**
 Experiencia personal del usuario: CamScanner en iPhone funciona perfecto
