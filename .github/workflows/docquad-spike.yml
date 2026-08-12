@@ -50,7 +50,7 @@ jobs:
           node --check scanner/docquad/postprocess.js
           node --check scanner/docquad/ort-runtime.node.js
           node --check scanner/docquad/detector.js
-          if [ -f scanner/opencv/detector.js ]; then node --check scanner/opencv/detector.js; fi
+          node --check scanner/opencv/detector.js
           node --check scripts/docquad-postprocess-test.js
           node --check scripts/opencv-spike.js
 
@@ -75,15 +75,27 @@ jobs:
           DOCQUAD_ALLOW_INVALID: '1'
         run: npm run docquad:spike -- /tmp/docquad-e2e.jpg /tmp/docquad-result.json
 
-      # La imagen de MakeACopy ya viene "cropped" y no es ground truth del
-      # borde exterior del papel. OpenCV se ejecuta allí sólo como diagnóstico.
       - name: Run OpenCV on MakeACopy fixture as diagnostic
         env:
           OPENCV_ALLOW_INVALID: '1'
         run: timeout 30s node scripts/opencv-spike.js /tmp/docquad-e2e.jpg /tmp/opencv-makeacopy.json
 
-      # Fixture creada específicamente para el pipeline clásico
-      # GaussianBlur -> Canny -> findContours -> approxPolyDP.
+      - name: Require composite service fallback on MakeACopy fixture
+        run: |
+          timeout 45s node - <<'NODE'
+          const fs = require('fs');
+          const scanner = require('./services/docquad');
+          (async () => {
+            await scanner.prepararMotores();
+            const r = await scanner.detectarDocumento(fs.readFileSync('/tmp/docquad-e2e.jpg'));
+            console.log(JSON.stringify(r, null, 2));
+            if (!r.confiable) throw new Error(`servicio compuesto no encontró quad: ${r.razon}`);
+            if (!Array.isArray(r.esquinas) || r.esquinas.length !== 4) throw new Error('servicio compuesto no devolvió 4 esquinas');
+            if (!String(r.fuente || '').startsWith('opencv')) throw new Error(`esperaba fallback OpenCV; fuente=${r.fuente}`);
+            process.exit(0);
+          })().catch(err => { console.error(err); process.exit(1); });
+          NODE
+
       - name: Download CamScanner OpenCV fixture
         run: |
           curl --fail --location --retry 3 \
