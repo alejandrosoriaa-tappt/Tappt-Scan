@@ -243,9 +243,16 @@ infraestructura con otra vertical.
 
 **Rediseño de la app (benchmark CamScanner)**: brief completo de producto
 y diseño, pantalla por pantalla, con los prompts exactos a seguir:
-**`docs/DIRECCION-DISENO.md`**. Empezar por la cámara (detección en vivo
-con 3 estados de confianza) — es lo más nuevo y lo que más se aleja de lo
-que hay hoy.
+**`docs/DIRECCION-DISENO.md`**. Ahí también está la crónica de qué se
+intentó y qué falló — leerla antes de repetir un enfoque ya descartado.
+
+**Motor de escaneo**: **`docs/ARQUITECTURA-SCANNER.md`** — la arquitectura
+acordada de `TapptScannerCore` (core en TypeScript, DocQuad vía ONNX,
+OpenCV WASM, auto-captura, Worker), el diagnóstico medido contra
+CamScanner y el orden de trabajo. Leerlo ANTES de tocar la detección de
+bordes: el heurístico de Otsu que hay hoy en `services/imagen.js` está
+para reemplazarse, no para parcharse — falló cuatro veces el 2026-08-13
+contra fotos reales y se revirtió a propósito.
 
 ## Rama de trabajo
 
