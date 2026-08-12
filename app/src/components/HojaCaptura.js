@@ -20,8 +20,11 @@ export default function HojaCaptura({ visible, onCerrar, onEscanear, onImportarA
     {
       clave: 'whatsapp',
       icono: 'whatsapp',
-      fondo: '#DDF7EA',
-      trazo: '#128C7E',
+      // Velo translúcido sobre superficie oscura, no pastel sólido: los
+      // pasteles del tema claro quedaron sueltos aquí tras el rediseño
+      // dark-first (mismo bug ya corregido en Dashboard y Onboarding).
+      fondo: 'rgba(37,211,102,0.16)',
+      trazo: '#25D366',
       titulo: t('capturaWhatsapp'),
       detalle: t('capturaWhatsappDetalle'),
       accion: () => Linking.openURL(`https://wa.me/${cuenta?.numeroTapptScan || ''}`),
@@ -38,8 +41,8 @@ export default function HojaCaptura({ visible, onCerrar, onEscanear, onImportarA
     {
       clave: 'archivo',
       icono: 'documento',
-      fondo: '#DDEBFB',
-      trazo: '#2F80ED',
+      fondo: 'rgba(59,130,246,0.18)',
+      trazo: '#5B9BFA',
       titulo: t('capturaArchivo'),
       detalle: t('capturaArchivoDetalle'),
       accion: onImportarArchivo,
@@ -47,8 +50,8 @@ export default function HojaCaptura({ visible, onCerrar, onEscanear, onImportarA
     {
       clave: 'foto',
       icono: 'subir',
-      fondo: '#FFEEDD',
-      trazo: '#F08C2E',
+      fondo: 'rgba(240,140,46,0.18)',
+      trazo: '#F5A34F',
       titulo: t('capturaFoto'),
       detalle: t('capturaFotoDetalle'),
       accion: onImportarFoto,
@@ -89,7 +92,7 @@ export default function HojaCaptura({ visible, onCerrar, onEscanear, onImportarA
                   <Text style={estilos.opcionTitulo}>{opcion.titulo}</Text>
                   <Text style={estilos.opcionDetalle}>{opcion.detalle}</Text>
                 </View>
-                <Icono nombre="derecha" tamano={18} color="#C4CDD5" />
+                <Icono nombre="derecha" tamano={18} color={colores.textoTerciario} />
               </TouchableOpacity>
             ))}
           </TouchableOpacity>

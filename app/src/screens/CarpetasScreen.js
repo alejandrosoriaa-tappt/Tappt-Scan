@@ -16,7 +16,7 @@ import Icono, { IconoChip } from '../components/Icono';
 import { Tarjeta, Barra, formatoBytes } from '../components/comunes';
 import { colores, porSeccion, espacio, radio, tipo, sombra } from '../theme';
 
-const GENERICA = { icono: 'carpeta', fondo: '#EEF2F5', trazo: '#667587' };
+const GENERICA = { icono: 'carpeta', fondo: 'rgba(182,192,204,0.14)', trazo: colores.textoSuave };
 
 /**
  * Explorador del Drive del usuario.
@@ -56,7 +56,7 @@ export default function CarpetasScreen({ navigation }) {
             {/* La conexión con Drive se muestra arriba, no escondida en
                 ajustes: es la promesa del producto. */}
             <Tarjeta style={estilos.drive}>
-              <IconoChip nombre="nube" fondo="#DDEBFB" trazo="#2F80ED" tamano={40} />
+              <IconoChip nombre="nube" fondo="rgba(59,130,246,0.18)" trazo="#5B9BFA" tamano={40} />
               <View style={estilos.driveTexto}>
                 <Text style={estilos.driveTitulo}>{t('enTuDrive')}</Text>
                 <View style={estilos.driveEstado}>
@@ -111,7 +111,7 @@ export default function CarpetasScreen({ navigation }) {
           </View>
         ) : (
           contenido.map((item) => {
-            const meta = item.esCarpeta ? GENERICA : { icono: 'documento', fondo: '#EEF2F5', trazo: '#667587' };
+            const meta = item.esCarpeta ? GENERICA : { icono: 'documento', fondo: 'rgba(182,192,204,0.14)', trazo: colores.textoSuave };
             return (
               <TouchableOpacity
                 key={item.id}
@@ -123,7 +123,7 @@ export default function CarpetasScreen({ navigation }) {
                 <Text style={estilos.filaNombre} numberOfLines={1}>
                   {item.nombre}
                 </Text>
-                {item.esCarpeta ? <Icono nombre="derecha" tamano={17} color="#C4CDD5" /> : null}
+                {item.esCarpeta ? <Icono nombre="derecha" tamano={17} color={colores.textoTerciario} /> : null}
               </TouchableOpacity>
             );
           })

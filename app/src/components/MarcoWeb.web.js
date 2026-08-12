@@ -1,5 +1,6 @@
 import React from 'react';
 import { View, StyleSheet, useWindowDimensions } from 'react-native';
+import { colores } from '../theme';
 
 const ANCHO_TELEFONO = 430;
 const UMBRAL_ESCRITORIO = 620;
@@ -54,7 +55,10 @@ const estilos = StyleSheet.create({
     width: ANCHO_TELEFONO,
     height: '100%',
     maxHeight: 940,
-    backgroundColor: '#F8FAFC',
+    // El "teléfono" simulado en escritorio debe tener el mismo fondo que la
+    // app real; este blanco era del tema claro anterior y se veía como un
+    // marco encendido alrededor de una app oscura.
+    backgroundColor: colores.fondo,
     borderRadius: 28,
     overflow: 'hidden',
     boxShadow: '0 24px 70px rgba(0,0,0,0.45)',

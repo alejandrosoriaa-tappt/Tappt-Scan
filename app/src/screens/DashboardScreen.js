@@ -37,7 +37,7 @@ function AccionPrincipal({ icono, fondo, trazo, titulo, detalle, onPress, destac
         <Text style={estilos.accionTitulo}>{titulo}</Text>
         <Text style={estilos.accionDetalle}>{detalle}</Text>
       </View>
-      <Icono nombre="derecha" tamano={18} color="#C4CDD5" />
+      <Icono nombre="derecha" tamano={18} color={colores.textoTerciario} />
     </TouchableOpacity>
   );
 }

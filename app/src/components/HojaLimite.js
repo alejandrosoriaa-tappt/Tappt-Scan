@@ -48,7 +48,7 @@ export default function HojaLimite({ visible, onCerrar }) {
             <View style={estilos.encabezado}>
               <IconoChip
                 nombre="reloj"
-                fondo="#FFF1D6"
+                fondo="rgba(245,158,11,0.18)"
                 trazo={colores.alerta}
                 tamano={52}
               />
