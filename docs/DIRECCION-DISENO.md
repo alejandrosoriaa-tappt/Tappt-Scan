@@ -452,6 +452,27 @@ más grande de la foto). Probado con una escena sintética de dos objetos
 oscuros de tamaño distinto — antes fallaba, ahora detecta el correcto y
 descarta el decoy.
 
+**🐛 Tercera regresión, misma tanda: con una hoja normal (papel +
+tabla/código de barras impreso adentro), el marco salía encogido
+alrededor del texto impreso, no del papel completo.** Causa: "preferir
+el componente más chico entre las dos hipótesis" fallaba en el caso más
+común de todos — casi cualquier documento tiene contenido oscuro
+impreso (texto, tablas, códigos de barras) que forma su propio
+componente, más chico que el papel. Ese contenido le ganaba al papel
+completo. **Arreglado de raíz**: ya no se comparan las dos hipótesis.
+Se prueba primero "documento = región clara" (el caso mayoritario) y
+SOLO si no encuentra nada válido se prueba la oscura como respaldo —
+nunca al revés. También se agregó `esquinasSeCruzan()` — un
+cuadrilátero armado de 4 puntos extremos sueltos puede salir
+autointersectado (zigzag) con brillo/ruido de cámara en vivo; se
+descarta antes de mostrarlo en vez de dibujar algo engañoso. Probado
+con 3 escenas (hoja+tabla impresa, tarjeta+funda decoy, la foto real de
+la tarjeta Inbursa): el caso de papel (mayoritario) queda sólido y con
+confianza; el caso de objetos oscuros ya no se equivoca de objeto pero
+prefiere pedir ajuste manual en vez de arriesgar un "listo" falso —
+tradeoff explícito y aceptado tras 3 iteraciones fallidas de intentar
+que ambos casos funcionen con confianza automática.
+
 **Explícitamente NO incluido en esta tanda** (para no fingir que ya
 está resuelto):
 - **Detección de obstrucciones** (dedo tapando el documento — el aviso
