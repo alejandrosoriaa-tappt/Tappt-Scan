@@ -78,8 +78,18 @@ jobs:
           DOCQUAD_ALLOW_INVALID: '1'
         run: npm run docquad:spike -- /tmp/docquad-e2e.jpg /tmp/docquad-result.json
 
+      - name: Download pinned official OpenCV.js
+        run: |
+          mkdir -p .cache/opencv
+          curl --fail --location --retry 3 --max-time 90 \
+            'https://docs.opencv.org/4.13.0/opencv.js' \
+            --output .cache/opencv/opencv-4.13.0.js
+          test $(wc -c < .cache/opencv/opencv-4.13.0.js) -gt 1000000
+          echo "opencv.js bytes=$(wc -c < .cache/opencv/opencv-4.13.0.js)"
+          sha256sum .cache/opencv/opencv-4.13.0.js
+
       - name: Run OpenCV fallback spike on same fixture
-        run: node scripts/opencv-spike.js /tmp/docquad-e2e.jpg /tmp/opencv-result.json
+        run: timeout 75s node scripts/opencv-spike.js /tmp/docquad-e2e.jpg /tmp/opencv-result.json
 
       - name: Show results
         if: always()
