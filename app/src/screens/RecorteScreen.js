@@ -176,7 +176,9 @@ export default function RecorteScreen({ route, navigation }) {
   const [tamanoImagen, setTamanoImagen] = useState(
     fotoAncho && fotoAlto ? { ancho: fotoAncho, alto: fotoAlto } : null
   );
-  const [detectando, setDetectando] = useState(!esquinasIniciales);
+  // La detección live sólo guía. La foto final SIEMPRE se vuelve a analizar
+  // a resolución completa antes de aceptar un recorte.
+  const [detectando, setDetectando] = useState(true);
   const [aviso, setAviso] = useState(null);
   const [guardando, setGuardando] = useState(false);
   const [limite, setLimite] = useState(false);
@@ -193,12 +195,10 @@ export default function RecorteScreen({ route, navigation }) {
     [lienzo, tamanoImagen]
   );
 
-  // Si la cámara en vivo ya venía con una detección de confianza alta
-  // (EscanearScreen), se usa esa y no hace falta pedirle otra vez al
-  // servidor — solo se detecta aquí cuando llega sin ella (foto importada,
-  // o PDF reenviado que primero pasó por otra pantalla).
+  // Regla dura del scanner: las esquinas del preview nunca son definitivas.
+  // Siempre re-detectamos sobre la captura full-res; `esquinasIniciales`
+  // sólo pueden servir como guía provisional mientras responde DocQuad.
   useEffect(() => {
-    if (esquinasIniciales) return;
     let cancelado = false;
 
     api
