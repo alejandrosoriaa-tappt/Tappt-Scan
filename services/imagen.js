@@ -59,18 +59,6 @@ function umbralOtsu(grises) {
   return mejorUmbral;
 }
 
-/**
- * Detecta las cuatro esquinas del documento dentro de la foto.
- *
- * Es una heurística, no visión por computadora seria: separa claro/oscuro
- * con Otsu y toma los extremos de x+y y x−y sobre la región clara. Funciona
- * bien en el caso normal (papel claro sobre superficie más oscura) y se
- * cae con fondos claros o documentos oscuros — por eso la app siempre deja
- * ajustar las esquinas a mano.
- *
- * Devuelve fracciones 0-1 en orden: superior-izq, superior-der,
- * inferior-der, inferior-izq.
- */
 // Etiqueta componentes conectados (4-vecinos) del mapa binario claro/oscuro
 // y regresa el más grande — es lo que faltaba: sin esto, "todos los
 // píxeles oscuros de la foto" mezcla objetos que no tienen nada que ver
@@ -128,24 +116,53 @@ function componenteMasGrande(grises, ancho, alto, umbral, esClaro) {
   return { ...mejor, proporcion: mejor.cuenta / (ancho * alto) };
 }
 
+// ¿Se cruzan dos segmentos (a1-a2) y (b1-b2)? Orientación por producto
+// cruz — signo distinto en ambos lados de cada segmento significa que se
+// cruzan.
+function segmentosSeCruzan(a1, a2, b1, b2) {
+  const d = (p, q, r) => (q.x - p.x) * (r.y - p.y) - (q.y - p.y) * (r.x - p.x);
+  const d1 = d(b1, b2, a1);
+  const d2 = d(b1, b2, a2);
+  const d3 = d(a1, a2, b1);
+  const d4 = d(a1, a2, b2);
+  return ((d1 > 0 && d2 < 0) || (d1 < 0 && d2 > 0)) && ((d3 > 0 && d4 < 0) || (d3 < 0 && d4 > 0));
+}
+
+// Un cuadrilátero armado a partir de 4 puntos extremos sueltos (no medidos
+// como un contorno ordenado) puede salir "cruzado" — el lado de arriba se
+// cruza con el de abajo, o los lados opuestos entre sí — en vez de un
+// rectángulo simple. Revisa los dos pares de lados opuestos.
+function esquinasSeCruzan(esquinas) {
+  const [supIzq, supDer, infDer, infIzq] = esquinas;
+  return (
+    segmentosSeCruzan(supIzq, supDer, infDer, infIzq) ||
+    segmentosSeCruzan(supDer, infDer, infIzq, supIzq)
+  );
+}
+
 /**
  * Detecta las cuatro esquinas del documento dentro de la foto.
  *
- * Prueba DOS hipótesis — "el documento es la región clara" (papel sobre
- * mesa oscura, el caso típico) y "el documento es la región oscura"
- * (una tarjeta negra, una credencial oscura, sobre mesa clara) — y se
- * queda con la que da un cuadrilátero más creíble. Antes solo probaba la
- * primera, así que cualquier objeto oscuro (tarjetas bancarias, fundas
- * negras) no se recortaba nunca: la detección "no encontraba nada" y la
- * foto se guardaba completa, mesa alrededor incluida.
+ * Hipótesis principal: "el documento es la región clara" (papel sobre
+ * mesa oscura) — es el caso mayoritario y el que está probado desde el
+ * principio. Solo si esa hipótesis NO encuentra nada válido, se prueba
+ * "el documento es la región oscura" (una tarjeta negra, una credencial,
+ * sobre mesa clara) como respaldo.
  *
- * `soloClaro` fuerza la hipótesis vieja (conservadora) nada más. Se usa en
- * el camino automático (WhatsApp/importar, sin pantalla de ajuste): ahí un
- * cuadrilátero mal armado por ruido/artefactos JPEG se guarda directo, sin
- * que nadie lo vea antes ni pueda corregirlo — probado en producción y
- * salió una foto irreconocible (2026-08-13). En la cámara de la app SÍ hay
+ * Nunca se comparan las dos a la vez para quedarse con "la más chica":
+ * se probó (2026-08-13) y falla en el caso más común — un papel normal
+ * casi siempre tiene texto/tablas/códigos de barras impresos, que forman
+ * su propio componente oscuro más chico que el papel. Comparando por
+ * tamaño, ese contenido interno le ganaba al papel completo, y el marco
+ * salía encogido alrededor del texto en vez de todo el documento.
+ *
+ * `soloClaro` fuerza la hipótesis clara nada más, sin respaldo oscuro.
+ * Se usa en el camino automático (WhatsApp/importar, sin pantalla de
+ * ajuste): ahí un cuadrilátero mal armado se guarda directo, sin que
+ * nadie lo vea antes ni pueda corregirlo — probado en producción y salió
+ * una foto irreconocible (2026-08-13). En la cámara de la app SÍ hay
  * pantalla de ajuste con las esquinas visibles, así que ahí puede
- * arriesgar con las dos hipótesis.
+ * arriesgar con el respaldo oscuro.
  */
 async function detectarDocumento(buffer, soloClaro = false) {
   const imagen = await cargar(buffer);
@@ -166,22 +183,13 @@ async function detectarDocumento(buffer, soloClaro = false) {
     confiable: false,
   };
 
-  const candidatos = (soloClaro ? [true] : [true, false])
-    .map((esClaro) => componenteMasGrande(grises, ancho, alto, umbral, esClaro))
-    // Igual que antes: si el componente ocupa casi todo o casi nada, no aporta.
-    .filter((c) => c.supIzq && c.proporcion >= 0.15 && c.proporcion <= 0.97);
+  const aValido = (c) => c.supIzq && c.proporcion >= 0.15 && c.proporcion <= 0.97;
 
-  if (!candidatos.length) return marcoCompleto;
-
-  // Entre las dos hipótesis válidas, se prefiere el componente MÁS CHICO
-  // de los dos. Ahora que cada candidato es un solo componente conectado
-  // (no una mezcla de objetos distintos, ver `componenteMasGrande`), esto
-  // vuelve a tener sentido: el fondo (mesa, superficie) casi siempre es
-  // el componente más grande de la foto — preferirlo llevaría a "detectar
-  // el fondo" en vez del objeto que el usuario está encuadrando. El
-  // objeto de interés (documento, tarjeta) normalmente es más chico que
-  // la superficie sobre la que está.
-  const elegido = candidatos.sort((a, b) => a.proporcion - b.proporcion)[0];
+  let elegido = componenteMasGrande(grises, ancho, alto, umbral, true);
+  if (!aValido(elegido) && !soloClaro) {
+    elegido = componenteMasGrande(grises, ancho, alto, umbral, false);
+  }
+  if (!aValido(elegido)) return marcoCompleto;
 
   const aFraccion = (p) => ({ x: p.x / ancho, y: p.y / alto });
   const esquinas = [
@@ -190,6 +198,15 @@ async function detectarDocumento(buffer, soloClaro = false) {
     aFraccion(elegido.infDer),
     aFraccion(elegido.infIzq),
   ];
+
+  // Los 4 extremos (x+y, x-y) asumen una forma limpia y convexa. Con brillo
+  // reflejado en una superficie (una tarjeta con glare, plástico), ruido de
+  // la cámara en vivo (la calidad se manda baja a propósito) o un borde
+  // irregular, esos 4 puntos pueden no formar un cuadrilátero simple —
+  // salen cruzados en zigzag (probado en vivo: el marco se veía como un
+  // rayo, no un rectángulo). Mostrar esa forma es peor que no mostrar
+  // nada: se descarta y se cae al marco completo sin confianza.
+  if (esquinasSeCruzan(esquinas)) return marcoCompleto;
 
   return { esquinas, confiable: area(esquinas) < 0.95 };
 }
