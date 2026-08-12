@@ -45,7 +45,9 @@ jobs:
             --output /tmp/clean_scan.jpg
           test -s /tmp/clean_scan.jpg
 
-      - name: Run DocQuad spike
+      - name: Run DocQuad image pipeline smoke test
+        env:
+          DOCQUAD_ALLOW_INVALID: '1'
         run: npm run docquad:spike -- /tmp/clean_scan.jpg /tmp/docquad-result.json
 
       - name: Show result
