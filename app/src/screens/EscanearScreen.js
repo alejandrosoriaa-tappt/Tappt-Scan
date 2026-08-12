@@ -69,7 +69,6 @@ export default function EscanearScreen({ navigation }) {
       const foto = await camara.current.capturar({
         calidad: 0.5,
         maxAncho: ANCHO_DETECCION,
-        rapido: true,
       });
       if (!foto) return;
 
