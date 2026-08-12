@@ -18,6 +18,21 @@ router.post('/detectar-bordes', requireAuth, async (req, res) => {
     const { imagen } = req.body;
     if (!imagen) return res.status(400).json({ error: 'falta_imagen' });
 
+    const estado = docquad.estadoDetector();
+    if (!estado.listo) {
+      // No bloquear el request de cámara mientras ORT descarga/carga el
+      // modelo. Si se hiciera aquí, el proxy de Railway puede cortar la
+      // conexión y mostrar 502. Disparamos/reintentamos el warm-up y la UI
+      // permanece en BUSCANDO hasta que el siguiente frame encuentre listo.
+      docquad.prepararDetector().catch(() => {});
+      return res.json({
+        esquinas: null,
+        confiable: false,
+        fuente: 'docquad',
+        razon: estado.error ? 'MODEL_RETRYING' : 'MODEL_WARMING',
+      });
+    }
+
     const limpio = imagen.replace(/^data:[^;]+;base64,/, '');
     const buffer = Buffer.from(limpio, 'base64');
     if (!buffer.length) return res.status(400).json({ error: 'imagen_vacia' });
@@ -26,7 +41,6 @@ router.post('/detectar-bordes', requireAuth, async (req, res) => {
     res.json(resultado);
   } catch (err) {
     console.error('[docquad] error detectando bordes', err);
-    // Falla segura: no inventar esquinas y no bloquear la captura manual.
     res.json({
       esquinas: null,
       confiable: false,
