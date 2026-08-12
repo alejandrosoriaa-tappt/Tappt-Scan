@@ -436,6 +436,22 @@ cámara de la app, donde SÍ hay vista previa antes de guardar — la
 lección: nada que se aplique sin que el usuario lo vea primero puede
 arriesgar tanto.
 
+**🐛 Segunda regresión, misma tanda: el encuadre en vivo marcaba
+"listo" sobre el objeto equivocado.** Probado por el usuario con la
+tarjeta Inbursa y otro objeto oscuro (una funda) en el mismo cuadro: el
+marco verde se dibujaba sobre la funda del fondo, no la tarjeta. Causa
+real: `extremosDeRegion()` tomaba los píxeles extremos (x+y, x-y) sobre
+**todos** los píxeles claros/oscuros de la foto entera, sin distinguir
+si eran de un mismo objeto — con dos objetos oscuros separados, las
+"esquinas" terminaban siendo una mezcla de ambos. **Arreglado**:
+`componenteMasGrande()` etiqueta componentes conectados (BFS, 4-vecinos)
+del mapa binario y trabaja sobre uno solo a la vez — el más grande de
+cada hipótesis (clara/oscura). Entre las dos hipótesis se sigue
+prefiriendo el componente más chico (el fondo/mesa casi siempre es el
+más grande de la foto). Probado con una escena sintética de dos objetos
+oscuros de tamaño distinto — antes fallaba, ahora detecta el correcto y
+descarta el decoy.
+
 **Explícitamente NO incluido en esta tanda** (para no fingir que ya
 está resuelto):
 - **Detección de obstrucciones** (dedo tapando el documento — el aviso
