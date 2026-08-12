@@ -9,6 +9,7 @@ const documentosRouter = require('./routes/documentos');
 const driveRouter = require('./routes/drive');
 const pagosRouter = require('./routes/pagos');
 const firmasRouter = require('./routes/firmas');
+const docquad = require('./services/docquad');
 
 // Guardrail de identidad: aborta si el número configurado no es el de
 // TapptScan. Evita procesar mensajes con las credenciales equivocadas
@@ -24,11 +25,6 @@ if (
   process.exit(1);
 }
 
-// Red de seguridad: sin esto, una promesa rechazada sin catch en cualquier
-// parte (p. ej. dentro de pdf.js/@napi-rs/canvas al rasterizar) tumba TODO
-// el proceso — Node mata el proceso por default desde v15 — y Railway lo
-// ve como 502 hasta que reinicia el contenedor. Logueamos para diagnosticar
-// en vez de dejar que el servidor entero se caiga por una sola request.
 process.on('unhandledRejection', (razon) => {
   console.error('[proceso] promesa rechazada sin capturar', razon);
 });
@@ -38,41 +34,38 @@ process.on('uncaughtException', (err) => {
 
 const app = express();
 
-// Los dos webhooks firmados necesitan el cuerpo CRUDO para poder verificar
-// la firma, así que van ANTES del parser JSON global.
 app.use('/api/pagos/webhook', express.raw({ type: 'application/json' }));
 app.use('/webhook', express.raw({ type: 'application/json' }));
 app.use(express.json({ limit: '25mb' }));
 
-app.get('/health', (_req, res) => res.json({ ok: true, service: 'tappt-scan' }));
+app.get('/health', (_req, res) =>
+  res.json({ ok: true, service: 'tappt-scan', docquad: docquad.estadoDetector() })
+);
 
-// Requeridas para publicar la app de Meta y la pantalla de consentimiento
-// de Google — cada vertical tiene la suya, no se reutiliza la de Tappt
-// (agenda): las prácticas de datos son distintas (Drive, WhatsApp como
-// login, Anthropic procesando documentos).
 app.use(express.static(path.join(__dirname, 'public')));
 
 app.use('/webhook', webhookRouter);
 app.use('/api/auth', authRouter);
 app.use('/api/cuenta', cuentaRouter);
-// DocQuad se monta antes de documentosRouter para apropiarse de
-// POST /detectar-bordes. El endpoint antiguo queda inaccesible como fallback
-// de código mientras validamos el motor nuevo, pero ya no participa del flujo.
 app.use('/api/documentos', docquadRouter);
 app.use('/api/documentos', documentosRouter);
 app.use('/api/drive', driveRouter);
 app.use('/api/pagos', pagosRouter);
 app.use('/api/firmas', firmasRouter);
 
-// Espejo web de la app nativa (React Native Web), para probar el
-// onboarding completo desde el navegador sin instalar nada. Va al final:
-// el build referencia rutas absolutas (/_expo/...), así que vive en la
-// raíz del dominio — las rutas de API de arriba ya se quedan con lo suyo
-// porque Express prueba las rutas en orden de registro. Ver
-// docs/DISTRIBUCION.md · Nivel 0.
 const appDist = path.join(__dirname, 'app', 'dist');
 app.use(express.static(appDist));
 app.get('*', (_req, res) => res.sendFile(path.join(appDist, 'index.html')));
 
 const port = process.env.PORT || 3000;
-app.listen(port, () => console.log(`tappt-scan escuchando en :${port}`));
+app.listen(port, () => {
+  console.log(`tappt-scan escuchando en :${port}`);
+
+  // Warm-up fuera del camino crítico HTTP. El servidor ya puede responder
+  // /health y servir la app mientras ORT/modelo se preparan. Los frames de
+  // cámara reciben MODEL_WARMING en vez de esperar hasta que Railway corte
+  // la conexión con 502.
+  docquad.prepararDetector().catch((err) => {
+    console.error('[docquad] warm-up inicial falló; se reintentará en siguiente frame', err.message);
+  });
+});
