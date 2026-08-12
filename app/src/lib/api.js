@@ -2,6 +2,104 @@ import { leerToken } from './sesion';
 
 const BASE = process.env.EXPO_PUBLIC_API_URL;
 
+function scannerDebugActivo() {
+  if (typeof window === 'undefined') return false;
+  try {
+    return new URLSearchParams(window.location.search).get('scannerDebug') === '1';
+  } catch {
+    return false;
+  }
+}
+
+function base64ABlob(base64, tipo = 'image/jpeg') {
+  const binario = atob(base64);
+  const bytes = new Uint8Array(binario.length);
+  for (let i = 0; i < binario.length; i++) bytes[i] = binario.charCodeAt(i);
+  return new Blob([bytes], { type: tipo });
+}
+
+async function compartirFixtureScanner() {
+  const fixture = typeof window !== 'undefined' ? window.__tapptscanFixture : null;
+  if (!fixture?.imagen) return;
+
+  const sello = fixture.fecha.replace(/[:.]/g, '-');
+  const imagenBlob = base64ABlob(fixture.imagen);
+  const jsonBlob = new Blob(
+    [
+      JSON.stringify(
+        {
+          fecha: fixture.fecha,
+          resultado: fixture.resultado,
+        },
+        null,
+        2
+      ),
+    ],
+    { type: 'application/json' }
+  );
+
+  const imagenFile = new File([imagenBlob], `tapptscan-fixture-${sello}.jpg`, {
+    type: 'image/jpeg',
+  });
+  const jsonFile = new File([jsonBlob], `tapptscan-fixture-${sello}.json`, {
+    type: 'application/json',
+  });
+
+  if (navigator.share && (!navigator.canShare || navigator.canShare({ files: [imagenFile, jsonFile] }))) {
+    await navigator.share({
+      title: 'TapptScan scanner fixture',
+      text: 'Frame exacto enviado al detector + diagnostico JSON',
+      files: [imagenFile, jsonFile],
+    });
+    return;
+  }
+
+  for (const archivo of [imagenFile, jsonFile]) {
+    const url = URL.createObjectURL(archivo);
+    const enlace = document.createElement('a');
+    enlace.href = url;
+    enlace.download = archivo.name;
+    enlace.click();
+    setTimeout(() => URL.revokeObjectURL(url), 2000);
+  }
+}
+
+function guardarFixtureScanner(imagen, resultado) {
+  if (!scannerDebugActivo() || typeof document === 'undefined') return;
+
+  window.__tapptscanFixture = {
+    fecha: new Date().toISOString(),
+    imagen,
+    resultado,
+  };
+
+  let boton = document.getElementById('tapptscan-scanner-fixture');
+  if (boton) return;
+
+  boton = document.createElement('button');
+  boton.id = 'tapptscan-scanner-fixture';
+  boton.type = 'button';
+  boton.textContent = 'Compartir fixture';
+  boton.style.position = 'fixed';
+  boton.style.left = '16px';
+  boton.style.bottom = '150px';
+  boton.style.zIndex = '2147483647';
+  boton.style.border = '1px solid rgba(124,245,192,.8)';
+  boton.style.borderRadius = '999px';
+  boton.style.padding = '10px 14px';
+  boton.style.background = 'rgba(0,0,0,.82)';
+  boton.style.color = '#7CF5C0';
+  boton.style.font = '600 12px -apple-system, BlinkMacSystemFont, sans-serif';
+  boton.style.boxShadow = '0 2px 12px rgba(0,0,0,.25)';
+  boton.addEventListener('click', () => {
+    compartirFixtureScanner().catch((err) => {
+      console.error('[scanner-debug] no se pudo compartir fixture', err);
+      alert(`No se pudo compartir fixture: ${err?.message || err}`);
+    });
+  });
+  document.body.appendChild(boton);
+}
+
 // Toda llamada al backend va firmada con el token de TapptScan.
 async function request(ruta, opciones = {}) {
   const token = await leerToken();
@@ -46,11 +144,14 @@ export const api = {
       method: 'POST',
       body: JSON.stringify({ imagen, filtro }),
     }),
-  detectarBordes: (imagen) =>
-    request('/api/documentos/detectar-bordes', {
+  detectarBordes: async (imagen) => {
+    const resultado = await request('/api/documentos/detectar-bordes', {
       method: 'POST',
       body: JSON.stringify({ imagen }),
-    }),
+    });
+    guardarFixtureScanner(imagen, resultado);
+    return resultado;
+  },
   firmaDesdeFoto: (imagen, color) =>
     request('/api/documentos/firma-desde-foto', {
       method: 'POST',
