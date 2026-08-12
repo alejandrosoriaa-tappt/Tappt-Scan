@@ -33,8 +33,13 @@ async function procesarArchivo(usuario, buffer, mimeType = 'image/jpeg', nombreO
   // estética es preferible a cortar información del documento.
   if (!entradaEsPdf) {
     try {
-      const { esquinas, confiable, razon } = await docquad.detectarDocumento(buffer);
-      if (confiable && esquinas?.length === 4) {
+      const { esquinas, confiable, razon, diagnostico } = await docquad.detectarDocumento(buffer);
+      // Una imagen ya corregida por RecorteScreen normalmente ocupa casi todo
+      // el frame. No volver a proyectarla: una segunda homografía sólo puede
+      // degradar nitidez o recortar bordes. En WhatsApp una foto encuadrada de
+      // cerca tampoco necesita corrección adicional.
+      const necesitaPerspectiva = (diagnostico?.area ?? 0) < 0.90;
+      if (confiable && esquinas?.length === 4 && necesitaPerspectiva) {
         buffer = await imagen.corregirPerspectiva(buffer, esquinas);
         // corregirPerspectiva siempre devuelve JPEG sin importar el formato
         // de entrada; reflejarlo evita declarar un media type incorrecto.
