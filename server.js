@@ -38,9 +38,16 @@ app.use('/api/pagos/webhook', express.raw({ type: 'application/json' }));
 app.use('/webhook', express.raw({ type: 'application/json' }));
 app.use(express.json({ limit: '25mb' }));
 
-app.get('/health', (_req, res) =>
-  res.json({ ok: true, service: 'tappt-scan', scanner: scanner.estadoDetector() })
-);
+app.get('/health', (_req, res) => {
+  const estado = scanner.estadoDetector();
+  res.json({
+    ok: true,
+    service: 'tappt-scan',
+    // `docquad` se conserva por compatibilidad con cualquier monitor previo.
+    docquad: estado,
+    scanner: estado,
+  });
+});
 
 app.use(express.static(path.join(__dirname, 'public')));
 
