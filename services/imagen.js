@@ -59,63 +59,6 @@ function umbralOtsu(grises) {
   return mejorUmbral;
 }
 
-// Etiqueta componentes conectados (4-vecinos) del mapa binario claro/oscuro
-// y regresa el más grande — es lo que faltaba: sin esto, "todos los
-// píxeles oscuros de la foto" mezcla objetos que no tienen nada que ver
-// entre sí (una tarjeta Y una funda oscura en el mismo cuadro), y las
-// esquinas terminan siendo el promedio de dos cosas distintas en vez de
-// las de un solo objeto real. Probado en producción (2026-08-13): el
-// encuadre en vivo marcó "listo" sobre una funda al fondo, no la tarjeta.
-function componenteMasGrande(grises, ancho, alto, umbral, esClaro) {
-  const visitado = new Uint8Array(ancho * alto);
-  const enRegion = (i) => (esClaro ? grises[i] > umbral : grises[i] <= umbral);
-
-  let mejor = null;
-
-  for (let inicio = 0; inicio < ancho * alto; inicio++) {
-    if (visitado[inicio] || !enRegion(inicio)) continue;
-
-    // BFS con pila explícita (no recursión — un componente puede cubrir
-    // decenas de miles de píxeles y desbordaría la pila de llamadas).
-    const pila = [inicio];
-    visitado[inicio] = 1;
-    let cuenta = 0;
-    let minSuma = Infinity;
-    let maxSuma = -Infinity;
-    let minResta = Infinity;
-    let maxResta = -Infinity;
-    let supIzq = null;
-    let infDer = null;
-    let supDer = null;
-    let infIzq = null;
-
-    while (pila.length) {
-      const i = pila.pop();
-      const x = i % ancho;
-      const y = (i / ancho) | 0;
-      cuenta++;
-
-      const suma = x + y;
-      const resta = x - y;
-      if (suma < minSuma) (minSuma = suma), (supIzq = { x, y });
-      if (suma > maxSuma) (maxSuma = suma), (infDer = { x, y });
-      if (resta > maxResta) (maxResta = resta), (supDer = { x, y });
-      if (resta < minResta) (minResta = resta), (infIzq = { x, y });
-
-      if (x > 0 && !visitado[i - 1] && enRegion(i - 1)) (visitado[i - 1] = 1), pila.push(i - 1);
-      if (x < ancho - 1 && !visitado[i + 1] && enRegion(i + 1)) (visitado[i + 1] = 1), pila.push(i + 1);
-      if (y > 0 && !visitado[i - ancho] && enRegion(i - ancho)) (visitado[i - ancho] = 1), pila.push(i - ancho);
-      if (y < alto - 1 && !visitado[i + ancho] && enRegion(i + ancho))
-        (visitado[i + ancho] = 1), pila.push(i + ancho);
-    }
-
-    if (!mejor || cuenta > mejor.cuenta) mejor = { supIzq, supDer, infDer, infIzq, cuenta };
-  }
-
-  if (!mejor) return { supIzq: null, proporcion: 0 };
-  return { ...mejor, proporcion: mejor.cuenta / (ancho * alto) };
-}
-
 // ¿Se cruzan dos segmentos (a1-a2) y (b1-b2)? Orientación por producto
 // cruz — signo distinto en ambos lados de cada segmento significa que se
 // cruzan.
@@ -142,29 +85,30 @@ function esquinasSeCruzan(esquinas) {
 
 /**
  * Detecta las cuatro esquinas del documento dentro de la foto.
+ * Es una heurística, no visión por computadora seria: separa claro/oscuro
+ * con Otsu y toma los extremos de x+y y x−y sobre la región clara. Funciona
+ * bien en el caso normal (papel claro sobre superficie más oscura) y se
+ * cae con fondos claros o documentos oscuros — por eso la app siempre deja
+ * ajustar las esquinas a mano.
  *
- * Hipótesis principal: "el documento es la región clara" (papel sobre
- * mesa oscura) — es el caso mayoritario y el que está probado desde el
- * principio. Solo si esa hipótesis NO encuentra nada válido, se prueba
- * "el documento es la región oscura" (una tarjeta negra, una credencial,
- * sobre mesa clara) como respaldo.
+ * Este archivo tuvo, en una sola sesión (2026-08-13), tres intentos de
+ * extenderlo a objetos oscuros (tarjetas, credenciales) — dos hipótesis
+ * compitiendo, componentes conectados, prioridad clara-primero — y los
+ * tres fallaron en producción con fotos reales (agarraba un objeto
+ * decoy, encogía el marco alrededor de texto impreso, salía un
+ * cuadrilátero en zigzag). Se revirtió a esta versión simple, la única
+ * que demostró ser confiable. Detectar objetos oscuros con esta técnica
+ * (umbral global + extremos) necesita algo mejor que parchear el mismo
+ * heurístico otra vez — visión por computadora real, no otro ajuste
+ * aquí. Mientras tanto, un objeto oscuro simplemente no se detecta
+ * automático y el usuario ajusta las esquinas a mano — eso ya
+ * funcionaba y sigue funcionando.
  *
- * Nunca se comparan las dos a la vez para quedarse con "la más chica":
- * se probó (2026-08-13) y falla en el caso más común — un papel normal
- * casi siempre tiene texto/tablas/códigos de barras impresos, que forman
- * su propio componente oscuro más chico que el papel. Comparando por
- * tamaño, ese contenido interno le ganaba al papel completo, y el marco
- * salía encogido alrededor del texto en vez de todo el documento.
- *
- * `soloClaro` fuerza la hipótesis clara nada más, sin respaldo oscuro.
- * Se usa en el camino automático (WhatsApp/importar, sin pantalla de
- * ajuste): ahí un cuadrilátero mal armado se guarda directo, sin que
- * nadie lo vea antes ni pueda corregirlo — probado en producción y salió
- * una foto irreconocible (2026-08-13). En la cámara de la app SÍ hay
- * pantalla de ajuste con las esquinas visibles, así que ahí puede
- * arriesgar con el respaldo oscuro.
+ * El segundo parámetro (`soloClaro`) ya no cambia nada — se deja en la
+ * firma para no romper a quien la llama (`procesarDocumento.js` la pasa
+ * como `true`), pero esta función siempre se comportó así.
  */
-async function detectarDocumento(buffer, soloClaro = false) {
+async function detectarDocumento(buffer, _soloClaro = true) {
   const imagen = await cargar(buffer);
   const escala = ANCHO_ANALISIS / imagen.width;
   const ancho = Math.max(1, Math.round(imagen.width * escala));
@@ -183,21 +127,38 @@ async function detectarDocumento(buffer, soloClaro = false) {
     confiable: false,
   };
 
-  const aValido = (c) => c.supIzq && c.proporcion >= 0.15 && c.proporcion <= 0.97;
+  let minSuma = Infinity;
+  let maxSuma = -Infinity;
+  let minResta = Infinity;
+  let maxResta = -Infinity;
+  let supIzq = null;
+  let infDer = null;
+  let supDer = null;
+  let infIzq = null;
+  let claros = 0;
 
-  let elegido = componenteMasGrande(grises, ancho, alto, umbral, true);
-  if (!aValido(elegido) && !soloClaro) {
-    elegido = componenteMasGrande(grises, ancho, alto, umbral, false);
+  for (let y = 0; y < alto; y++) {
+    for (let x = 0; x < ancho; x++) {
+      if (grises[y * ancho + x] <= umbral) continue;
+      claros++;
+
+      const suma = x + y;
+      const resta = x - y;
+
+      if (suma < minSuma) (minSuma = suma), (supIzq = { x, y });
+      if (suma > maxSuma) (maxSuma = suma), (infDer = { x, y });
+      if (resta > maxResta) (maxResta = resta), (supDer = { x, y });
+      if (resta < minResta) (minResta = resta), (infIzq = { x, y });
+    }
   }
-  if (!aValido(elegido)) return marcoCompleto;
+
+  // Si el documento ocupa casi todo o casi nada, la detección no aporta:
+  // mejor devolver la imagen completa que un recorte inventado.
+  const proporcion = claros / (ancho * alto);
+  if (!supIzq || proporcion < 0.15 || proporcion > 0.97) return marcoCompleto;
 
   const aFraccion = (p) => ({ x: p.x / ancho, y: p.y / alto });
-  const esquinas = [
-    aFraccion(elegido.supIzq),
-    aFraccion(elegido.supDer),
-    aFraccion(elegido.infDer),
-    aFraccion(elegido.infIzq),
-  ];
+  const esquinas = [aFraccion(supIzq), aFraccion(supDer), aFraccion(infDer), aFraccion(infIzq)];
 
   // Los 4 extremos (x+y, x-y) asumen una forma limpia y convexa. Con brillo
   // reflejado en una superficie (una tarjeta con glare, plástico), ruido de
