@@ -55,48 +55,61 @@ function estadoDetector() {
   };
 }
 
+function normalizarEsquinas(corners) {
+  if (!Array.isArray(corners) || corners.length !== 4) return null;
+  const normalizadas = corners.map((p) => ({
+    x: Math.max(0, Math.min(1, p.x)),
+    y: Math.max(0, Math.min(1, p.y)),
+  }));
+  return normalizadas.every((p) => Number.isFinite(p.x) && Number.isFinite(p.y))
+    ? normalizadas
+    : null;
+}
+
 /**
  * Contrato de producto para cámara/WhatsApp.
  *
- * Si DocQuad no tiene evidencia suficiente, NO devuelve cuatro puntos
- * "aproximados": esquinas=null obliga a la UI a seguir en BUSCANDO y al
- * flujo sin UI a conservar la foto original. Es preferible no recortar a
- * destruir un documento por un falso positivo.
+ * Regla importante:
+ * - geometría inválida => no se devuelve quad;
+ * - geometría válida pero confianza baja => se devuelve como detección PARCIAL
+ *   (`confiable:false`) para que la cámara pueda mostrar lo que DocQuad está
+ *   proponiendo sin usarlo todavía como recorte final;
+ * - geometría válida + confianza suficiente => `confiable:true`.
+ *
+ * Esto mantiene la seguridad del guardado (solo una detección confiable se usa
+ * automáticamente) pero evita que el overlay quede completamente ciego cuando
+ * el modelo sí ve la hoja y únicamente falla un guardrail de confianza.
  */
 async function detectarDocumento(buffer) {
   const detector = await obtenerDetector();
   const resultado = await detector.detectarBuffer(buffer);
 
+  const diagnostico = {
+    area: resultado.area,
+    minConfidenceZ: resultado.minConfidenceZ,
+    mask: resultado.mask,
+    timing: resultado.timing,
+    validation: resultado.validation,
+  };
+
   if (!resultado.valid) {
+    const geometriaValida = Boolean(resultado.validation?.geometryValid);
+    const esquinas = geometriaValida ? normalizarEsquinas(resultado.corners) : null;
+
     return {
-      esquinas: null,
+      esquinas,
       confiable: false,
       fuente: 'docquad',
       razon: resultado.suspiciousReason || 'INVALID_GEOMETRY',
-      diagnostico: {
-        area: resultado.area,
-        minConfidenceZ: resultado.minConfidenceZ,
-        mask: resultado.mask,
-        timing: resultado.timing,
-      },
+      diagnostico,
     };
   }
 
-  const esquinas = resultado.corners.map((p) => ({
-    x: Math.max(0, Math.min(1, p.x)),
-    y: Math.max(0, Math.min(1, p.y)),
-  }));
-
   return {
-    esquinas,
+    esquinas: normalizarEsquinas(resultado.corners),
     confiable: true,
     fuente: 'docquad',
-    diagnostico: {
-      area: resultado.area,
-      minConfidenceZ: resultado.minConfidenceZ,
-      mask: resultado.mask,
-      timing: resultado.timing,
-    },
+    diagnostico,
   };
 }
 
