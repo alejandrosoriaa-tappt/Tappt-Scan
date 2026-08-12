@@ -420,9 +420,21 @@ ninguno.
   `POST /api/documentos/escanear` acepta el filtro elegido.
 - `RecorteScreen.js`: fila de 4 chips con miniatura real antes de
   guardar.
-- WhatsApp/importar (`procesarDocumento.js`): aplica `'color'` (auto
-  niveles leve) automáticamente — no hay pantalla ahí para elegir, así
-  que se usa el preset más conservador solo.
+
+**🐛 Regresión encontrada y revertida el mismo día.** La primera versión
+también aplicaba automáticamente el filtro `'color'` y la detección de
+dos hipótesis en el camino de WhatsApp/importar. Probado en producción
+minutos después: una foto real salió con bloques de artefactos JPEG
+amplificados, colores rotos — irreconocible. Causa: WhatsApp no tiene
+pantalla de ajuste (a diferencia de la cámara de la app), así que un
+cuadrilátero mal armado o un contraste mal estirado se guardaba directo
+sin que nadie lo viera antes. **Revertido**: `detectarDocumento(buffer,
+soloClaro)` — WhatsApp/importar siempre usa `soloClaro = true` (la
+hipótesis vieja, conservadora) y ya NO aplica ningún filtro automático.
+Los 4 filtros y la detección de dos hipótesis siguen enteros en la
+cámara de la app, donde SÍ hay vista previa antes de guardar — la
+lección: nada que se aplique sin que el usuario lo vea primero puede
+arriesgar tanto.
 
 **Explícitamente NO incluido en esta tanda** (para no fingir que ya
 está resuelto):
