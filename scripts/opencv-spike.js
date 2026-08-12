@@ -251,8 +251,11 @@ async function detectar(cv, buffer) {
   const json = JSON.stringify(result, null, 2);
   console.log(json);
   if (output) fs.writeFileSync(path.resolve(output), `${json}\n`);
-  if (!result.valid) process.exitCode = 3;
+
+  // Emscripten/OpenCV.js puede dejar handles vivos aunque ya acabó la
+  // inferencia. En un CLI/spike queremos terminar de forma determinista.
+  process.exit(result.valid ? 0 : 3);
 })().catch((err) => {
   console.error(JSON.stringify({ ok: false, error: err.message, stack: err.stack }, null, 2));
-  process.exitCode = 1;
+  process.exit(1);
 });
