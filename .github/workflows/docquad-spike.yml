@@ -35,6 +35,9 @@ jobs:
       - name: Prepare verified DocQuad model
         run: npm run docquad:model
 
+      - name: Verify runtime against MakeACopy golden input
+        run: node scripts/docquad-golden.js
+
       - name: Download public MakeACopy fixture
         run: |
           curl --fail --location --retry 3 \
