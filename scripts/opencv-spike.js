@@ -17,8 +17,6 @@ function timeout(ms, codigo) {
 async function cargarCv() {
   let cv = cvModule?.default || cvModule;
 
-  // @techstark/opencv-js documenta los tres estados posibles: Promise,
-  // módulo ya listo, o módulo Emscripten todavía esperando runtime init.
   if (cv && typeof cv.then === 'function') {
     cv = await Promise.race([cv, timeout(30_000, 'opencv_init_timeout_promise')]);
   } else if (!cv?.Mat) {
@@ -105,8 +103,9 @@ async function bufferAImageData(buffer, maxEdge = MAX_EDGE) {
 }
 
 function matPointVectorToArray(approx) {
-  const data32S = approx.data32S;
   const out = [];
+  const data32S = approx.data32S;
+  if (!data32S?.length) throw new Error(`opencv_approx_not_int:${approx.type()}`);
   for (let i = 0; i < data32S.length; i += 2) {
     out.push({ x: data32S[i], y: data32S[i + 1] });
   }
@@ -117,8 +116,13 @@ async function detectar(cv, buffer) {
   const img = await bufferAImageData(buffer);
   const src = cv.matFromImageData(img.imageData);
   const gray = new cv.Mat();
+  const blur = new cv.Mat();
+  const med = new cv.Mat();
   const threshold = new cv.Mat();
   const morph = new cv.Mat();
+  const edgesMorph = new cv.Mat();
+  const edgesDirect = new cv.Mat();
+  const edgesFixed = new cv.Mat();
   const edges = new cv.Mat();
   const hierarchy = new cv.Mat();
   const contours = new cv.MatVector();
@@ -126,41 +130,63 @@ async function detectar(cv, buffer) {
 
   try {
     cv.cvtColor(src, gray, cv.COLOR_RGBA2GRAY);
-    cv.GaussianBlur(gray, gray, new cv.Size(5, 5), 0, 0, cv.BORDER_DEFAULT);
+    cv.GaussianBlur(gray, blur, new cv.Size(5, 5), 0, 0, cv.BORDER_DEFAULT);
 
-    // No es el detector Otsu legado. El threshold es una etapa del pipeline
-    // OpenCV de MakeACopy: después siguen morfología, Canny, contornos y quad.
-    cv.threshold(gray, threshold, 0, 255, cv.THRESH_BINARY + cv.THRESH_OTSU);
+    // Rama 1: pipeline clásico de scanner (GaussianBlur -> Canny), como los
+    // repos de CamScanner/OpenCV revisados por el usuario.
+    cv.medianBlur(blur, med, 3);
+    const meanGray = cv.mean(med)[0];
+    const lowerDirect = Math.max(0, 0.67 * meanGray);
+    const upperDirect = Math.min(255, 1.33 * meanGray);
+    cv.Canny(med, edgesDirect, lowerDirect, upperDirect, 3, true);
 
+    // Un Canny fijo de respaldo evita que una imagen de alto promedio deje
+    // thresholds adaptativos demasiado altos para bordes finos del papel.
+    cv.Canny(blur, edgesFixed, 30, 100, 3, true);
+
+    // Rama 2: la ruta morfológica de MakeACopy. El threshold aquí es sólo
+    // preproceso, no el antiguo detector Otsu de TapptScan.
+    cv.threshold(blur, threshold, 0, 255, cv.THRESH_BINARY + cv.THRESH_OTSU);
     let kernelSize = Math.max(5, Math.floor(Math.min(src.cols, src.rows) / 50));
     if (kernelSize % 2 === 0) kernelSize++;
     kernel = cv.getStructuringElement(cv.MORPH_RECT, new cv.Size(kernelSize, kernelSize));
     cv.morphologyEx(threshold, morph, cv.MORPH_CLOSE, kernel);
 
-    const mean = cv.mean(gray)[0];
-    const cannyLower = Math.max(0, 0.66 * mean);
-    const cannyUpper = Math.min(255, 1.33 * mean);
-    cv.Canny(morph, edges, cannyLower, cannyUpper);
+    const meanMorph = cv.mean(blur)[0];
+    cv.Canny(
+      morph,
+      edgesMorph,
+      Math.max(0, 0.66 * meanMorph),
+      Math.min(255, 1.33 * meanMorph),
+      3,
+      true
+    );
+
+    // Best-of fusion: cualquier borde encontrado por cualquiera de las tres
+    // rutas sobrevive para findContours.
+    cv.bitwise_or(edgesDirect, edgesMorph, edges);
+    cv.bitwise_or(edges, edgesFixed, edges);
 
     cv.findContours(edges, contours, hierarchy, cv.RETR_EXTERNAL, cv.CHAIN_APPROX_SIMPLE);
 
+    const totalContours = contours.size();
     const imgArea = src.cols * src.rows;
     let bestScore = -1;
     let bestQuad = null;
     let candidatos = 0;
 
-    for (let i = 0; i < contours.size(); i++) {
+    for (let i = 0; i < totalContours; i++) {
       const contour = contours.get(i);
       try {
         const area = cv.contourArea(contour, false);
         if (area < imgArea * 0.08) continue;
 
-        const curve = new cv.Mat();
         const approx = new cv.Mat();
         try {
-          contour.convertTo(curve, cv.CV_32FC2);
-          const perimeter = cv.arcLength(curve, true);
-          cv.approxPolyDP(curve, approx, perimeter * 0.015, true);
+          // findContours ya entrega CV_32SC2; mantener ese tipo evita perder
+          // los puntos al leer data32S después de approxPolyDP.
+          const perimeter = cv.arcLength(contour, true);
+          cv.approxPolyDP(contour, approx, perimeter * 0.015, true);
           if (approx.rows !== 4 || !cv.isContourConvex(approx)) continue;
 
           const quad = ordenarPuntos(matPointVectorToArray(approx));
@@ -181,7 +207,6 @@ async function detectar(cv, buffer) {
             bestQuad = quad;
           }
         } finally {
-          curve.delete();
           approx.delete();
         }
       } finally {
@@ -200,8 +225,12 @@ async function detectar(cv, buffer) {
           srcH: img.srcH,
           scale: img.scale,
         },
-        contours: contours.size(),
+        contours: totalContours,
         candidatos,
+        thresholds: {
+          direct: [lowerDirect, upperDirect],
+          fixed: [30, 100],
+        },
       };
     }
 
@@ -225,8 +254,12 @@ async function detectar(cv, buffer) {
         srcH: img.srcH,
         scale: img.scale,
       },
-      contours: contours.size(),
+      contours: totalContours,
       candidatos,
+      thresholds: {
+        direct: [lowerDirect, upperDirect],
+        fixed: [30, 100],
+      },
       corners: normalized,
       cornersPixelsDetection: bestQuad,
       cornersPixelsOriginal: normalized.map((p) => ({ x: p.x * img.srcW, y: p.y * img.srcH })),
@@ -236,8 +269,13 @@ async function detectar(cv, buffer) {
     contours.delete();
     hierarchy.delete();
     edges.delete();
+    edgesFixed.delete();
+    edgesDirect.delete();
+    edgesMorph.delete();
     morph.delete();
     threshold.delete();
+    med.delete();
+    blur.delete();
     gray.delete();
     src.delete();
   }
