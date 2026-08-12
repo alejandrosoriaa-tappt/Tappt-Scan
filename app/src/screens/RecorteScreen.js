@@ -154,7 +154,14 @@ export default function RecorteScreen({ route, navigation }) {
       .detectarBordes(fotoBase64)
       .then((resultado) => {
         if (cancelado) return;
-        setEsquinas(resultado.esquinas);
+        // Si el detector no confía en lo que encontró, NO se usa esa región
+        // como recorte inicial — puede ser una zona chica y equivocada (una
+        // luz de fondo, un reflejo), y aplicarla igual encoge la foto real
+        // a esa región chica, dejando el documento borroso al guardar
+        // (probado: 335×410px en vez de los ~1300×1900px que captura la
+        // cámara). Sin confianza, se arranca del cuadro completo — el
+        // usuario dibuja su propio recorte si quiere uno.
+        setEsquinas(resultado.confiable ? resultado.esquinas : MARCO_COMPLETO);
         if (!resultado.confiable) {
           setAviso(t('ajustaAMano'));
         }
