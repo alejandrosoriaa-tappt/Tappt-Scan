@@ -267,6 +267,32 @@ contra fotos reales y se revirtió a propósito.
 Rama activa: **`claude/new-session-9mhtdk`**. Desarrollar, commitear y
 pushear ahí. No abrir PR salvo que se pida explícitamente.
 
+## 👉 Retomando la sesión (última: 2026-08-12)
+
+**Leer `docs/ARQUITECTURA-SCANNER.md` completo antes de tocar el
+escáner** — sobre todo "Lo primero al retomar" y el bloqueo de ONNX.
+
+Resumen de dónde quedó:
+
+- El foco es **iPhone + Web App** (Safari de referencia) y **WhatsApp**.
+  iOS/Android nativos están pospuestos hasta tener las cuentas de
+  desarrollador; no bloquean nada.
+- **Resuelto hoy:** captura a resolución completa (0.25 → 5.35 MP,
+  medido contra los 2.6 MP de CamScanner), overlay alineado con el
+  preview, salida JPEG (5.16 → 0.59 MB), y un bug que llevaba todo el
+  día en producción: los filtros guardaban a ~1% de calidad porque
+  `@napi-rs/canvas` usa escala 0-100, no 0-1.
+- **Lo que sigue sin resolverse:** el documento se guarda sin recortar
+  ni enderezar. El detector de Otsu no da el ancho — falló cuatro veces
+  contra fotos reales y se revirtió a propósito. **No volver a
+  parcharlo**; el plan es reemplazarlo por DocQuad (ONNX).
+- **Esperando del usuario:** las 6 capturas de diagnóstico (botón ⓘ en
+  la pantalla de cámara) para cerrar el Paso 0 Web con evidencia.
+- **Bloqueo técnico:** `onnxruntime-node` no se instala desde el entorno
+  de Claude (el proxy corta la descarga de binarios nativos). El modelo
+  DocQuad sí se descargó y está verificado. Ver las tres salidas
+  posibles en `ARQUITECTURA-SCANNER.md`.
+
 ## Estado / pendientes
 
 Nada se ha probado todavía contra servicios reales — falta configurar el

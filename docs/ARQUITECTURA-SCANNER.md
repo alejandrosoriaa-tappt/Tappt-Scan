@@ -328,9 +328,11 @@ el grueso del uso real.
 
 | Pieza | Estado |
 |---|---|
-| Captura a resolución completa | ✅ hecho (0.25 → 5.35 MP) |
+| Captura a resolución completa (web) | ✅ hecho (0.25 → 5.35 MP, medido) |
 | Overlay alineado con el preview | ✅ hecho |
 | Adapter de cámara (`CamaraDoc`) | ✅ hecho |
+| Panel de diagnóstico (botón ⓘ, solo web) | ✅ hecho |
+| Salida JPEG en vez de PNG | ✅ hecho (5.16 → 0.59 MB) |
 | Filtros de imagen (4 presets) | ✅ hecho, pero manuales y básicos |
 | Detección DocQuad | ❌ pendiente — hoy es Otsu, y no da el ancho |
 | Recorte + perspectiva automáticos | ❌ dependen de la detección |
@@ -339,25 +341,89 @@ el grueso del uso real.
 | One Euro smoothing | ❌ pendiente |
 | Worker | ❌ pendiente |
 
-**Pendiente conocido no listado arriba:** el pipeline guarda PNG (~5 MB
-por página ahora que las imágenes son grandes). Debe pasar a JPEG.
+### Lo primero al retomar
+
+1. **Las 6 capturas de diagnóstico** (3 Safari + 3 Chrome iOS, mismo
+   documento, misma luz). El botón ⓘ de la pantalla de cámara ya muestra
+   STREAM / TRACK / DETECTOR / CAPTURA con dimensiones, MP, KB y ms. Con
+   esos números se cierra el **Paso 0 Web con evidencia**, que es lo que
+   falta para darlo por bueno. Verificar además: nitidez real ampliando
+   texto chico (no solo comparar MP), que lo que se ve en el preview sea
+   lo que sale en la foto, y que el marco verde caiga sobre las esquinas
+   físicas del documento. Después, aparte, probar rotar el dispositivo
+   (histórico punto débil de `getUserMedia` en WebKit).
+2. **Decidir la salida del bloqueo de ONNX** (ver abajo). Recomendado:
+   `onnxruntime-web` en Node para el spike.
+3. No probar todavía como PWA instalada — WebKit tiene reportes de
+   `getUserMedia` fallando en modo standalone aunque funcione en el
+   navegador. Eso es un criterio de compatibilidad aparte, no mezclarlo
+   con la calidad del scanner.
+
+### Estado honesto del escáner
+
+La **materia prima** ya está resuelta: capturamos 5.35 MP (más que los
+2.6 MP de CamScanner) y pesa 0.59 MB. Lo que falta es **procesamiento**:
+hoy el documento se guarda sin recortar ni enderezar, porque el detector
+de Otsu no da confianza y cae al cuadro completo. Ese es exactamente el
+hueco de DocQuad, y es el siguiente trabajo real.
 
 ## Orden de trabajo acordado
 
+**Alcance temporal (2026-08-12):** hasta tener las cuentas de
+desarrollador de Apple y Google, el laboratorio es **iPhone + Web App
+(Safari de referencia, Chrome como compatibilidad) y WhatsApp/Node**.
+React Native nativo se pospone — no bloquea nada del scanner.
+
+Nota: Chrome en iOS **no** es Blink, corre sobre WKWebView/WebKit. Si
+algo falla igual en Safari y en Chrome iOS, el problema es WebKit o
+nuestro código, no "Chrome vs Safari". No optimizar los dos por
+separado sin evidencia de que difieren.
+
 | # | Paso | Estado |
 |---|---|---|
-| 0 | Captura full-res + overlay alineado | ✅ hecho |
-| 1 | PNG → JPEG (urgente: ~5 MB por página) | ⬜ |
-| 1.5 | **Spike DocQuad**: el `.ort` enciende en Node, Web y RN | ⬜ |
+| 0 | Captura full-res + overlay alineado | ✅ web / ⚠️ nativo sin medir |
+| 1 | PNG → JPEG | ✅ hecho (5.16 MB → 0.59 MB) |
+| 1.5 | **Spike DocQuad**: el `.ort` enciende en Node y Web | 🔴 bloqueado |
 | 1.6 | `scanner-fixtures/` — 20 fotos con ground truth | ⬜ |
-| 2 | DocQuad en **Node** (cubre WhatsApp, la entrada principal) | ⬜ |
-| 3 | DocQuad en **Web + React Native** (live loop) | ⬜ |
+| 2 | DocQuad en **Node** (cubre WhatsApp Y la web app) | ⬜ |
+| 3 | DocQuad en `onnxruntime-web` (quitar latencia del live loop) | ⬜ |
 | 4 | AutoCaptureGate + quality gates | ⬜ |
 | 5 | Perspectiva + realce automático (`ImageProcessor`) | ⬜ |
 | 6 | One Euro + Worker (pulido de sensación) | ⬜ |
 | 7 | Benchmark de 300–500 fotos contra CamScanner | ⬜ |
+| — | DocQuad / AutoCapture / ImageProcessor en React Native | ⏸ hasta cuentas de tiendas |
+
+**Hallazgo que simplifica el orden:** la web app ya pide la detección al
+servidor (`POST /api/documentos/detectar-bordes`, cada 1.4 s). Poner
+DocQuad en el backend con `onnxruntime-node` arregla **WhatsApp y la web
+app de un solo golpe**, sin necesitar `onnxruntime-web` todavía. Ese
+queda como optimización de latencia, no como requisito.
 
 Los pasos **1.5 y 1.6 van antes de tocar el producto**: primero
-comprobar que el motor enciende en los tres runtimes y que tenemos con
-qué medir. Construir DocQuad encima sin eso es repetir el error de
-depender de "se ve mejor en mi teléfono".
+comprobar que el motor enciende y que tenemos con qué medir. Construir
+DocQuad encima sin eso es repetir el error de depender de "se ve mejor
+en mi teléfono".
+
+### 🔴 Bloqueo activo del paso 1.5
+
+`onnxruntime-node` **no se instala desde el entorno de desarrollo de
+Claude**: su `postinstall` descarga los binarios nativos de ONNX Runtime
+desde un CDN externo y el proxy corta la conexión (`ECONNRESET`,
+reproducido dos veces con `--foreground-scripts`).
+
+El modelo **sí se pudo descargar** y está verificado: 13.4 MB, formato
+ORT (flatbuffer, identificador `ORTM` en los bytes 4-8), desde
+`raw.githubusercontent.com/egdels/makeacopy/main/app/src/main/assets/docquad/docquadnet256_trained_opset17.ort`.
+Es formato ORT, **no** ONNX protobuf — hay que confirmar que el runtime
+elegido lo cargue.
+
+Tres salidas posibles, a decidir al retomar:
+1. Instalar `onnxruntime-node` desde una máquina con salida libre y
+   commitear el `package-lock.json`. Railway sí tiene red, así que en el
+   deploy bajaría los binarios sin problema.
+2. **Usar `onnxruntime-web` (WASM) dentro de Node** para el spike: se
+   instala sin binarios nativos, desbloquea la validación de modelo,
+   tensores, letterbox y postprocesador hoy mismo. Si el rendimiento no
+   alcanza en producción se cambia el adapter — `OrtRuntime` existe
+   justamente para eso. **Opción recomendada.**
+3. Pedir que el proxy permita ese CDN.
