@@ -29,6 +29,15 @@ router.get('/', (req, res) => {
  * mensajes de un número ya registrado: gastarle sus escaneos, o provocar que
  * le mandemos links de pago.
  */
+// La misma URL para cualquiera: no distingue si quien la abre trae la app
+// nativa instalada o no — siempre es la web app (Railway sirve el mismo
+// build de React Native Web), así que abre en cualquier navegador, en
+// cualquier dispositivo. Si RAILWAY_PUBLIC_DOMAIN no está configurado en
+// el servicio de Railway, no hay URL que mandar.
+function appUrlPublica() {
+  return process.env.RAILWAY_PUBLIC_DOMAIN ? `https://${process.env.RAILWAY_PUBLIC_DOMAIN}` : null;
+}
+
 function firmaValida(req) {
   const secreto = process.env.WHATSAPP_APP_SECRET;
   if (!secreto) return true; // sin secreto configurado no se puede verificar
@@ -160,12 +169,17 @@ async function recibirArchivo(from, medio, mimePorDefecto) {
     medio.filename || null
   );
 
+  const appUrl = appUrlPublica();
+
   await whatsapp.sendButtons(
     from,
     t(idioma, 'guardado', {
       archivo: nombreArchivo,
       ruta,
       paginas: paginas > 1 ? t(idioma, 'paginas', { n: paginas }) : '',
+      // Si no hay dominio público configurado en Railway, no se inventa un
+      // link roto — se omite la línea completa en vez de mandarla vacía.
+      editar: appUrl ? t(idioma, 'guardadoEditar', { appUrl }) : '',
     }),
     [
       { id: 'ok', title: t(idioma, 'botonGuardar') },
@@ -275,9 +289,7 @@ async function handleButton(from, interactive) {
       .limit(1)
       .maybeSingle();
 
-    const appUrl = process.env.RAILWAY_PUBLIC_DOMAIN
-      ? `https://${process.env.RAILWAY_PUBLIC_DOMAIN}`
-      : null;
+    const appUrl = appUrlPublica();
 
     await whatsapp.sendText(
       from,
