@@ -363,7 +363,7 @@ sincronización en tiempo real (WebSocket o polling) entre las dos
 sesiones. Explícitamente **para después de terminar el rediseño
 completo** — no priorizarlo antes sin que el usuario lo pida.
 
-## Idea guardada: vista de mosaico + manejo de páginas de un PDF
+## ✅ Vista de mosaico + manejo de páginas de un PDF — hecho (2026-08-12)
 
 Propuesta del usuario (2026-08-11), benchmark directo de CamScanner:
 cuando un documento (escaneado o importado) tiene varias páginas, dar
@@ -398,9 +398,17 @@ Encaja con el trabajo de versionado recién hecho: "eliminar página X"
 también debería quedar como una versión nueva en `scan_versiones`, no
 pisar el original.
 
-**Explícitamente pausado** — el usuario pidió guardarlo en memoria y
-seguir con lo que estaba en curso (firma, versiones, 502) antes de
-construir esto.
+**Implementado 2026-08-12.** Botón "Vista mosaico" en `EditorScreen.js`
+(visible cuando el documento tiene más de una página) abre
+`components/VistaMosaico.js`: cuadrícula de miniaturas, zoom con
+navegación ‹›, y modo selección con "Compartir (n)" / "Eliminar (n)".
+Backend: `pdf.copiarPaginas()` en `services/pdf.js` arma un PDF nuevo a
+partir de índices (usa `pdf-lib`), con dos rutas nuevas en
+`routes/documentos.js`: `POST /:id/paginas/eliminar` (registra la
+versión resultante en `scan_versiones`, el original nunca se toca) y
+`POST /:id/paginas/compartir` (arma un PDF aparte solo con las páginas
+elegidas, no se registra como versión). Se agregó el ícono `mosaico`
+(cuadrícula 2×2) al set propio en `Icono.js`.
 
 ## Estado — segunda pasada, misma noche (2026-08-11, tarde)
 
@@ -460,12 +468,31 @@ editor → firma de punta a punta.
    `scan_versiones` en Supabase (ver `scan_schema.sql`) — sin eso el
    guardado en el editor sigue funcionando pero el historial no
    aparecerá.
-3. Pendiente sin relación al diseño: el número de WhatsApp
+3. **✅ Pulido de firma** — hecho 2026-08-12: deshacer trazo a trazo
+   (web y nativo), aviso al dar "Listo" con el lienzo vacío, y color
+   elegible al importar una firma de una foto (antes forzaba azul).
+4. **✅ Estados explícitos de "Procesamiento IA"** — hecho 2026-08-12:
+   `RecorteScreen.js` ahora muestra una capa a pantalla completa que
+   avanza "Subiendo a tu Drive" → "Enderezando el documento" →
+   "Clasificando con IA" al guardar, en vez de un spinner mudo.
+5. **✅ Onboarding** — hecho 2026-08-12: se corrigió el último chip con
+   paleta clara heredada (`OnboardingScreen.js`, ícono de Drive).
+   `LoginScreen.js` ya estaba limpio.
+6. **✅ Vista mosaico + manejo de páginas** — hecho 2026-08-12 (detalle
+   arriba, sección propia).
+7. Pendiente sin relación al diseño: el número de WhatsApp
    (`+52 1 56 4417 0712`) seguía registrado en dos WABAs de Meta a la
    vez la última vez que se confirmó — el login por WhatsApp falla al
    azar mientras no se quite de la WABA `Tappt` (la vieja) desde la Mac
    del usuario. Confirmado 2026-08-11: el login funcionó una vez y
    falló (expiró) otra, consistente con mensajes cayendo a veces en el
    webhook equivocado.
-4. Idea guardada para **después** del rediseño completo: cámara
+8. Idea guardada para **después** del rediseño completo: cámara
    continua celular↔web por QR (ver sección arriba).
+9. **Pendiente real que queda del brief:** pantalla dedicada de
+   "Versiones" (hoy vive como sección dentro de `DocumentoScreen`, el
+   brief sugería su propia pantalla) — es lo único de pulido visual que
+   sigue abierto. Todo lo demás del brief ejecutivo ya está construido;
+   falta la verificación de punta a punta en un dispositivo real
+   (cámara → recorte → editor → firma → mosaico) que el usuario aún no
+   ha hecho.
