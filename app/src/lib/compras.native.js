@@ -18,7 +18,7 @@ export const PRODUCTOS_IAP = {
   negocio: 'lat.tappt.scan.negocio.anual',
 };
 
-// Segundo canal de cobro (docs/DIRECCION-DISENO.md, decisión 2026-08-13):
+// Segundo canal de cobro (docs/DIRECCION-DISENO.md, decisión 2026-08-12):
 // dentro de la app nativa el pago es IAP de la tienda, nunca Stripe — Apple
 // y Google no dejan usar una pasarela externa para bienes digitales adentro
 // de la app. No existe en web: no hay tienda que cobre ahí, ese canal sigue

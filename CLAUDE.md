@@ -53,11 +53,19 @@ organizar) se hace en la app.
 - IA: Anthropic (Claude, visión) para clasificar/extraer — `services/vision.js`.
 - Mensajería: WhatsApp Cloud API (Meta Graph v19) — `services/whatsapp.js`.
 - Almacenamiento: Google Drive del usuario vía OAuth — `services/drive.js`.
-- Pagos: **Stripe Checkout en modo suscripción anual** (planes
-  Personal/Negocio). El cobro va fuera de la app nativa para evitar la
-  comisión de las tiendas, y **la app no muestra precios** (guía 3.1.1 de
-  Apple): solo abre WhatsApp, donde vive el precio y el link. Multi-moneda
-  (mxn/usd/eur) para salir a otros países sin tocar código.
+- Pagos: **dos canales** (decisión 2026-08-12, ver `docs/DIRECCION-DISENO.md`).
+  1. **App nativa (iOS/Android): In-App Purchase de la tienda** —
+     `services/iap.js`, `POST /api/pagos/iap/verificar`,
+     `app/src/lib/compras.native.js`. Se acepta la comisión de 15-30% como
+     costo de negocio en vez de evadirla. La guía 3.1.1 de Apple prohíbe
+     dirigir a comprar fuera desde la app, así que ahí **no** se abre
+     WhatsApp para contratar (solo para gestionar una suscripción activa).
+     Bloqueado hasta dar de alta los productos en App Store Connect / Play
+     Console y configurar `APPLE_SHARED_SECRET` /
+     `GOOGLE_PLAY_SERVICE_ACCOUNT_JSON`.
+  2. **WhatsApp y Web App: Stripe Checkout, suscripción anual** (planes
+     Personal/Negocio) — ahí sí es válido cobrar afuera. Multi-moneda
+     (mxn/usd/eur) para salir a otros países sin tocar código.
 - Idiomas: español e inglés, en la app y en el bot (`services/i18n.js` y
   `app/src/i18n/`). El idioma del usuario vive en `scan_users.idioma`.
 
@@ -251,7 +259,7 @@ acordada de `TapptScannerCore` (core en TypeScript, DocQuad vía ONNX,
 OpenCV WASM, auto-captura, Worker), el diagnóstico medido contra
 CamScanner y el orden de trabajo. Leerlo ANTES de tocar la detección de
 bordes: el heurístico de Otsu que hay hoy en `services/imagen.js` está
-para reemplazarse, no para parcharse — falló cuatro veces el 2026-08-13
+para reemplazarse, no para parcharse — falló cuatro veces el 2026-08-12
 contra fotos reales y se revirtió a propósito.
 
 ## Rama de trabajo

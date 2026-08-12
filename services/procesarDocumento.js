@@ -34,7 +34,7 @@ async function procesarArchivo(usuario, buffer, mimeType = 'image/jpeg', nombreO
   if (!entradaEsPdf) {
     // `soloClaro`: aquí no hay pantalla de ajuste (a diferencia de la
     // cámara de la app) — nadie ve el resultado antes de que se guarde.
-    // Probado en producción (2026-08-13): la hipótesis de "documento =
+    // Probado en producción (2026-08-12): la hipótesis de "documento =
     // región oscura" combinada con una foto ya comprimida por WhatsApp
     // puede armar un cuadrilátero de ruido/artefactos JPEG en vez del
     // objeto real, y sin nadie viéndolo antes de guardar el resultado
@@ -59,7 +59,7 @@ async function procesarArchivo(usuario, buffer, mimeType = 'image/jpeg', nombreO
     }
 
     // El filtro de auto-realce se retiró de este camino automático
-    // (2026-08-13): mismo problema — sin nadie viéndolo antes de
+    // (2026-08-12): mismo problema — sin nadie viéndolo antes de
     // guardar, estirar el contraste de una foto ya comprimida por
     // WhatsApp puede exagerar artefactos JPEG en vez de mejorar la
     // imagen. Los filtros siguen disponibles y probados en la cámara de

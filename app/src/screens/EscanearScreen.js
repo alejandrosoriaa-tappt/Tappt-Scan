@@ -163,7 +163,7 @@ export default function EscanearScreen({ navigation }) {
    * tapar la pantalla y lo que sobra se recorta por los lados o por arriba
    * y abajo. Sin deshacer ese recorte, las fracciones caen en el lugar
    * equivocado — es el bug que hacía que el marco verde apareciera corrido
-   * respecto al documento (2026-08-13).
+   * respecto al documento (2026-08-12).
    */
   const aPantalla = (esquina) => {
     const escala = Math.max(pantalla.ancho / cuadro.ancho, pantalla.alto / cuadro.alto);

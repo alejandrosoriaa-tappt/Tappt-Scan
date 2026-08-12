@@ -1,13 +1,13 @@
 # Arquitectura del escáner — TapptScannerCore
 
-_Definido: 2026-08-13. Documento de plan, no de estado: describe hacia
+_Definido: 2026-08-12. Documento de plan, no de estado: describe hacia
 dónde vamos. Para lo que HAY hoy en el código, ver la sección "Estado
 real" al final y `docs/DIRECCION-DISENO.md`._
 
 ## Por qué existe este documento
 
 El escáner es "la carnita" del producto: es lo que separa a TapptScan de
-un simple subidor de fotos a Drive. Durante la sesión del 2026-08-13 se
+un simple subidor de fotos a Drive. Durante la sesión del 2026-08-12 se
 intentó cuatro veces mejorar el detector de bordes actual parchando el
 mismo heurístico, y las cuatro fallaron contra fotos reales. La
 conclusión no fue "otro parche más", sino que **la técnica actual no da
@@ -133,12 +133,36 @@ imagen → letterbox 256×256 → RGB float NCHW → ONNX Runtime
        → postproceso → TL, TR, BR, BL → validación geométrica
 ```
 
-**Dónde corre — en los dos lados, con el mismo postprocesador en TS:**
+**Dónde corre — TRES runtimes, no dos.** "Cliente" no es uno solo: React
+Native **no** corre `onnxruntime-web`. Corre JS sobre Hermes, no en un
+navegador, y necesita su propio paquete:
 
-- `onnxruntime-web` en el cliente → live loop sin latencia de red
-- `onnxruntime-node` en el backend → **obligatorio**, porque la entrada
-  principal de TapptScan es WhatsApp y ahí no hay cliente nuestro: llega
-  una foto al webhook y hay que detectar y enderezar en el servidor
+| Superficie | Runtime | Motor |
+|---|---|---|
+| Web y web móvil (react-native-web) | `onnxruntime-web` | WASM (+ WebGPU opcional) |
+| iOS / Android (Expo) | `onnxruntime-react-native` | ONNX Runtime nativo |
+| WhatsApp / backend | `onnxruntime-node` | ONNX Runtime nativo |
+
+El backend es **obligatorio**, no un respaldo: la entrada principal de
+TapptScan es WhatsApp, y ahí no hay cliente nuestro — llega una foto al
+webhook y hay que detectar y enderezar en el servidor.
+
+**Esto no rompe el principio de un solo scanner.** Lo que se comparte es
+todo menos la llamada al runtime:
+
+```
+COMPARTIDO (TypeScript, idéntico en las 3 superficies)
+  DocQuadDetector · preprocessor (letterbox, NCHW, normalización)
+  postprocessor (heatmaps → esquinas) · QuadValidator
+  QualityEngine · AutoCaptureGate · ScannerController
+
+ESPECÍFICO POR PLATAFORMA (adapter, solo carga y ejecuta el modelo)
+  OrtRuntime.web.ts · OrtRuntime.native.ts · OrtRuntime.node.ts
+```
+
+Mismo patrón `.web` / `.native` que ya usamos en `CamaraDoc`, `FirmaPad` y
+`compras`. El adapter es delgado a propósito: si la lógica se filtra
+hacia él, se nos triplica el mantenimiento.
 
 Conservar la filosofía del original: **no confiar ciegamente en la IA**.
 Validar que el cuadrilátero sea convexo, no degenerado y razonable antes
@@ -152,11 +176,28 @@ Cadena de fallback:
 4. Ajuste manual  ← el usuario SIEMPRE debe poder mover las 4 esquinas
 ```
 
-### Geometría y realce — OpenCV WASM (pendiente)
+### Geometría y realce — `ImageProcessor` (pendiente)
 
-Build reducido (`core` + `imgproc`), no OpenCV entero:
-`getPerspectiveTransform`, `warpPerspective`, CLAHE, `adaptiveThreshold`,
-`GaussianBlur`, `Laplacian`, contornos, morfología, unsharp.
+Mismo patrón adapter que `OrtRuntime`, y por la misma razón: **OpenCV.js
+se compila con Emscripten para navegador, y React Native no es un
+navegador**. Una librería hecha para browser/React DOM no es
+automáticamente compatible con Hermes.
+
+```
+ImageProcessor          ← misma API, mismo algoritmo, mismo resultado
+  ├── .web    → OpenCV.js / WASM
+  ├── .native → POR VALIDAR   ← no asumir que OpenCV.js corre aquí
+  └── .node   → OpenCV nativo o alternativa de servidor
+```
+
+La regla que sí imponemos es **misma API y mismo resultado visual**, no
+"mismo binario WASM en todos lados". Ese desacople nos evita quedar
+atrapados si en React Native hay que resolverlo distinto.
+
+Operaciones necesarias (build reducido: `core` + `imgproc`, no OpenCV
+entero): `getPerspectiveTransform`, `warpPerspective`, CLAHE,
+`adaptiveThreshold`, `GaussianBlur`, `Laplacian`, contornos, morfología,
+unsharp.
 
 Presets al usuario, sin exponer 20 controles:
 
@@ -214,6 +255,53 @@ smoothing · algoritmo de foco · pipeline OpenCV · estrategia de fallback
 README) antes de incorporar nada. Descartados: DocTr (uso comercial
 requiere contactar autores) y trudido-scanner (GPL-3.0).
 
+## Antes de integrar nada: el spike de runtime
+
+**No meter DocQuad al producto sin antes probar que el motor enciende en
+los tres ambientes.** Un spike aislado, fuera de la app, con la MISMA
+fotografía:
+
+```
+docquadnet256.ort
+    ├── NODE            ✓ carga  ✓ inferencia  ✓ outputs correctos
+    ├── WEB             ✓ carga  ✓ inferencia  ✓ outputs correctos
+    └── REACT NATIVE    ✓ carga  ✓ inferencia  ✓ outputs correctos
+```
+
+Criterio: `esquinas(Node) ≈ esquinas(Web) ≈ esquinas(Native)`. No tienen
+que ser bit-exact, pero sí geométricamente equivalentes.
+
+Eso valida de un golpe: que el `.ort` funciona en cada runtime, el tensor
+de entrada, NCHW, la normalización, el letterbox, los nombres y
+dimensiones de los outputs, el postprocesador en TS, el empaquetado del
+modelo, la memoria y el runtime de React Native. Si algo de eso falla,
+falla **antes** de haber construido el scanner encima.
+
+## `scanner-fixtures/` — medir en vez de opinar
+
+Antes de las 300–500, un set chico de **20 fotos asesinas**, cada una con
+sus `groundTruthCorners` marcadas a mano:
+
+```
+papel blanco / mesa oscura      perspectiva fuerte     luz amarilla
+papel blanco / mesa blanca      sombra diagonal        baja luz
+INE                             glare                  texto negro abundante
+tarjeta oscura                  fondo con objetos      ticket largo
+recibo térmico                  papel ocupando 90%     documento horizontal
+contrato                        papel ocupando 30%     hoja ligeramente doblada
+                                esquina fuera de cuadro
+                                foto SIN documento     ← el falso positivo importa
+```
+
+Con eso, desde el primer día de DocQuad se mide **IoU / error de esquina,
+tasa de detección, falsos positivos y latencia**.
+
+Esto existe para no volver a *"se ve mejor en mi teléfono"* — que es
+exactamente cómo se perdieron cuatro intentos el 2026-08-12. Pasamos a
+*"DocQuad acertó 18/20, error medio de esquina X px"*.
+
+Las 20 crecen después a las 300–500 de abajo.
+
 ## Criterio de "ya tenemos scanner"
 
 No comparar por cantidad de funciones. Armar un set de **300–500 fotos
@@ -236,7 +324,7 @@ modelos bastante más sofisticados. Primero resolver perfectamente papel
 plano: recibos, contratos, identificaciones, tickets, facturas — que es
 el grueso del uso real.
 
-## Estado real hoy (2026-08-13)
+## Estado real hoy (2026-08-12)
 
 | Pieza | Estado |
 |---|---|
@@ -256,11 +344,20 @@ por página ahora que las imágenes son grandes). Debe pasar a JPEG.
 
 ## Orden de trabajo acordado
 
-1. PNG → JPEG (rápido, urgente por el peso de archivo)
-2. **DocQuad** — arregla recorte, perspectiva y marco de una sola vez.
-   Empezar por `onnxruntime-node` en el backend (una implementación,
-   todas las plataformas, y cubre WhatsApp), luego `onnxruntime-web` para
-   el live loop
-3. **AutoCaptureGate** + quality gates
-4. OpenCV WASM: realce automático y refinamiento de esquinas
-5. Worker + One Euro (pulido de sensación)
+| # | Paso | Estado |
+|---|---|---|
+| 0 | Captura full-res + overlay alineado | ✅ hecho |
+| 1 | PNG → JPEG (urgente: ~5 MB por página) | ⬜ |
+| 1.5 | **Spike DocQuad**: el `.ort` enciende en Node, Web y RN | ⬜ |
+| 1.6 | `scanner-fixtures/` — 20 fotos con ground truth | ⬜ |
+| 2 | DocQuad en **Node** (cubre WhatsApp, la entrada principal) | ⬜ |
+| 3 | DocQuad en **Web + React Native** (live loop) | ⬜ |
+| 4 | AutoCaptureGate + quality gates | ⬜ |
+| 5 | Perspectiva + realce automático (`ImageProcessor`) | ⬜ |
+| 6 | One Euro + Worker (pulido de sensación) | ⬜ |
+| 7 | Benchmark de 300–500 fotos contra CamScanner | ⬜ |
+
+Los pasos **1.5 y 1.6 van antes de tocar el producto**: primero
+comprobar que el motor enciende en los tres runtimes y que tenemos con
+qué medir. Construir DocQuad encima sin eso es repetir el error de
+depender de "se ve mejor en mi teléfono".

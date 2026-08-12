@@ -7,7 +7,7 @@ import { View } from 'react-native';
  * Existe porque `CameraView` de expo-camera NO permite pedir resolución en
  * web: su `getIdealConstraints` nunca recibe width/height, así que siempre
  * cae en `{ video: true }` y el navegador entrega su default (~480p).
- * Medido el 2026-08-13: un escaneo salió de 477×530px contra 1356×1920 del
+ * Medido el 2026-08-12: un escaneo salió de 477×530px contra 1356×1920 del
  * mismo documento en CamScanner — 10× menos píxeles, y ninguna mejora de
  * procesamiento posterior puede recuperar detalle que nunca se capturó.
  *

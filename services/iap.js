@@ -2,7 +2,7 @@ const axios = require('axios');
 const { google } = require('googleapis');
 
 /**
- * Segundo canal de cobro (decisión 2026-08-13, ver docs/DIRECCION-DISENO.md):
+ * Segundo canal de cobro (decisión 2026-08-12, ver docs/DIRECCION-DISENO.md):
  * dentro de la app nativa el pago tiene que ser IAP de la tienda — Apple
  * prohíbe una pasarela externa ahí (guía 3.1.1) y Google Play tiene la
  * misma regla para bienes digitales. Stripe (`services/stripe.js`) se queda

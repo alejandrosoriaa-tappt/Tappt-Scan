@@ -8,7 +8,7 @@ Ideas del usuario, sin acción todavía — capturadas tal cual para no
 perderlas antes de la siguiente sesión.
 
 **1. Comisión de las tiendas (App Store / Play Store) — ✅ DECIDIDO
-(2026-08-13) y ✅ CÓDIGO CONSTRUIDO (2026-08-13).** Estrategia de pago
+(2026-08-12) y ✅ CÓDIGO CONSTRUIDO (2026-08-12).** Estrategia de pago
 con dos canales:
 - **App nativa (iOS/Android):** In-App Purchases de la tienda —
   aceptar la comisión (15-30%) como costo de negocio/marketing en vez
@@ -393,7 +393,7 @@ sincronización en tiempo real (WebSocket o polling) entre las dos
 sesiones. Explícitamente **para después de terminar el rediseño
 completo** — no priorizarlo antes sin que el usuario lo pida.
 
-## 🐛✅ Calidad borrosa al guardar — encontrado y arreglado (2026-08-13, después del revert)
+## 🐛✅ Calidad borrosa al guardar — encontrado y arreglado (2026-08-12, después del revert)
 
 Después de revertir el detector (sección de abajo), el usuario reportó
 que un documento normal salió borroso al guardar. Diagnosticado con
@@ -416,7 +416,7 @@ quiere uno. No se tocó el detector otra vez (ya se revirtió abajo,
 no volver a tocarlo sin CV real) — el fix fue en cómo la pantalla
 *usa* el resultado, no en el detector en sí.
 
-## Filtros de imagen — hecho. Detección para objetos oscuros — revertida (2026-08-13)
+## Filtros de imagen — hecho. Detección para objetos oscuros — revertida (2026-08-12)
 
 **⚠️ Resumen ejecutivo, léase antes que la crónica de abajo:** los 4
 filtros de imagen (Original/Gris/B&N/Mejorar) quedaron y funcionan

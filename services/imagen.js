@@ -91,7 +91,7 @@ function esquinasSeCruzan(esquinas) {
  * cae con fondos claros o documentos oscuros — por eso la app siempre deja
  * ajustar las esquinas a mano.
  *
- * Este archivo tuvo, en una sola sesión (2026-08-13), tres intentos de
+ * Este archivo tuvo, en una sola sesión (2026-08-12), tres intentos de
  * extenderlo a objetos oscuros (tarjetas, credenciales) — dos hipótesis
  * compitiendo, componentes conectados, prioridad clara-primero — y los
  * tres fallaron en producción con fotos reales (agarraba un objeto

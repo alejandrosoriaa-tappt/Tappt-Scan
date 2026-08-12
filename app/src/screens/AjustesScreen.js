@@ -30,7 +30,7 @@ export default function AjustesScreen() {
   const [comprando, setComprando] = useState(null); // 'personal' | 'negocio' | null
 
   /**
-   * Dos canales de cobro (docs/DIRECCION-DISENO.md, decisión 2026-08-13):
+   * Dos canales de cobro (docs/DIRECCION-DISENO.md, decisión 2026-08-12):
    *
    * - Adentro de la app nativa (iOS/Android): IAP de la tienda. La guía
    *   3.1.1 de Apple prohíbe un botón que dirija a comprar fuera de su
