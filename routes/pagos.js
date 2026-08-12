@@ -2,9 +2,11 @@ const express = require('express');
 const router = express.Router();
 
 const stripe = require('../services/stripe');
+const iap = require('../services/iap');
 const supabase = require('../services/supabase');
 const whatsapp = require('../services/whatsapp');
 const { t } = require('../services/i18n');
+const { requireAuth } = require('../services/auth');
 
 /**
  * Webhook de Stripe.
@@ -133,5 +135,55 @@ async function cancelacion(suscripcion) {
 
   await avisar(usuario, 'planTerminado');
 }
+
+/**
+ * Activa el plan a partir de una compra IAP ya verificada con la tienda.
+ *
+ * La app manda el recibo/token justo después de que `react-native-iap`
+ * confirma la compra. El backend es quien de verdad valida contra Apple/
+ * Google — nunca se confía en lo que diga el cliente por sí solo, o
+ * cualquiera podría mandar un plan falso con la app modificada.
+ */
+router.post('/iap/verificar', requireAuth, async (req, res) => {
+  const { plataforma, productoId, recibo, token } = req.body;
+
+  try {
+    let resultado;
+    if (plataforma === 'apple') {
+      if (!recibo) return res.status(400).json({ error: 'falta_recibo' });
+      resultado = await iap.verificarApple(recibo);
+    } else if (plataforma === 'google') {
+      if (!productoId || !token) return res.status(400).json({ error: 'falta_producto_o_token' });
+      resultado = await iap.verificarGoogle(productoId, token);
+    } else {
+      return res.status(400).json({ error: 'plataforma_no_soportada' });
+    }
+
+    const campoIdentidad =
+      plataforma === 'apple' ? 'apple_original_transaction_id' : 'google_purchase_token';
+    const valorIdentidad =
+      plataforma === 'apple' ? resultado.originalTransactionId : resultado.purchaseToken;
+
+    await supabase
+      .from('scan_users')
+      .update({ plan: resultado.plan, plan_vence: resultado.expiraEn, [campoIdentidad]: valorIdentidad })
+      .eq('id', req.usuario.id);
+
+    await supabase.from('scan_payments').insert({
+      user_id: req.usuario.id,
+      plan: resultado.plan,
+      monto: 0, // el monto real lo cobra la tienda directo; aquí solo se registra el evento
+      moneda: req.usuario.moneda || 'mxn',
+      estado: 'pagado',
+      payment_id: valorIdentidad,
+      fuente: plataforma,
+    });
+
+    res.json({ plan: resultado.plan, planVence: resultado.expiraEn });
+  } catch (err) {
+    console.error('[pagos] error verificando compra IAP', err);
+    res.status(400).json({ error: err.message });
+  }
+});
 
 module.exports = router;

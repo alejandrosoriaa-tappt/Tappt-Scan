@@ -172,6 +172,23 @@ create index if not exists idx_scan_users_stripe_sub on scan_users(stripe_subscr
 -- La pestaña de Favoritos filtraba sobre una columna que no existía.
 alter table scan_documents add column if not exists favorito boolean not null default false;
 
+-- ------------------------------------------------------- compras in-app
+-- Segundo canal de cobro (2026-08-13): dentro de la app nativa el pago
+-- tiene que ser IAP de la tienda (guía 3.1.1 de Apple / equivalente en
+-- Google Play) — Stripe se queda acotado a WhatsApp y la Web App. Cada
+-- tienda identifica la suscripción distinto (Apple por
+-- `originalTransactionId`, Google por `purchaseToken`), así que se
+-- guardan aparte de los campos de Stripe. Ver `services/iap.js`.
+alter table scan_users add column if not exists apple_original_transaction_id text;
+alter table scan_users add column if not exists google_purchase_token text;
+
+create index if not exists idx_scan_users_apple_tx on scan_users(apple_original_transaction_id);
+create index if not exists idx_scan_users_google_token on scan_users(google_purchase_token);
+
+-- `scan_payments` ya no es solo Stripe: distingue de dónde vino el cobro.
+alter table scan_payments add column if not exists fuente text not null default 'stripe'
+  check (fuente in ('stripe', 'apple', 'google'));
+
 -- Biblioteca de firmas reutilizables (agosto 2026, rediseño benchmark
 -- CamScanner): dibujar o importar una firma la deja guardada para no
 -- repetir el trazo cada vez. `datos` es el PNG completo en data URL —

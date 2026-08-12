@@ -261,6 +261,7 @@ export const TEXTOS = {
 
     hablarDePlanes: 'Hablar de planes por WhatsApp',
     gestionarSuscripcion: 'Gestionar mi suscripción',
+    suscribirseA: 'Suscribirse a {plan}',
     mensajeMiSuscripcion: 'Mi suscripción',
     renovacion: 'Renovación',
     seRenueva: 'Se renueva el {fecha}',
@@ -534,6 +535,7 @@ export const TEXTOS = {
 
     hablarDePlanes: 'Talk plans on WhatsApp',
     gestionarSuscripcion: 'Manage my subscription',
+    suscribirseA: 'Subscribe to {plan}',
     mensajeMiSuscripcion: 'My subscription',
     renovacion: 'Renewal',
     seRenueva: 'Renews on {fecha}',

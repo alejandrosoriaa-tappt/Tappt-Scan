@@ -1,12 +1,14 @@
 import React, { useState } from 'react';
-import { View, Text, ScrollView, TouchableOpacity, StyleSheet } from 'react-native';
+import { View, Text, ScrollView, TouchableOpacity, StyleSheet, ActivityIndicator, Platform } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Linking } from 'react-native';
 import Icono from '../components/Icono';
 import { useSesion } from '../context/SesionContext';
 import { useIdioma } from '../i18n';
+import { alertar } from '../lib/alerta';
 import { TEXTOS } from '../i18n/textos';
 import { colores, espacio } from '../theme';
+import { iapDisponible, comprasIAP } from '../lib/compras';
 
 const PLANES = { gratis: 'Gratis', personal: 'Personal', negocio: 'Negocio' };
 
@@ -23,20 +25,35 @@ function Fila({ etiqueta, valor, estado }) {
 }
 
 export default function AjustesScreen() {
-  const { cuenta, cerrarSesion } = useSesion();
+  const { cuenta, cerrarSesion, refrescarCuenta } = useSesion();
   const { t, idioma, setIdioma, idiomas } = useIdioma();
+  const [comprando, setComprando] = useState(null); // 'personal' | 'negocio' | null
 
   /**
-   * La app NO muestra precios ni lleva a pagar.
+   * Dos canales de cobro (docs/DIRECCION-DISENO.md, decisión 2026-08-13):
    *
-   * La guía 3.1.1 de Apple prohíbe botones que dirijan a comprar fuera de
-   * su sistema, y un precio dentro de la app es justo lo que buscan los
-   * revisores. Aquí solo se abre la conversación de WhatsApp; el precio y
-   * el cobro viven allá.
+   * - Adentro de la app nativa (iOS/Android): IAP de la tienda. La guía
+   *   3.1.1 de Apple prohíbe un botón que dirija a comprar fuera de su
+   *   sistema — por eso aquí NUNCA se abre WhatsApp para comprar un plan
+   *   nuevo, solo para gestionar uno que ya está activo.
+   * - Web App: sigue siendo Stripe vía WhatsApp — ahí sí es válido, no
+   *   hay tienda de por medio.
    */
   const abrirWhatsapp = (mensaje) => {
     const numero = cuenta?.numeroTapptScan || '';
     Linking.openURL(`https://wa.me/${numero}?text=${encodeURIComponent(mensaje)}`);
+  };
+
+  const comprarPlan = async (plan) => {
+    setComprando(plan);
+    try {
+      await comprasIAP.comprarPlan(plan);
+      await refrescarCuenta();
+    } catch (err) {
+      if (err.message !== 'E_USER_CANCELLED') alertar(t('noSePudo'), err.message);
+    } finally {
+      setComprando(null);
+    }
   };
 
   if (!cuenta) return <SafeAreaView style={estilos.pantalla} />;
@@ -101,16 +118,36 @@ export default function AjustesScreen() {
           />
         </View>
 
-        <TouchableOpacity
-          style={estilos.botonWhatsapp}
-          onPress={() => abrirWhatsapp(t(cuenta.plan === 'gratis' ? 'mensajeQuieroMas' : 'mensajeMiSuscripcion'))}
-          activeOpacity={0.85}
-        >
-          <Icono nombre="whatsapp" tamano={19} color={colores.primario} />
-          <Text style={estilos.botonWhatsappTexto}>
-            {t(cuenta.plan === 'gratis' ? 'hablarDePlanes' : 'gestionarSuscripcion')}
-          </Text>
-        </TouchableOpacity>
+        {iapDisponible && cuenta.plan === 'gratis' ? (
+          <View style={estilos.planesIAP}>
+            {['personal', 'negocio'].map((plan) => (
+              <TouchableOpacity
+                key={plan}
+                style={estilos.botonPlanIAP}
+                onPress={() => comprarPlan(plan)}
+                disabled={Boolean(comprando)}
+                activeOpacity={0.85}
+              >
+                {comprando === plan ? (
+                  <ActivityIndicator color={colores.primario} />
+                ) : (
+                  <Text style={estilos.botonPlanIAPTexto}>{t('suscribirseA', { plan: PLANES[plan] })}</Text>
+                )}
+              </TouchableOpacity>
+            ))}
+          </View>
+        ) : (
+          <TouchableOpacity
+            style={estilos.botonWhatsapp}
+            onPress={() => abrirWhatsapp(t(cuenta.plan === 'gratis' ? 'mensajeQuieroMas' : 'mensajeMiSuscripcion'))}
+            activeOpacity={0.85}
+          >
+            <Icono nombre="whatsapp" tamano={19} color={colores.primario} />
+            <Text style={estilos.botonWhatsappTexto}>
+              {t(cuenta.plan === 'gratis' ? 'hablarDePlanes' : 'gestionarSuscripcion')}
+            </Text>
+          </TouchableOpacity>
+        )}
 
         <TouchableOpacity onPress={cerrarSesion}>
           <Text style={estilos.salir}>{t('cerrarSesion')}</Text>
@@ -178,6 +215,14 @@ const estilos = StyleSheet.create({
     marginTop: espacio.md,
   },
   botonWhatsappTexto: { color: colores.primario, fontSize: 15, fontWeight: '600' },
+  planesIAP: { gap: espacio.sm, marginTop: espacio.md },
+  botonPlanIAP: {
+    backgroundColor: colores.primario,
+    borderRadius: 12,
+    paddingVertical: espacio.md,
+    alignItems: 'center',
+  },
+  botonPlanIAPTexto: { color: '#FFFFFF', fontSize: 15, fontWeight: '600' },
   salir: { color: colores.peligro, fontSize: 14, textAlign: 'center', marginTop: espacio.lg },
   nota: {
     fontSize: 12,

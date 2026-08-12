@@ -82,6 +82,9 @@ export const api = {
   resumen: () => request('/api/documentos/resumen'),
   borrarDocumento: (id) => request(`/api/documentos/${id}`, { method: 'DELETE' }),
 
+  verificarCompraIAP: (body) =>
+    request('/api/pagos/iap/verificar', { method: 'POST', body: JSON.stringify(body) }),
+
   urlConectarDrive: () => request('/api/drive/conectar'),
   usoDrive: () => request('/api/drive/uso'),
   carpetas: (carpeta) =>
