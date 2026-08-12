@@ -4,6 +4,7 @@ const express = require('express');
 const webhookRouter = require('./routes/webhook');
 const authRouter = require('./routes/auth');
 const cuentaRouter = require('./routes/cuenta');
+const docquadRouter = require('./routes/docquad');
 const documentosRouter = require('./routes/documentos');
 const driveRouter = require('./routes/drive');
 const pagosRouter = require('./routes/pagos');
@@ -54,6 +55,10 @@ app.use(express.static(path.join(__dirname, 'public')));
 app.use('/webhook', webhookRouter);
 app.use('/api/auth', authRouter);
 app.use('/api/cuenta', cuentaRouter);
+// DocQuad se monta antes de documentosRouter para apropiarse de
+// POST /detectar-bordes. El endpoint antiguo queda inaccesible como fallback
+// de código mientras validamos el motor nuevo, pero ya no participa del flujo.
+app.use('/api/documentos', docquadRouter);
 app.use('/api/documentos', documentosRouter);
 app.use('/api/drive', driveRouter);
 app.use('/api/pagos', pagosRouter);
