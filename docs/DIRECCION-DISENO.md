@@ -8,12 +8,35 @@ Ideas del usuario, sin acción todavía — capturadas tal cual para no
 perderlas antes de la siguiente sesión.
 
 **1. Comisión de las tiendas (App Store / Play Store) — ✅ DECIDIDO
-(2026-08-13).** Estrategia de pago con dos canales:
+(2026-08-13) y ✅ CÓDIGO CONSTRUIDO (2026-08-13).** Estrategia de pago
+con dos canales:
 - **App nativa (iOS/Android):** In-App Purchases de la tienda —
   aceptar la comisión (15-30%) como costo de negocio/marketing en vez
-  de evadirla. Pendiente de construir (`expo-in-app-purchases` o
-  `react-native-iap` + validación de recibos en el backend); es una
-  capa nueva completa, no una extensión del flujo de Stripe.
+  de evadirla. **Ya implementado**: `services/iap.js` (verifica
+  recibos de Apple/Google), `POST /api/pagos/iap/verificar`,
+  `app/src/lib/compras.native.js` (`react-native-iap`) +
+  `compras.web.js` (stub, el bundle web nunca carga el módulo nativo),
+  botones de suscripción en `AjustesScreen.js` reemplazando el botón de
+  WhatsApp cuando el plan es gratis (evita el riesgo de rechazo por la
+  3.1.1). Ver commit `feat(pagos): compras dentro de la app...`.
+  **Bloqueado en 4 cosas que solo el usuario puede hacer** (fuera del
+  alcance de Claude — necesitan las consolas de Apple/Google):
+  1. Dar de alta los productos de suscripción en **App Store Connect**
+     y **Play Console** con los IDs exactos
+     `lat.tappt.scan.personal.anual` / `lat.tappt.scan.negocio.anual`
+     (deben coincidir carácter por carácter con `services/iap.js` y
+     `compras.native.js` — si cambian ahí, cambian en ambos lados).
+  2. Variable de entorno **`APPLE_SHARED_SECRET`** en Railway (App
+     Store Connect → tu app → Suscripciones → "App-Specific Shared
+     Secret").
+  3. Variable de entorno **`GOOGLE_PLAY_SERVICE_ACCOUNT_JSON`** en
+     Railway (JSON completo de una cuenta de servicio con acceso a la
+     Android Publisher API — se crea en Google Cloud Console del mismo
+     proyecto de Play Console, con el rol de "Financial data" en Play
+     Console → Configuración de la API).
+  4. Un **build nativo (EAS)** nuevo — `react-native-iap` es un módulo
+     nativo, no funciona en Expo Go ni en la web. No se puede probar
+     hasta que exista ese build.
 - **Clientes que llegan directo o contratan vía Web App:** siguen con
   **Stripe**, igual que hoy (WhatsApp + `scan.tappt.lat`). No se
   toca — Stripe no desaparece, solo deja de ser el único camino.
