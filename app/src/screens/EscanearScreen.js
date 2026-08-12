@@ -62,6 +62,13 @@ export default function EscanearScreen({ navigation }) {
   const [pantalla, setPantalla] = useState({ ancho: 1, alto: 1 });
   const [cuadro, setCuadro] = useState(null);
 
+  // Panel de diagnóstico (temporal, solo web): mide la cámara real en el
+  // dispositivo en vez de suponer. Se activa tocando el ícono ⓘ. Existe
+  // porque lo que se PIDE en las constraints no es lo que se RECIBE.
+  const [diag, setDiag] = useState(null);
+  const [ultimoFrame, setUltimoFrame] = useState(null);
+  const [ultimaCaptura, setUltimaCaptura] = useState(null);
+
   const analizarFrame = useCallback(async () => {
     if (analizandoRef.current || !camara.current || !listaRef.current) return;
     analizandoRef.current = true;
@@ -73,6 +80,7 @@ export default function EscanearScreen({ navigation }) {
       if (!foto) return;
 
       setCuadro({ ancho: foto.ancho, alto: foto.alto });
+      setUltimoFrame(foto);
       const { esquinas, confiable } = await api.detectarBordes(foto.base64);
 
       setDeteccion({
@@ -139,6 +147,7 @@ export default function EscanearScreen({ navigation }) {
       // son chicos a propósito, pero la foto que se guarda no debe serlo.
       const foto = await camara.current.capturar({ calidad: 0.92 });
       if (!foto) throw new Error('sin_camara');
+      setUltimaCaptura(foto);
 
       navigation.navigate('Recorte', {
         fotoBase64: foto.base64,
@@ -243,6 +252,47 @@ export default function EscanearScreen({ navigation }) {
           <Icono nombre="cerrar" tamano={20} color="#FFFFFF" />
         </TouchableOpacity>
 
+        {esWeb ? (
+          <TouchableOpacity
+            style={estilos.diagBoton}
+            onPress={() => setDiag(diag ? null : camara.current?.diagnostico?.() || {})}
+            hitSlop={12}
+            activeOpacity={0.8}
+          >
+            <Text style={estilos.diagBotonTexto}>ⓘ</Text>
+          </TouchableOpacity>
+        ) : null}
+
+        {diag ? (
+          <View style={estilos.diagPanel} pointerEvents="none">
+            <Text style={estilos.diagLinea}>
+              STREAM {diag.videoWidth}×{diag.videoHeight}
+            </Text>
+            {diag.track ? (
+              <Text style={estilos.diagLinea}>
+                TRACK {diag.track.width}×{diag.track.height} @{diag.track.frameRate || '?'}fps{'\n'}
+                facing: {diag.track.facingMode || '—'}
+              </Text>
+            ) : null}
+            <Text style={estilos.diagLinea}>
+              DETECTOR{' '}
+              {ultimoFrame
+                ? `${ultimoFrame.ancho}×${ultimoFrame.alto} · ${Math.round(ultimoFrame.bytes / 1024)}KB · ${ultimoFrame.ms}ms`
+                : '—'}
+            </Text>
+            <Text style={estilos.diagLinea}>
+              CAPTURA{' '}
+              {ultimaCaptura
+                ? `${ultimaCaptura.ancho}×${ultimaCaptura.alto} · ${(
+                    (ultimaCaptura.ancho * ultimaCaptura.alto) /
+                    1e6
+                  ).toFixed(2)}MP · ${Math.round(ultimaCaptura.bytes / 1024)}KB · ${ultimaCaptura.ms}ms`
+                : 'aún no capturas'}
+            </Text>
+            <Text style={estilos.diagLineaTenue}>{diag.navegador}</Text>
+          </View>
+        ) : null}
+
         <View style={estilos.visor} pointerEvents="box-none">
           {puntos ? null : <View style={estilos.marco} />}
 
@@ -284,6 +334,32 @@ const estilos = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
+  diagBoton: {
+    position: 'absolute',
+    top: espacio.md,
+    right: espacio.md,
+    zIndex: 10,
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: 'rgba(0,0,0,0.45)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  diagBotonTexto: { color: '#FFFFFF', fontSize: 18 },
+  diagPanel: {
+    position: 'absolute',
+    top: espacio.md + 48,
+    left: espacio.md,
+    right: espacio.md,
+    zIndex: 9,
+    backgroundColor: 'rgba(0,0,0,0.82)',
+    borderRadius: 10,
+    padding: espacio.sm,
+    gap: 4,
+  },
+  diagLinea: { color: '#7CF5C0', fontSize: 11, fontFamily: Platform.OS === 'web' ? 'monospace' : undefined },
+  diagLineaTenue: { color: 'rgba(255,255,255,0.45)', fontSize: 9 },
   centrado: {
     flex: 1,
     backgroundColor: '#0B1220',

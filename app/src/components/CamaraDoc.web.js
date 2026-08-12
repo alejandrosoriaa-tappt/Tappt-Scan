@@ -12,9 +12,15 @@ import { View } from 'react-native';
  * procesamiento posterior puede recuperar detalle que nunca se capturó.
  *
  * Pidiendo constraints explícitas subimos a lo que el dispositivo dé.
- * Ojo: iOS Safari topa en 720p aunque se pida 4K (limitación conocida de
- * WebKit) y no soporta ImageCapture — ahí 720p es el techo real del
- * navegador. En Android y escritorio sí sube bastante más.
+ *
+ * Nota sobre el famoso "tope de 720p en iOS Safari": la documentación de
+ * WebKit lo sugería, pero **nuestra propia medición lo refutó** — en un
+ * iPhone real la captura final salió de 1869×2863 (5.35 MP) el
+ * 2026-08-12. No usar esa suposición para tomar decisiones; medir con el
+ * panel de diagnóstico (`diagnostico()` más abajo) en cada dispositivo.
+ *
+ * Pedir `ideal: 3840×2160` NO garantiza recibirlo: el navegador entrega lo
+ * que puede. Lo único confiable es `getSettings()` del track ya activo.
  */
 const CONSTRAINTS = {
   audio: false,
@@ -88,6 +94,7 @@ function CamaraDocWeb({ style, onLista, onError }, ref) {
       const el = video.current;
       if (!el || !el.videoWidth) return null;
 
+      const inicio = Date.now();
       const escala = maxAncho ? Math.min(1, maxAncho / el.videoWidth) : 1;
       const ancho = Math.round(el.videoWidth * escala);
       const alto = Math.round(el.videoHeight * escala);
@@ -98,7 +105,36 @@ function CamaraDocWeb({ style, onLista, onError }, ref) {
       lienzo.getContext('2d', { alpha: false }).drawImage(el, 0, 0, ancho, alto);
 
       const url = lienzo.toDataURL('image/jpeg', calidad);
-      return { base64: url.slice(url.indexOf(',') + 1), ancho, alto };
+      const base64 = url.slice(url.indexOf(',') + 1);
+
+      return {
+        base64,
+        ancho,
+        alto,
+        // Diagnóstico: base64 infla ~4/3 sobre los bytes reales.
+        bytes: Math.round((base64.length * 3) / 4),
+        ms: Date.now() - inicio,
+      };
+    },
+
+    /**
+     * Telemetría real de la cámara, para cerrar el Paso 0 con evidencia en
+     * vez de suposición.
+     *
+     * `getSettings()` del track es la única fuente confiable: lo que se
+     * PIDE en las constraints no es lo que se RECIBE, y WebKit tiene casos
+     * documentados donde las mismas constraints dan resultados distintos
+     * según el estado u orientación del stream.
+     */
+    diagnostico() {
+      const el = video.current;
+      const track = stream.current?.getVideoTracks?.()[0];
+      return {
+        navegador: typeof navigator !== 'undefined' ? navigator.userAgent : '—',
+        track: track?.getSettings?.() || null,
+        videoWidth: el?.videoWidth || 0,
+        videoHeight: el?.videoHeight || 0,
+      };
     },
   }));
 
