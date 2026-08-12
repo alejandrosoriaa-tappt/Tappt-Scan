@@ -39,7 +39,13 @@ function usage() {
       fs.writeFileSync(path.resolve(outputPath), `${json}\n`);
     }
 
-    if (!result.valid) process.exitCode = 3;
+    // Para una foto elegida como benchmark sí queremos que un "no detectado"
+    // falle el comando. En CI, el fixture público actual es de OCR y sólo se
+    // usa para comprobar que el pipeline de imagen ejecuta sin excepción;
+    // puede no contener un documento detectable por DocQuad.
+    if (!result.valid && process.env.DOCQUAD_ALLOW_INVALID !== '1') {
+      process.exitCode = 3;
+    }
   } catch (err) {
     console.error(JSON.stringify({
       ok: false,
