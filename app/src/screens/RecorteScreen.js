@@ -79,17 +79,54 @@ const MARCO_COMPLETO = [
 
 const RADIO = 14; // radio táctil del tirador
 
+/**
+ * `Image resizeMode="contain"` conserva la proporción de la foto y deja
+ * bandas vacías cuando su aspect ratio no coincide con el del lienzo.
+ * Las esquinas viven normalizadas contra la FOTO (0..1), no contra esas
+ * bandas. Este rect es la posición/tamaño real donde React dibuja la foto.
+ */
+function calcularRectImagen(lienzo, imagen) {
+  if (
+    !lienzo?.ancho ||
+    !lienzo?.alto ||
+    !imagen?.ancho ||
+    !imagen?.alto ||
+    lienzo.ancho <= 1 ||
+    lienzo.alto <= 1
+  ) {
+    return null;
+  }
+
+  const escala = Math.min(lienzo.ancho / imagen.ancho, lienzo.alto / imagen.alto);
+  const ancho = imagen.ancho * escala;
+  const alto = imagen.alto * escala;
+
+  return {
+    x: (lienzo.ancho - ancho) / 2,
+    y: (lienzo.alto - alto) / 2,
+    ancho,
+    alto,
+  };
+}
+
+function aLienzo(esquina, rectImagen) {
+  return {
+    x: rectImagen.x + esquina.x * rectImagen.ancho,
+    y: rectImagen.y + esquina.y * rectImagen.alto,
+  };
+}
+
 // Un tirador por esquina. Vive aparte para que su PanResponder se cree una
 // sola vez y no en cada render del padre.
-function Tirador({ indice, esquina, lienzo, onMover }) {
+function Tirador({ indice, esquina, rectImagen, onMover }) {
   const inicio = useRef({ x: 0, y: 0 });
 
   // El PanResponder se crea una sola vez, así que lee el estado actual a
   // través de refs en lugar de capturar los valores del primer render.
   const esquinaRef = useRef(esquina);
-  const lienzoRef = useRef(lienzo);
+  const rectRef = useRef(rectImagen);
   esquinaRef.current = esquina;
-  lienzoRef.current = lienzo;
+  rectRef.current = rectImagen;
 
   const responder = useRef(
     PanResponder.create({
@@ -99,23 +136,29 @@ function Tirador({ indice, esquina, lienzo, onMover }) {
         inicio.current = { ...esquinaRef.current };
       },
       onPanResponderMove: (_evento, gesto) => {
-        const { ancho, alto } = lienzoRef.current;
-        if (!ancho || !alto) return;
+        const rect = rectRef.current;
+        if (!rect?.ancho || !rect?.alto) return;
 
+        // dx/dy están en píxeles de pantalla. Al dividir por el tamaño REAL
+        // de la foto mostrada (no por todo el lienzo) el movimiento conserva
+        // la misma coordenada normalizada que después consume el backend.
         onMover(indice, {
-          x: Math.min(1, Math.max(0, inicio.current.x + gesto.dx / ancho)),
-          y: Math.min(1, Math.max(0, inicio.current.y + gesto.dy / alto)),
+          x: Math.min(1, Math.max(0, inicio.current.x + gesto.dx / rect.ancho)),
+          y: Math.min(1, Math.max(0, inicio.current.y + gesto.dy / rect.alto)),
         });
       },
     })
   ).current;
+
+  if (!rectImagen) return null;
+  const posicion = aLienzo(esquina, rectImagen);
 
   return (
     <View
       {...responder.panHandlers}
       style={[
         estilos.tirador,
-        { left: esquina.x * lienzo.ancho - RADIO, top: esquina.y * lienzo.alto - RADIO },
+        { left: posicion.x - RADIO, top: posicion.y - RADIO },
       ]}
     >
       <View style={estilos.tiradorInterior} />
@@ -124,12 +167,15 @@ function Tirador({ indice, esquina, lienzo, onMover }) {
 }
 
 export default function RecorteScreen({ route, navigation }) {
-  const { fotoBase64, esquinasIniciales } = route.params;
+  const { fotoBase64, fotoAncho, fotoAlto, esquinasIniciales } = route.params;
   const { refrescarCuenta } = useSesion();
   const { t } = useIdioma();
 
   const [esquinas, setEsquinas] = useState(esquinasIniciales || MARCO_COMPLETO);
   const [lienzo, setLienzo] = useState({ ancho: 1, alto: 1 });
+  const [tamanoImagen, setTamanoImagen] = useState(
+    fotoAncho && fotoAlto ? { ancho: fotoAncho, alto: fotoAlto } : null
+  );
   const [detectando, setDetectando] = useState(!esquinasIniciales);
   const [aviso, setAviso] = useState(null);
   const [guardando, setGuardando] = useState(false);
@@ -140,6 +186,11 @@ export default function RecorteScreen({ route, navigation }) {
   const textosProcesando = useMemo(
     () => [t('procesandoSubiendo'), t('procesandoEnderezando'), t('procesandoClasificando')],
     [t]
+  );
+
+  const rectImagen = useMemo(
+    () => calcularRectImagen(lienzo, tamanoImagen),
+    [lienzo, tamanoImagen]
   );
 
   // Si la cámara en vivo ya venía con una detección de confianza alta
@@ -220,17 +271,20 @@ export default function RecorteScreen({ route, navigation }) {
   };
 
   // Polígono del marco dibujado con cuatro barras finas entre esquinas.
-  const lados = esquinas.map((esquina, i) => {
-    const siguiente = esquinas[(i + 1) % 4];
-    const x1 = esquina.x * lienzo.ancho;
-    const y1 = esquina.y * lienzo.alto;
-    const x2 = siguiente.x * lienzo.ancho;
-    const y2 = siguiente.y * lienzo.alto;
-    const largo = Math.hypot(x2 - x1, y2 - y1);
-    const angulo = (Math.atan2(y2 - y1, x2 - x1) * 180) / Math.PI;
+  // IMPORTANTE: se proyecta al rect real de la foto dentro de `contain`.
+  // Antes se multiplicaba por todo el lienzo y las bandas vacías desplazaban
+  // las cuatro esquinas (visible claramente en Safari en iPhone).
+  const lados = rectImagen
+    ? esquinas.map((esquina, i) => {
+        const siguiente = esquinas[(i + 1) % 4];
+        const p1 = aLienzo(esquina, rectImagen);
+        const p2 = aLienzo(siguiente, rectImagen);
+        const largo = Math.hypot(p2.x - p1.x, p2.y - p1.y);
+        const angulo = (Math.atan2(p2.y - p1.y, p2.x - p1.x) * 180) / Math.PI;
 
-    return { key: i, left: x1, top: y1, width: largo, angulo };
-  });
+        return { key: i, left: p1.x, top: p1.y, width: largo, angulo };
+      })
+    : [];
 
   return (
     <SafeAreaView style={estilos.pantalla} edges={['bottom']}>
@@ -244,6 +298,15 @@ export default function RecorteScreen({ route, navigation }) {
           source={{ uri: `data:image/jpeg;base64,${fotoBase64}` }}
           style={StyleSheet.absoluteFill}
           resizeMode="contain"
+          // `fotoAncho/fotoAlto` vienen de la cámara y evitan esperar este
+          // evento. `onLoad` queda como fallback para cualquier entrada que
+          // llegue a Recorte sin esas dimensiones en el futuro.
+          onLoad={(e) => {
+            const source = e.nativeEvent?.source;
+            if (source?.width > 0 && source?.height > 0) {
+              setTamanoImagen({ ancho: source.width, alto: source.height });
+            }
+          }}
         />
 
         {lados.map((lado) => (
@@ -266,7 +329,7 @@ export default function RecorteScreen({ route, navigation }) {
             key={indice}
             indice={indice}
             esquina={esquina}
-            lienzo={lienzo}
+            rectImagen={rectImagen}
             onMover={moverEsquina}
           />
         ))}
