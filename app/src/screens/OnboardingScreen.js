@@ -46,7 +46,7 @@ export default function OnboardingScreen() {
     <SafeAreaView style={estilos.pantalla}>
       <View style={estilos.contenido}>
         <View style={estilos.encabezado}>
-          <IconoChip nombre="nube" fondo="#DDEBFB" trazo="#2F80ED" tamano={56} />
+          <IconoChip nombre="nube" fondo="rgba(59,130,246,0.18)" trazo="#5B9BFA" tamano={56} />
           <Text style={estilos.titulo}>{t('conectaDrive')}</Text>
           <Text style={estilos.subtitulo}>{t('driveDetalle')}</Text>
         </View>
