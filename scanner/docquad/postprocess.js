@@ -13,6 +13,13 @@ const CHANNELS = 4;
 const STRIDE_64_TO_256 = 4;
 const CORNER_NAMES = ['topLeft', 'topRight', 'bottomRight', 'bottomLeft'];
 
+// Guardrails de producto usados por MakeACopy. No basta con que cuatro puntos
+// formen un cuadrilátero: una heatmap difusa puede producir un quad convexo y
+// aun así estar adivinando. Ese era justamente el error conceptual de Otsu.
+const PEAK_SIGMA_THRESHOLD = 5.0;
+const MASK_DIFFUSE_MEAN_THRESHOLD = 0.45;
+const MASK_DIFFUSE_MIN_AREA = 100;
+
 function indice(c, y, x) {
   return c * GRID * GRID + y * GRID + x;
 }
@@ -25,6 +32,25 @@ function validarHeatmaps(tensor) {
   if (dims.length && dims.join('x') !== '1x4x64x64') {
     throw new Error(`docquad_bad_corner_shape:${dims.join('x')}`);
   }
+}
+
+function validarMask(tensor) {
+  if (!tensor?.data || tensor.data.length !== GRID * GRID) {
+    throw new Error(`docquad_bad_mask_logits:${tensor?.data?.length || 0}`);
+  }
+  const dims = tensor.dims || [];
+  if (dims.length && dims.join('x') !== '1x1x64x64') {
+    throw new Error(`docquad_bad_mask_shape:${dims.join('x')}`);
+  }
+}
+
+function sigmoid(x) {
+  if (x >= 0) {
+    const z = Math.exp(-x);
+    return 1 / (1 + z);
+  }
+  const z = Math.exp(x);
+  return z / (1 + z);
 }
 
 function estadisticaCanal(data, c) {
@@ -45,6 +71,21 @@ function estadisticaCanal(data, c) {
   }
   const std = Math.sqrt(sumSq / n);
   return { peak: best, mean, std, z: std > 1e-9 ? (best - mean) / std : Infinity };
+}
+
+function estadisticaMask(maskTensor) {
+  validarMask(maskTensor);
+  let count = 0;
+  let sumProb = 0;
+  for (const logit of maskTensor.data) {
+    const prob = sigmoid(logit);
+    sumProb += prob;
+    if (prob > 0.5) count++;
+  }
+  return {
+    areaGt05: count,
+    meanProb: sumProb / maskTensor.data.length,
+  };
 }
 
 /**
@@ -177,8 +218,23 @@ function areaNormalizada(points) {
   return Math.abs(sum) / 2;
 }
 
-function postprocesarEsquinas(cornerTensor, letterbox, srcW, srcH) {
+function evaluarSospechoso({ confidence, maskStats, geometryValid }) {
+  if (confidence.some((z) => Number.isFinite(z) && z < PEAK_SIGMA_THRESHOLD)) {
+    return 'LOW_PEAK_MARGIN';
+  }
+  if (
+    maskStats.meanProb > MASK_DIFFUSE_MEAN_THRESHOLD &&
+    maskStats.areaGt05 < MASK_DIFFUSE_MIN_AREA
+  ) {
+    return 'MASK_DIFFUSE';
+  }
+  if (!geometryValid) return 'GEOMETRY_IMPLAUSIBLE';
+  return null;
+}
+
+function postprocesarEsquinas(cornerTensor, maskTensor, letterbox, srcW, srcH) {
   validarHeatmaps(cornerTensor);
+  validarMask(maskTensor);
   const data = cornerTensor.data;
 
   const detalles = [];
@@ -203,15 +259,21 @@ function postprocesarEsquinas(cornerTensor, letterbox, srcW, srcH) {
   );
   const convex = esConvexoTLTRBRBL(normalizadas);
   const area = finite ? areaNormalizada(normalizadas) : 0;
+  const geometryValid = finite && plausibleBounds && convex && area > 0.01;
+  const maskStats = estadisticaMask(maskTensor);
+  const suspiciousReason = evaluarSospechoso({ confidence, maskStats, geometryValid });
 
   return {
     corners: normalizadas,
     cornersPixels: pixels,
     confidenceZ: confidence,
     minConfidenceZ: Math.min(...confidence),
+    mask: maskStats,
     area,
-    valid: finite && plausibleBounds && convex && area > 0.01,
-    validation: { finite, plausibleBounds, convex, area },
+    valid: geometryValid && !suspiciousReason,
+    suspicious: Boolean(suspiciousReason),
+    suspiciousReason,
+    validation: { finite, plausibleBounds, convex, area, geometryValid },
     details: detalles,
   };
 }
@@ -221,4 +283,6 @@ module.exports = {
   esConvexoTLTRBRBL,
   areaNormalizada,
   refinarEsquina,
+  estadisticaMask,
+  evaluarSospechoso,
 };
