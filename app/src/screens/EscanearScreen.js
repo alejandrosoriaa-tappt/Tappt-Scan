@@ -1,29 +1,23 @@
 import React, { useRef, useState, useEffect, useCallback } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, Platform, ActivityIndicator } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { CameraView, useCameraPermissions } from 'expo-camera';
+import { useCameraPermissions } from 'expo-camera';
 import Svg, { Polygon } from 'react-native-svg';
+import CamaraDoc from '../components/CamaraDoc';
 import { api } from '../lib/api';
 import { useIdioma } from '../i18n';
 import { alertar } from '../lib/alerta';
 import Icono from '../components/Icono';
 import { colores, espacio } from '../theme';
 
-// expo-camera 15 en web solo entiende la prop vieja `type` para elegir
-// cámara (su capa web nunca se actualizó a la prop `facing` que sí usa
-// nativo) — sin esto abre la frontal por default en cualquier navegador.
-// Ver node_modules/expo-camera/build/utils/props.js: ConversionTables
-// solo mapea "type", `facing` se cuela sin traducir y se pierde.
-const propsCamaraTrasera = Platform.OS === 'web' ? { type: 'back' } : {};
-
-// En web, foto.base64 de expo-camera viene con el prefijo "data:...,"
-// incluido (a diferencia de nativo, que da base64 puro). Ver el mismo
-// fix en la captura final más abajo.
-function base64Puro(valor) {
-  return valor.startsWith('data:') ? valor.slice(valor.indexOf(',') + 1) : valor;
-}
+const esWeb = Platform.OS === 'web';
 
 const INTERVALO_DETECCION_MS = 1400;
+
+// Los frames de detección van chicos a propósito: el detector no necesita
+// resolución, y entre más chico más rápido el ciclo. La captura FINAL va
+// aparte, a resolución completa (ver `capturar()`).
+const ANCHO_DETECCION = 640;
 
 // Fórmula del cordón (shoelace) en fracción del cuadro — mismo criterio
 // que services/imagen.js usa en el servidor para decidir si un
@@ -56,16 +50,31 @@ export default function EscanearScreen({ navigation }) {
   const [deteccion, setDeteccion] = useState({ estado: 'buscando', esquinas: null });
   const analizandoRef = useRef(false);
   const listaRef = useRef(false); // la cámara ya montó su primer frame
-  const [lienzo, setLienzo] = useState({ ancho: 1, alto: 1 });
+  const [errorCamara, setErrorCamara] = useState(false);
+
+  // Dos rectángulos distintos, y confundirlos era un bug real: `pantalla`
+  // es el área que ocupa la vista de la cámara, y `cuadro` es el tamaño
+  // real del frame que analiza el detector. El detector devuelve fracciones
+  // del CUADRO; para pintarlas hay que convertirlas a píxeles de PANTALLA
+  // considerando el recorte de `object-fit: cover`. Antes se pintaban como
+  // fracciones de una caja interior con padding, así que el polígono salía
+  // corrido y encogido respecto a lo que se veía.
+  const [pantalla, setPantalla] = useState({ ancho: 1, alto: 1 });
+  const [cuadro, setCuadro] = useState(null);
 
   const analizarFrame = useCallback(async () => {
     if (analizandoRef.current || !camara.current || !listaRef.current) return;
     analizandoRef.current = true;
     try {
-      // Calidad baja a propósito: esto no es la foto final, solo alimenta
-      // al detector — cuanto más chica, más rápido el ciclo.
-      const foto = await camara.current.takePictureAsync({ quality: 0.15, base64: true, skipProcessing: true });
-      const { esquinas, confiable } = await api.detectarBordes(base64Puro(foto.base64));
+      const foto = await camara.current.capturar({
+        calidad: 0.5,
+        maxAncho: ANCHO_DETECCION,
+        rapido: true,
+      });
+      if (!foto) return;
+
+      setCuadro({ ancho: foto.ancho, alto: foto.alto });
+      const { esquinas, confiable } = await api.detectarBordes(foto.base64);
 
       setDeteccion({
         esquinas,
@@ -80,12 +89,16 @@ export default function EscanearScreen({ navigation }) {
   }, []);
 
   useEffect(() => {
-    if (!permiso?.granted || capturando) return;
+    if (!(esWeb || permiso?.granted) || capturando) return;
     const intervalo = setInterval(analizarFrame, INTERVALO_DETECCION_MS);
     return () => clearInterval(intervalo);
   }, [permiso?.granted, capturando, analizarFrame]);
 
-  if (!permiso) {
+  // En web no se usa el hook de permisos de expo-camera: `getUserMedia`
+  // pide el permiso por su cuenta al montar, y `navigator.permissions` para
+  // cámara no es confiable en Safari. Si el usuario lo niega, la cámara
+  // avisa por `onError` y se muestra la misma pantalla de permiso.
+  if (!esWeb && !permiso) {
     return (
       <View style={estilos.centrado}>
         <ActivityIndicator color="#FFFFFF" />
@@ -93,14 +106,21 @@ export default function EscanearScreen({ navigation }) {
     );
   }
 
-  if (!permiso.granted) {
+  if (esWeb ? errorCamara : !permiso.granted) {
     return (
       <SafeAreaView style={estilos.centrado}>
         <Text style={estilos.permisoTitulo}>{t('permisoCamara')}</Text>
         <Text style={estilos.permisoTexto}>
           {t('permisoCamaraDetalle')}
         </Text>
-        <TouchableOpacity style={estilos.botonPermiso} onPress={pedirPermiso} activeOpacity={0.8}>
+        <TouchableOpacity
+          style={estilos.botonPermiso}
+          // En web no hay a quién "pedirle" de nuevo desde JS: si lo negaron,
+          // se reintenta remontando la cámara (y el navegador vuelve a
+          // preguntar si el usuario cambió el permiso del sitio).
+          onPress={() => (esWeb ? setErrorCamara(false) : pedirPermiso())}
+          activeOpacity={0.8}
+        >
           <Text style={estilos.botonPermisoTexto}>{t('permitirCamara')}</Text>
         </TouchableOpacity>
         <TouchableOpacity onPress={() => navigation.goBack()} style={{ marginTop: espacio.md }}>
@@ -115,14 +135,14 @@ export default function EscanearScreen({ navigation }) {
 
     setCapturando(true);
     try {
-      // La foto no se sube aquí: primero pasa por el recorte, que es quien
-      // la manda ya enderezada.
-      const foto = await camara.current.takePictureAsync({ quality: 0.8, base64: true });
+      // Sin `maxAncho`: la captura final va a la resolución completa que dé
+      // el dispositivo. Es justo lo que faltaba — los frames de detección
+      // son chicos a propósito, pero la foto que se guarda no debe serlo.
+      const foto = await camara.current.capturar({ calidad: 0.92 });
+      if (!foto) throw new Error('sin_camara');
 
-      // Ver base64Puro() arriba: en web, expo-camera regresa el base64 con
-      // el prefijo de data URL ya incluido; en nativo viene puro.
       navigation.navigate('Recorte', {
-        fotoBase64: base64Puro(foto.base64),
+        fotoBase64: foto.base64,
         // Si ya había una detección de confianza alta de los frames en
         // vivo, se la pasamos a Recorte para que abra directo con las
         // esquinas correctas en vez de tener que detectar otra vez.
@@ -135,14 +155,33 @@ export default function EscanearScreen({ navigation }) {
     }
   };
 
-  // Puntos del polígono detectado, en píxeles del lienzo — mismo criterio
-  // que usa RecorteScreen para su marco ajustable, pero aquí se rellena en
-  // vez de solo dibujar el contorno (benchmark CamScanner: el encuadre en
+  /**
+   * Convierte una esquina (fracción del cuadro analizado) a píxeles de
+   * pantalla.
+   *
+   * El preview se dibuja con `object-fit: cover`: el cuadro se escala hasta
+   * tapar la pantalla y lo que sobra se recorta por los lados o por arriba
+   * y abajo. Sin deshacer ese recorte, las fracciones caen en el lugar
+   * equivocado — es el bug que hacía que el marco verde apareciera corrido
+   * respecto al documento (2026-08-13).
+   */
+  const aPantalla = (esquina) => {
+    const escala = Math.max(pantalla.ancho / cuadro.ancho, pantalla.alto / cuadro.alto);
+    const anchoVisible = cuadro.ancho * escala;
+    const altoVisible = cuadro.alto * escala;
+    return {
+      x: (pantalla.ancho - anchoVisible) / 2 + esquina.x * anchoVisible,
+      y: (pantalla.alto - altoVisible) / 2 + esquina.y * altoVisible,
+    };
+  };
+
+  // Polígono relleno sobre el preview (benchmark CamScanner: el encuadre en
   // vivo se "ilumina" con una capa translúcida, no solo una línea).
   const puntos =
-    deteccion.esquinas && lienzo.ancho > 1
+    deteccion.esquinas && cuadro && pantalla.ancho > 1
       ? deteccion.esquinas
-          .map((e) => `${e.x * lienzo.ancho},${e.y * lienzo.alto}`)
+          .map((e) => aPantalla(e))
+          .map((p) => `${p.x},${p.y}`)
           .join(' ')
       : null;
 
@@ -165,18 +204,37 @@ export default function EscanearScreen({ navigation }) {
   };
 
   return (
-    <View style={estilos.pantalla}>
-      <CameraView
+    <View
+      style={estilos.pantalla}
+      // El rect de la cámara es la pantalla completa: el overlay se mide
+      // contra ESTE, no contra la caja con padding de adentro. Medirlo mal
+      // era exactamente el bug del marco corrido.
+      onLayout={(e) =>
+        setPantalla({ ancho: e.nativeEvent.layout.width, alto: e.nativeEvent.layout.height })
+      }
+    >
+      <CamaraDoc
         ref={camara}
         style={StyleSheet.absoluteFill}
-        facing="back"
-        {...propsCamaraTrasera}
-        onCameraReady={() => {
+        onLista={() => {
           listaRef.current = true;
         }}
+        onError={() => setErrorCamara(true)}
       />
 
-      <SafeAreaView style={estilos.capa} edges={['top', 'bottom']}>
+      {puntos ? (
+        <Svg style={StyleSheet.absoluteFill} pointerEvents="none">
+          <Polygon
+            points={puntos}
+            fill={rellenoPorEstado[deteccion.estado]}
+            stroke={colorPorEstado[deteccion.estado]}
+            strokeWidth={3}
+            strokeLinejoin="round"
+          />
+        </Svg>
+      ) : null}
+
+      <SafeAreaView style={estilos.capa} edges={['top', 'bottom']} pointerEvents="box-none">
         <TouchableOpacity
           style={estilos.cerrar}
           onPress={() => navigation.goBack()}
@@ -186,25 +244,8 @@ export default function EscanearScreen({ navigation }) {
           <Icono nombre="cerrar" tamano={20} color="#FFFFFF" />
         </TouchableOpacity>
 
-        <View
-          style={estilos.visor}
-          onLayout={(e) =>
-            setLienzo({ ancho: e.nativeEvent.layout.width, alto: e.nativeEvent.layout.height })
-          }
-        >
-          {puntos ? (
-            <Svg style={StyleSheet.absoluteFill} pointerEvents="none">
-              <Polygon
-                points={puntos}
-                fill={rellenoPorEstado[deteccion.estado]}
-                stroke={colorPorEstado[deteccion.estado]}
-                strokeWidth={3}
-                strokeLinejoin="round"
-              />
-            </Svg>
-          ) : (
-            <View style={estilos.marco} />
-          )}
+        <View style={estilos.visor} pointerEvents="box-none">
+          {puntos ? null : <View style={estilos.marco} />}
 
           <View style={estilos.pistaCaja} pointerEvents="none">
             <Text style={estilos.marcoTexto}>{textoPorEstado[deteccion.estado]}</Text>
