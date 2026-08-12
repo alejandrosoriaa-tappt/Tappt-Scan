@@ -55,17 +55,19 @@ jobs:
       - name: Verify runtime against MakeACopy golden input
         run: node scripts/docquad-golden.js
 
-      - name: Download public MakeACopy fixture
+      # Esta es la misma fotografía que MakeACopy usa en su test E2E
+      # CompositeCornerDetectorE2eInstrumentedTest y donde exige que la fuente
+      # ganadora sea DOCQUAD. A diferencia de clean_scan.jpg, sí es una fixture
+      # destinada explícitamente a validar el detector de esquinas.
+      - name: Download MakeACopy DocQuad E2E fixture
         run: |
           curl --fail --location --retry 3 \
-            'https://raw.githubusercontent.com/egdels/makeacopy/f4aaf8fc3a9a96422446600a139f117240d3843b/app/src/androidTest/assets/clean_scan.jpg' \
-            --output /tmp/clean_scan.jpg
-          test -s /tmp/clean_scan.jpg
+            'https://raw.githubusercontent.com/egdels/makeacopy/f4aaf8fc3a9a96422446600a139f117240d3843b/app/src/androidTest/assets/instrumented_test_data/20251007_183138_cropped.jpg' \
+            --output /tmp/docquad-e2e.jpg
+          test -s /tmp/docquad-e2e.jpg
 
-      - name: Run DocQuad image pipeline smoke test
-        env:
-          DOCQUAD_ALLOW_INVALID: '1'
-        run: npm run docquad:spike -- /tmp/clean_scan.jpg /tmp/docquad-result.json
+      - name: Require valid DocQuad detection on E2E fixture
+        run: npm run docquad:spike -- /tmp/docquad-e2e.jpg /tmp/docquad-result.json
 
       - name: Show result
         if: always()
