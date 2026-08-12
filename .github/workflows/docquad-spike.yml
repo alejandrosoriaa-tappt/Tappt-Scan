@@ -1,4 +1,4 @@
-name: DocQuad spike
+name: Scanner detector spike
 
 on:
   workflow_dispatch:
@@ -7,6 +7,7 @@ on:
       - claude/new-session-9mhtdk
     paths:
       - 'scanner/docquad/**'
+      - 'scanner/opencv/**'
       - 'scripts/docquad-*.js'
       - 'scripts/opencv-spike.js'
       - 'services/docquad.js'
@@ -49,67 +50,81 @@ jobs:
           node --check scanner/docquad/postprocess.js
           node --check scanner/docquad/ort-runtime.node.js
           node --check scanner/docquad/detector.js
+          if [ -f scanner/opencv/detector.js ]; then node --check scanner/opencv/detector.js; fi
           node --check scripts/docquad-postprocess-test.js
           node --check scripts/opencv-spike.js
 
-      - name: Verify PRODUCT postprocess contract
+      - name: Verify PRODUCT DocQuad postprocess contract
         run: node scripts/docquad-postprocess-test.js
 
       - name: Prepare verified DocQuad model
         run: npm run docquad:model
 
-      - name: Verify runtime against MakeACopy golden input
+      - name: Verify ONNX runtime against MakeACopy golden input
         run: node scripts/docquad-golden.js
 
-      - name: Download MakeACopy DocQuad E2E fixture
+      - name: Download MakeACopy DocQuad diagnostic fixture
         run: |
           curl --fail --location --retry 3 \
             'https://raw.githubusercontent.com/egdels/makeacopy/f4aaf8fc3a9a96422446600a139f117240d3843b/app/src/androidTest/assets/instrumented_test_data/20251007_183138_cropped.jpg' \
             --output /tmp/docquad-e2e.jpg
           test -s /tmp/docquad-e2e.jpg
 
-      # Este asset upstream NO tiene ground-truth de esquinas. MakeACopy sólo
-      # exige que el detector ejecute y produzca geometría finita; sus propios
-      # guardrails "suspicious" no forman parte de ese test. Por eso aquí no
-      # usamos valid=true como criterio de precisión: guardamos el resultado
-      # como diagnóstico y la precisión real se medirá con scanner-fixtures/.
-      - name: Run upstream E2E fixture as DocQuad diagnostic
+      - name: Run MakeACopy fixture as DocQuad diagnostic
         env:
           DOCQUAD_ALLOW_INVALID: '1'
         run: npm run docquad:spike -- /tmp/docquad-e2e.jpg /tmp/docquad-result.json
 
-      - name: Download pinned official OpenCV.js
-        run: |
-          mkdir -p .cache/opencv
-          curl --fail --location --retry 3 --max-time 90 \
-            'https://docs.opencv.org/4.13.0/opencv.js' \
-            --output .cache/opencv/opencv-4.13.0.js
-          test $(wc -c < .cache/opencv/opencv-4.13.0.js) -gt 1000000
-          echo "opencv.js bytes=$(wc -c < .cache/opencv/opencv-4.13.0.js)"
-          sha256sum .cache/opencv/opencv-4.13.0.js
+      # La imagen de MakeACopy ya viene "cropped" y no es ground truth del
+      # borde exterior del papel. OpenCV se ejecuta allí sólo como diagnóstico.
+      - name: Run OpenCV on MakeACopy fixture as diagnostic
+        env:
+          OPENCV_ALLOW_INVALID: '1'
+        run: timeout 30s node scripts/opencv-spike.js /tmp/docquad-e2e.jpg /tmp/opencv-makeacopy.json
 
-      - name: Run OpenCV fallback spike on same fixture
-        run: timeout 75s node scripts/opencv-spike.js /tmp/docquad-e2e.jpg /tmp/opencv-result.json
+      # Fixture creada específicamente para el pipeline clásico
+      # GaussianBlur -> Canny -> findContours -> approxPolyDP.
+      - name: Download CamScanner OpenCV fixture
+        run: |
+          curl --fail --location --retry 3 \
+            'https://raw.githubusercontent.com/AdityaPai2398/CamScanner-In-Python/1dfad528594d570d6183113940c6b7decadc0890/test_img.jpg' \
+            --output /tmp/camscanner-test.jpg
+          test -s /tmp/camscanner-test.jpg
+
+      - name: Require OpenCV detector on CamScanner fixture
+        run: timeout 30s node scripts/opencv-spike.js /tmp/camscanner-test.jpg /tmp/opencv-camscanner.json
+
+      - name: Validate OpenCV result contract
+        run: |
+          node - <<'NODE'
+          const fs = require('fs');
+          const r = JSON.parse(fs.readFileSync('/tmp/opencv-camscanner.json', 'utf8'));
+          if (!r.valid) throw new Error('OpenCV fixture no produjo quad válido');
+          if (!Array.isArray(r.corners) || r.corners.length !== 4) throw new Error('OpenCV no devolvió 4 esquinas');
+          if (!r.corners.every(p => Number.isFinite(p.x) && Number.isFinite(p.y))) throw new Error('OpenCV devolvió coordenadas no finitas');
+          if (!(r.area > 0.10 && r.area < 0.95)) throw new Error(`Área sospechosa: ${r.area}`);
+          console.log(`OpenCV fixture OK source=${r.source} area=${r.area.toFixed(3)} score=${r.score.toFixed(3)}`);
+          NODE
 
       - name: Show results
         if: always()
         run: |
-          if [ -f /tmp/docquad-result.json ]; then
-            echo '--- DOCQUAD ---'
-            cat /tmp/docquad-result.json
-          fi
-          if [ -f /tmp/opencv-result.json ]; then
-            echo '--- OPENCV ---'
-            cat /tmp/opencv-result.json
-          fi
+          for f in /tmp/docquad-result.json /tmp/opencv-makeacopy.json /tmp/opencv-camscanner.json; do
+            if [ -f "$f" ]; then
+              echo "--- $f ---"
+              cat "$f"
+            fi
+          done
 
-      - name: Upload spike diagnostics
+      - name: Upload detector diagnostics
         if: always()
         uses: actions/upload-artifact@v4
         with:
           name: scanner-spike-result
           path: |
             /tmp/docquad-result.json
-            /tmp/opencv-result.json
+            /tmp/opencv-makeacopy.json
+            /tmp/opencv-camscanner.json
             /tmp/docquad-e2e.jpg
+            /tmp/camscanner-test.jpg
           if-no-files-found: ignore
