@@ -2,6 +2,7 @@ import React, { useRef, useState, useEffect, useCallback } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, Platform, ActivityIndicator } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { CameraView, useCameraPermissions } from 'expo-camera';
+import Svg, { Polygon } from 'react-native-svg';
 import { api } from '../lib/api';
 import { useIdioma } from '../i18n';
 import { alertar } from '../lib/alerta';
@@ -134,26 +135,27 @@ export default function EscanearScreen({ navigation }) {
     }
   };
 
-  // Los 4 lados del polígono detectado, en píxeles del lienzo — mismo
-  // criterio que usa RecorteScreen para dibujar su marco ajustable.
-  const lados =
+  // Puntos del polígono detectado, en píxeles del lienzo — mismo criterio
+  // que usa RecorteScreen para su marco ajustable, pero aquí se rellena en
+  // vez de solo dibujar el contorno (benchmark CamScanner: el encuadre en
+  // vivo se "ilumina" con una capa translúcida, no solo una línea).
+  const puntos =
     deteccion.esquinas && lienzo.ancho > 1
-      ? deteccion.esquinas.map((esquina, i) => {
-          const siguiente = deteccion.esquinas[(i + 1) % 4];
-          const x1 = esquina.x * lienzo.ancho;
-          const y1 = esquina.y * lienzo.alto;
-          const x2 = siguiente.x * lienzo.ancho;
-          const y2 = siguiente.y * lienzo.alto;
-          const largo = Math.hypot(x2 - x1, y2 - y1);
-          const angulo = (Math.atan2(y2 - y1, x2 - x1) * 180) / Math.PI;
-          return { key: i, left: x1, top: y1, width: largo, angulo };
-        })
+      ? deteccion.esquinas
+          .map((e) => `${e.x * lienzo.ancho},${e.y * lienzo.alto}`)
+          .join(' ')
       : null;
 
   const colorPorEstado = {
     buscando: 'rgba(255,255,255,0.5)',
     parcial: 'rgba(255,255,255,0.85)',
     listo: colores.primario,
+  };
+
+  const rellenoPorEstado = {
+    buscando: 'rgba(255,255,255,0.08)',
+    parcial: 'rgba(255,255,255,0.16)',
+    listo: 'rgba(24,184,117,0.25)', // colores.primario en rgba — SVG no acepta variables ni conAlfa()
   };
 
   const textoPorEstado = {
@@ -190,22 +192,16 @@ export default function EscanearScreen({ navigation }) {
             setLienzo({ ancho: e.nativeEvent.layout.width, alto: e.nativeEvent.layout.height })
           }
         >
-          {lados ? (
-            lados.map((lado) => (
-              <View
-                key={lado.key}
-                style={[
-                  estilos.lado,
-                  {
-                    left: lado.left,
-                    top: lado.top,
-                    width: lado.width,
-                    backgroundColor: colorPorEstado[deteccion.estado],
-                    transform: [{ rotate: `${lado.angulo}deg` }],
-                  },
-                ]}
+          {puntos ? (
+            <Svg style={StyleSheet.absoluteFill} pointerEvents="none">
+              <Polygon
+                points={puntos}
+                fill={rellenoPorEstado[deteccion.estado]}
+                stroke={colorPorEstado[deteccion.estado]}
+                strokeWidth={3}
+                strokeLinejoin="round"
               />
-            ))
+            </Svg>
           ) : (
             <View style={estilos.marco} />
           )}
@@ -283,12 +279,6 @@ const estilos = StyleSheet.create({
     justifyContent: 'center',
   },
   marcoTexto: { color: 'rgba(255,255,255,0.85)', fontSize: 13, fontWeight: '600' },
-  lado: {
-    position: 'absolute',
-    height: 3,
-    borderRadius: 2,
-    transformOrigin: 'left center',
-  },
   pistaCaja: {
     position: 'absolute',
     bottom: espacio.md,
