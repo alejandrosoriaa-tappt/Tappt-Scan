@@ -8,6 +8,7 @@ on:
     paths:
       - 'scanner/docquad/**'
       - 'scripts/docquad-*.js'
+      - 'scripts/opencv-spike.js'
       - 'services/docquad.js'
       - 'services/procesarDocumento.js'
       - 'routes/docquad.js'
@@ -23,7 +24,7 @@ permissions:
 jobs:
   spike:
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    timeout-minutes: 12
     steps:
       - uses: actions/checkout@v4
         with:
@@ -49,6 +50,7 @@ jobs:
           node --check scanner/docquad/ort-runtime.node.js
           node --check scanner/docquad/detector.js
           node --check scripts/docquad-postprocess-test.js
+          node --check scripts/opencv-spike.js
 
       - name: Verify PRODUCT postprocess contract
         run: node scripts/docquad-postprocess-test.js
@@ -71,24 +73,33 @@ jobs:
       # guardrails "suspicious" no forman parte de ese test. Por eso aquí no
       # usamos valid=true como criterio de precisión: guardamos el resultado
       # como diagnóstico y la precisión real se medirá con scanner-fixtures/.
-      - name: Run upstream E2E fixture as diagnostic
+      - name: Run upstream E2E fixture as DocQuad diagnostic
         env:
           DOCQUAD_ALLOW_INVALID: '1'
         run: npm run docquad:spike -- /tmp/docquad-e2e.jpg /tmp/docquad-result.json
 
-      - name: Show result
+      - name: Run OpenCV fallback spike on same fixture
+        run: node scripts/opencv-spike.js /tmp/docquad-e2e.jpg /tmp/opencv-result.json
+
+      - name: Show results
         if: always()
         run: |
           if [ -f /tmp/docquad-result.json ]; then
+            echo '--- DOCQUAD ---'
             cat /tmp/docquad-result.json
+          fi
+          if [ -f /tmp/opencv-result.json ]; then
+            echo '--- OPENCV ---'
+            cat /tmp/opencv-result.json
           fi
 
       - name: Upload spike diagnostics
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: docquad-spike-result
+          name: scanner-spike-result
           path: |
             /tmp/docquad-result.json
+            /tmp/opencv-result.json
             /tmp/docquad-e2e.jpg
           if-no-files-found: ignore
