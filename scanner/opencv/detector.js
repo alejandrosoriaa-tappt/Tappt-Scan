@@ -220,8 +220,6 @@ function detectarPorPapelClaro(cv, gray, imgArea) {
           thresholdValue,
         };
 
-        // Una escena casi completamente blanca no es evidencia suficiente de
-        // que todo el frame sea un documento.
         if (candidate.areaNorm < 0.95 && (!best || candidate.score > best.score)) {
           best = candidate;
         }
@@ -238,6 +236,17 @@ function detectarPorPapelClaro(cv, gray, imgArea) {
   }
 
   return best;
+}
+
+function elegirMejorCandidato(canny, paper) {
+  if (!canny) return paper;
+  if (!paper) return canny;
+
+  // Los dos motores compiten siempre. Esto evita que un rectángulo interno
+  // encontrado por Canny (tabla, recuadro, etiqueta) impida considerar el
+  // contorno exterior del papel. El score ya pondera 70% área y 30%
+  // rectangularidad, así que el documento exterior convincente debe ganar.
+  return paper.score > canny.score ? paper : canny;
 }
 
 class OpenCvDocumentDetector {
@@ -279,7 +288,6 @@ class OpenCvDocumentDetector {
       cv.cvtColor(src, gray, cv.COLOR_RGBA2GRAY);
       cv.GaussianBlur(gray, blur, new cv.Size(5, 5), 0, 0, cv.BORDER_DEFAULT);
 
-      // Rama clásica: GaussianBlur/median -> Canny.
       cv.medianBlur(blur, med, 3);
       const meanGray = cv.mean(med)[0];
       cv.Canny(
@@ -292,8 +300,6 @@ class OpenCvDocumentDetector {
       );
       cv.Canny(blur, edgesFixed, 30, 100, 3, true);
 
-      // Rama morfológica inspirada en MakeACopy. Otsu aquí sólo genera una
-      // máscara de apoyo: NO es el detector Otsu legado de TapptScan.
       cv.threshold(blur, threshold, 0, 255, cv.THRESH_BINARY + cv.THRESH_OTSU);
       let kernelSize = Math.max(5, Math.floor(Math.min(src.cols, src.rows) / 50));
       if (kernelSize % 2 === 0) kernelSize++;
@@ -324,11 +330,11 @@ class OpenCvDocumentDetector {
         maxAspect: 4.0,
       });
 
-      let candidate = contourResult.best
+      const cannyCandidate = contourResult.best
         ? { ...contourResult.best, source: 'opencv-canny' }
         : null;
-
-      if (!candidate) candidate = detectarPorPapelClaro(cv, gray, imgArea);
+      const paperCandidate = detectarPorPapelClaro(cv, gray, imgArea);
+      const candidate = elegirMejorCandidato(cannyCandidate, paperCandidate);
 
       if (!candidate) {
         return {
@@ -358,6 +364,14 @@ class OpenCvDocumentDetector {
         angles: candidate.angles,
         epsilon: candidate.epsilon,
         thresholdValue: candidate.thresholdValue || null,
+        candidates: {
+          canny: cannyCandidate
+            ? { area: cannyCandidate.areaNorm, score: cannyCandidate.score }
+            : null,
+          paper: paperCandidate
+            ? { area: paperCandidate.areaNorm, score: paperCandidate.score }
+            : null,
+        },
         image: {
           width: img.width,
           height: img.height,
@@ -392,5 +406,6 @@ module.exports = {
   cargarCv,
   ordenarPuntos,
   areaQuad,
+  elegirMejorCandidato,
   MIN_AREA_CONFIABLE,
 };
