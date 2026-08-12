@@ -71,38 +71,61 @@ function umbralOtsu(grises) {
  * Devuelve fracciones 0-1 en orden: superior-izq, superior-der,
  * inferior-der, inferior-izq.
  */
-// Extremos x+y / x-y de una región (clara u oscura, según `esClaro`) —
-// mismo truco de siempre: las esquinas de un cuadrilátero son los puntos
-// que maximizan/minimizan esas dos combinaciones.
-function extremosDeRegion(grises, ancho, alto, umbral, esClaro) {
-  let minSuma = Infinity;
-  let maxSuma = -Infinity;
-  let minResta = Infinity;
-  let maxResta = -Infinity;
-  let supIzq = null;
-  let infDer = null;
-  let supDer = null;
-  let infIzq = null;
-  let cuenta = 0;
+// Etiqueta componentes conectados (4-vecinos) del mapa binario claro/oscuro
+// y regresa el más grande — es lo que faltaba: sin esto, "todos los
+// píxeles oscuros de la foto" mezcla objetos que no tienen nada que ver
+// entre sí (una tarjeta Y una funda oscura en el mismo cuadro), y las
+// esquinas terminan siendo el promedio de dos cosas distintas en vez de
+// las de un solo objeto real. Probado en producción (2026-08-13): el
+// encuadre en vivo marcó "listo" sobre una funda al fondo, no la tarjeta.
+function componenteMasGrande(grises, ancho, alto, umbral, esClaro) {
+  const visitado = new Uint8Array(ancho * alto);
+  const enRegion = (i) => (esClaro ? grises[i] > umbral : grises[i] <= umbral);
 
-  for (let y = 0; y < alto; y++) {
-    for (let x = 0; x < ancho; x++) {
-      const valor = grises[y * ancho + x];
-      const enRegion = esClaro ? valor > umbral : valor <= umbral;
-      if (!enRegion) continue;
+  let mejor = null;
+
+  for (let inicio = 0; inicio < ancho * alto; inicio++) {
+    if (visitado[inicio] || !enRegion(inicio)) continue;
+
+    // BFS con pila explícita (no recursión — un componente puede cubrir
+    // decenas de miles de píxeles y desbordaría la pila de llamadas).
+    const pila = [inicio];
+    visitado[inicio] = 1;
+    let cuenta = 0;
+    let minSuma = Infinity;
+    let maxSuma = -Infinity;
+    let minResta = Infinity;
+    let maxResta = -Infinity;
+    let supIzq = null;
+    let infDer = null;
+    let supDer = null;
+    let infIzq = null;
+
+    while (pila.length) {
+      const i = pila.pop();
+      const x = i % ancho;
+      const y = (i / ancho) | 0;
       cuenta++;
 
       const suma = x + y;
       const resta = x - y;
-
       if (suma < minSuma) (minSuma = suma), (supIzq = { x, y });
       if (suma > maxSuma) (maxSuma = suma), (infDer = { x, y });
       if (resta > maxResta) (maxResta = resta), (supDer = { x, y });
       if (resta < minResta) (minResta = resta), (infIzq = { x, y });
+
+      if (x > 0 && !visitado[i - 1] && enRegion(i - 1)) (visitado[i - 1] = 1), pila.push(i - 1);
+      if (x < ancho - 1 && !visitado[i + 1] && enRegion(i + 1)) (visitado[i + 1] = 1), pila.push(i + 1);
+      if (y > 0 && !visitado[i - ancho] && enRegion(i - ancho)) (visitado[i - ancho] = 1), pila.push(i - ancho);
+      if (y < alto - 1 && !visitado[i + ancho] && enRegion(i + ancho))
+        (visitado[i + ancho] = 1), pila.push(i + ancho);
     }
+
+    if (!mejor || cuenta > mejor.cuenta) mejor = { supIzq, supDer, infDer, infIzq, cuenta };
   }
 
-  return { supIzq, supDer, infDer, infIzq, proporcion: cuenta / (ancho * alto) };
+  if (!mejor) return { supIzq: null, proporcion: 0 };
+  return { ...mejor, proporcion: mejor.cuenta / (ancho * alto) };
 }
 
 /**
@@ -144,16 +167,20 @@ async function detectarDocumento(buffer, soloClaro = false) {
   };
 
   const candidatos = (soloClaro ? [true] : [true, false])
-    .map((esClaro) => extremosDeRegion(grises, ancho, alto, umbral, esClaro))
-    // Igual que antes: si la región ocupa casi todo o casi nada, no aporta.
+    .map((esClaro) => componenteMasGrande(grises, ancho, alto, umbral, esClaro))
+    // Igual que antes: si el componente ocupa casi todo o casi nada, no aporta.
     .filter((c) => c.supIzq && c.proporcion >= 0.15 && c.proporcion <= 0.97);
 
   if (!candidatos.length) return marcoCompleto;
 
-  // Entre las dos hipótesis válidas, se prefiere la región más chica: un
-  // documento/tarjeta normalmente ocupa menos foto que la superficie sobre
-  // la que está — es más probable que sea el objeto de interés que el
-  // fondo. Si un solo lado calificó, no hay nada que comparar.
+  // Entre las dos hipótesis válidas, se prefiere el componente MÁS CHICO
+  // de los dos. Ahora que cada candidato es un solo componente conectado
+  // (no una mezcla de objetos distintos, ver `componenteMasGrande`), esto
+  // vuelve a tener sentido: el fondo (mesa, superficie) casi siempre es
+  // el componente más grande de la foto — preferirlo llevaría a "detectar
+  // el fondo" en vez del objeto que el usuario está encuadrando. El
+  // objeto de interés (documento, tarjeta) normalmente es más chico que
+  // la superficie sobre la que está.
   const elegido = candidatos.sort((a, b) => a.proporcion - b.proporcion)[0];
 
   const aFraccion = (p) => ({ x: p.x / ancho, y: p.y / alto });
