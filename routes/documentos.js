@@ -92,7 +92,7 @@ async function recibirDesdeApp(req, res, mimePorDefecto) {
   // cuatro esquinas (confirmadas o ajustadas por el usuario).
   if (esquinas?.length === 4 && !pdf.esPdf(buffer)) {
     buffer = await imagenServicio.corregirPerspectiva(buffer, esquinas);
-    mime = 'image/png';
+    mime = 'image/jpeg';
   }
 
   // Filtro de imagen (Color/Gris/B&N/Mejorar): siempre después del

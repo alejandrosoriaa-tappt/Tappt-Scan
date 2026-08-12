@@ -230,6 +230,16 @@ function distancia(a, b) {
   return Math.hypot(a.x - b.x, a.y - b.y);
 }
 
+// Un documento no necesita compresión sin pérdida: es papel con texto, no
+// una imagen con transparencia ni degradados finos. A 92 la diferencia
+// visual es imperceptible y el archivo baja ~8x.
+//
+// OJO con la escala: `@napi-rs/canvas` espera la calidad de 0 a 100, NO de
+// 0 a 1 como la Canvas API del navegador. Pasarle 0.92 se interpreta como
+// ~1% y produce una imagen destruida de 41 KB (medido). Es un error fácil
+// de cometer viniendo de `toDataURL(type, 0.92)` del lado del cliente.
+const CALIDAD_JPEG = 92;
+
 /**
  * Recorta y endereza: toma las cuatro esquinas del documento en la foto y
  * las estira a un rectángulo recto (corrección de perspectiva).
@@ -237,6 +247,11 @@ function distancia(a, b) {
  * Se hace por mapeo inverso — para cada píxel del resultado se calcula de
  * dónde viene en el original y se interpola — porque el mapeo directo deja
  * huecos.
+ *
+ * Devuelve JPEG, no PNG. Cuando la captura era de ~480p el peso daba igual,
+ * pero al subir a resolución completa (2026-08-12) una sola página pasó a
+ * pesar 5.2 MB en PNG — insostenible para el Drive del usuario y para subir
+ * con datos móviles.
  */
 async function corregirPerspectiva(buffer, esquinasFraccion) {
   const imagen = await cargar(buffer);
@@ -300,7 +315,7 @@ async function corregirPerspectiva(buffer, esquinasFraccion) {
   }
 
   ctxSalida.putImageData(datosSalida, 0, 0);
-  return salida.toBuffer('image/png');
+  return salida.toBuffer('image/jpeg', CALIDAD_JPEG);
 }
 
 const ANCHO_FIRMA = 900; // suficiente para el trazo de una firma, sin cargar el proceso
@@ -495,7 +510,10 @@ async function aplicarFiltro(buffer, filtro = 'color', anchoMax = null) {
   }
 
   ctx.putImageData(imagenDatos, 0, 0);
-  return canvas.toBuffer('image/jpeg', 0.9);
+  // Escala 0-100, no 0-1 — ver CALIDAD_JPEG. Este llamado tenía 0.9, o sea
+  // ~1% de calidad: los filtros Gris/B&N/Mejorar llevaban desde el
+  // 2026-08-12 guardando imágenes destruidas.
+  return canvas.toBuffer('image/jpeg', CALIDAD_JPEG);
 }
 
 module.exports = { detectarDocumento, corregirPerspectiva, extraerFirma, aplicarFiltro, FILTROS };

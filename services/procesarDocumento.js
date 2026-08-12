@@ -45,12 +45,11 @@ async function procesarArchivo(usuario, buffer, mimeType = 'image/jpeg', nombreO
       const { esquinas, confiable } = await imagen.detectarDocumento(buffer, true);
       if (confiable) {
         buffer = await imagen.corregirPerspectiva(buffer, esquinas);
-        // corregirPerspectiva siempre devuelve PNG (toBuffer('image/png') en
-        // services/imagen.js) sin importar el formato de entrada — hay que
-        // reflejarlo aquí o pdf.desdeImagen intenta leer estos bytes como
-        // JPEG (revienta) y Claude recibe un media_type que no coincide con
-        // los bytes reales.
-        mimeType = 'image/png';
+        // corregirPerspectiva siempre devuelve JPEG sin importar el formato
+        // de entrada — hay que reflejarlo aquí o `pdf.desdeImagen` intenta
+        // decodificar los bytes con el códec equivocado y Claude recibe un
+        // media_type que no coincide con lo que le mandamos.
+        mimeType = 'image/jpeg';
       }
     } catch (err) {
       // Un fallo aquí no debe tumbar el escaneo completo: seguimos con

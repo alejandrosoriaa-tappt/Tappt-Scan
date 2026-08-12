@@ -87,9 +87,15 @@ async function incrustarImagen(pdf, base64) {
 }
 
 // Crea un PDF de una página con la imagen del documento a página completa.
+//
+// El formato se decide por los BYTES, no por el mimeType que nos digan: ya
+// nos pasó que una transformación cambiara el formato de salida y el
+// mimeType siguiera diciendo el anterior, con lo que pdf-lib intentaba
+// decodificar con el códec equivocado y reventaba. Los bytes no mienten.
 async function desdeImagen(buffer, mimeType = 'image/jpeg') {
   const pdf = await PDFDocument.create();
-  const imagen = mimeType.includes('png') ? await pdf.embedPng(buffer) : await pdf.embedJpg(buffer);
+  const esPng = buffer[0] === 0x89 && buffer[1] === 0x50; // \x89PNG
+  const imagen = esPng ? await pdf.embedPng(buffer) : await pdf.embedJpg(buffer);
 
   const pagina = pdf.addPage([imagen.width, imagen.height]);
   pagina.drawImage(imagen, { x: 0, y: 0, width: imagen.width, height: imagen.height });
