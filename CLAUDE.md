@@ -138,9 +138,20 @@ warm-up de DocQuad.
   doble corrección de perspectiva.
 - `services/docquad.js` — singleton/warm-up del detector, contrato de producto
   para cámara/WhatsApp y traducción de resultado DocQuad a
-  `{esquinas, confiable, razon, diagnostico}`. Un quad geométricamente válido
-  pero de baja confianza se conserva como detección parcial; no se usa para
-  recorte automático.
+  `{esquinas, confiable, razon, diagnostico}`. **Tres niveles, no dos**:
+  `confiable` (recorta solo), **parcial** (`esquinas` con `confiable:false`
+  — se dibuja para que el usuario ajuste, nunca recorta) y sin quad. La
+  confianza sale de DocQuad pasando sus guardrails **o** de que DocQuad y
+  OpenCV coincidan (IoU ≥ 0.8) en el mismo papel; dos métodos independientes
+  sobre el mismo papel es mejor evidencia que cualquier umbral suelto.
+- `scanner/fixtures/` — **banco de fixtures con ground truth** (paso 1.6) e
+  `iou.js`. Correr con `npm run scanner:fixtures`. Un fixture es una imagen
+  **más** dónde está de verdad el documento, anotado a mano, y se mide por
+  IoU. Es la única forma de saber si un cambio al detector mejoró o empeoró.
+  Distingue `escena` (documento dentro de un fondo) de `recortado` (la imagen
+  ya es el documento): confundirlos fue lo que rompió el CI durante días.
+  **Van 2 de las 20 que pide el plan** — agregar fotos aquí vale más que
+  cualquier ajuste de umbral.
 - `scanner/docquad/` — modelo, descarga/verificación, letterbox 256×256,
   runtime ONNX/WASM, postproceso y detector aislado. El modelo queda fijado a
   un commit conocido de MakeACopy; no seguir `main` silenciosamente.
@@ -316,13 +327,33 @@ Estado actual del scanner:
   mostró todavía el polígono. Antes de tocar umbrales o algoritmos hay que
   instrumentar la respuesta real de DocQuad (`razon`, esquinas, confiable,
   `minConfidenceZ`, máscara, tiempos y latencia HTTP).
-- `services/docquad.js` ya conserva un quad geométricamente válido aunque sea
-  de baja confianza: debe aparecer como parcial/blanco; verde sólo cuando
-  `confiable:true`.
 - Brecha conocida vs MakeACopy: nuestro postproceso usa principalmente las
   corner heatmaps y la máscara como guardrail; MakeACopy tiene selección/
   refinamiento adicional basado en máscara. Revisar esa brecha si la
   instrumentación demuestra que el problema está en postproceso.
+
+### Hallazgo 2026-08-13 — por qué el scanner no avanzaba
+
+Tres causas, todas nuestras, encontradas con el banco de fixtures nuevo:
+
+1. **DocQuad estaba apagado de hecho.** `PEAK_SIGMA_THRESHOLD = 5.0`
+   (heredado tal cual de MakeACopy, `DocQuadPostprocessor.java:130`) exige
+   que las 4 esquinas tengan su pico a ≥5σ. En fotos reales los picos
+   medidos van de **2.4 a 4.0**, así que `LOW_PEAK_MARGIN` se disparaba
+   siempre. Todo lo visto en pantalla hasta ahora ha sido OpenCV; DocQuad
+   nunca produjo una detección aceptada.
+2. **El compuesto era todo-o-nada y tiraba esquinas correctas.** Un quad de
+   DocQuad con IoU **0.948** contra ground truth se descartaba entero por
+   estar marcado `suspicious`, y la app no dibujaba nada. El `CLAUDE.md`
+   afirmaba que `99cff3d` conservaba el parcial: el postproceso sí lo
+   conservaba, pero el compuesto lo anulaba después. Ya está arreglado.
+3. **Medíamos con un fixture equivocado.** El del CI es una hoja YA
+   RECORTADA y se le exigía un quad de área < 0.95 — o sea, se premiaba
+   la respuesta incorrecta. Se estuvo ajustando contra esa señal.
+
+**NO tocar `PEAK_SIGMA_THRESHOLD` a ojo.** Se recalibra cuando el banco
+tenga las 20 fotos con ground truth; `npm run scanner:fixtures` ya imprime
+los `z` por esquina de cada fixture justamente para juntar esa evidencia.
 
 Commits del relevo ChatGPT documentados en el handoff:
 
@@ -347,7 +378,7 @@ el handoff anterior. El orden acordado sigue siendo:
 0    Captura full-res + overlay             en validación web / nativo pendiente
 1    PNG → JPEG                             avanzado/resuelto en web actual
 1.5  Spike DocQuad (3 runtimes)            Node avanzado; web/native pendientes
-1.6  scanner-fixtures (20 + ground truth)  pendiente
+1.6  scanner-fixtures (20 + ground truth)  banco y metrica IoU listos; van 2/20 fotos
 2    DocQuad Node / WhatsApp                integración en curso
 3    DocQuad Web + Native                   pendiente
 4    AutoCapture + Quality                  pendiente

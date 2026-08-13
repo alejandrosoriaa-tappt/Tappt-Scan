@@ -10,6 +10,8 @@ on:
       - 'scanner/opencv/**'
       - 'scripts/docquad-*.js'
       - 'scripts/opencv-spike.js'
+      - 'scripts/scanner-fixtures.js'
+      - 'scanner/fixtures/**'
       - 'services/docquad.js'
       - 'services/procesarDocumento.js'
       - 'routes/docquad.js'
@@ -53,6 +55,9 @@ jobs:
           node --check scanner/opencv/detector.js
           node --check scripts/docquad-postprocess-test.js
           node --check scripts/opencv-spike.js
+          node --check scripts/scanner-fixtures.js
+          node --check scanner/fixtures/iou.js
+          node --check scanner/fixtures/manifest.js
 
       - name: Verify PRODUCT DocQuad postprocess contract
         run: node scripts/docquad-postprocess-test.js
@@ -80,21 +85,14 @@ jobs:
           OPENCV_ALLOW_INVALID: '1'
         run: timeout 30s node scripts/opencv-spike.js /tmp/docquad-e2e.jpg /tmp/opencv-makeacopy.json
 
-      - name: Require composite service fallback on MakeACopy fixture
-        run: |
-          timeout 45s node - <<'NODE'
-          const fs = require('fs');
-          const scanner = require('./services/docquad');
-          (async () => {
-            await scanner.prepararMotores();
-            const r = await scanner.detectarDocumento(fs.readFileSync('/tmp/docquad-e2e.jpg'));
-            console.log(JSON.stringify(r, null, 2));
-            if (!r.confiable) throw new Error(`servicio compuesto no encontró quad: ${r.razon}`);
-            if (!Array.isArray(r.esquinas) || r.esquinas.length !== 4) throw new Error('servicio compuesto no devolvió 4 esquinas');
-            if (!String(r.fuente || '').startsWith('opencv')) throw new Error(`esperaba fallback OpenCV; fuente=${r.fuente}`);
-            process.exit(0);
-          })().catch(err => { console.error(err); process.exit(1); });
-          NODE
+      # Antes aquí se le exigía al detector "encontrar un quad con área < 0.95"
+      # sobre `20251007_183138_cropped.jpg`. Esa imagen es una hoja YA
+      # RECORTADA: ocupa el cuadro completo, así que la respuesta correcta es
+      # justo la que la aserción prohibía. Un detector que devolvía un
+      # cuadrilátero en medio del texto pasaba, y uno correcto fallaba.
+      # Ahora se mide contra ground truth anotado, por IoU.
+      - name: Banco de fixtures del scanner (IoU vs ground truth)
+        run: timeout 120s npm run scanner:fixtures
 
       - name: Download CamScanner OpenCV fixture
         run: |

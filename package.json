@@ -10,7 +10,8 @@
     "variables": "node scripts/variables.js",
     "variables:revisar": "node scripts/variables.js --revisar",
     "docquad:model": "node scripts/docquad-model.js",
-    "docquad:spike": "node scripts/docquad-spike.js"
+    "docquad:spike": "node scripts/docquad-spike.js",
+    "scanner:fixtures": "node scripts/scanner-fixtures.js"
   },
   "license": "UNLICENSED",
   "private": true,
