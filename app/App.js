@@ -7,8 +7,12 @@ import MarcoWeb from './src/components/MarcoWeb';
 import { IdiomaProvider } from './src/i18n';
 import { SesionProvider } from './src/context/SesionContext';
 
-// Sin la URL del backend no hay nada que hacer.
-const faltaConfiguracion = !process.env.EXPO_PUBLIC_API_URL;
+import { BASE } from './src/lib/api';
+
+// Sin la URL del backend no hay nada que hacer. En la web app `BASE` cae al
+// propio origen (el backend sirve el bundle), así que esta pantalla solo
+// aparece en nativo, que sí necesita la variable explícita.
+const faltaConfiguracion = !BASE;
 import ConfiguracionScreen from './src/screens/ConfiguracionScreen';
 import RootNavigator from './src/navigation/RootNavigator';
 

@@ -1,6 +1,12 @@
 import { leerToken } from './sesion';
 
-const BASE = process.env.EXPO_PUBLIC_API_URL;
+// En la web app el backend sirve el propio `app/dist`, así que el mismo origen
+// ES el backend. El build de Railway no tiene `app/.env` (está en .gitignore),
+// de modo que sin este respaldo el bundle quedaba con BASE `undefined` y toda
+// llamada iba a "undefined/api/...". En nativo sí es obligatoria la variable.
+export const BASE =
+  process.env.EXPO_PUBLIC_API_URL ||
+  (typeof window !== 'undefined' && window.location ? window.location.origin : '');
 
 function scannerDebugActivo() {
   if (typeof window === 'undefined') return false;
