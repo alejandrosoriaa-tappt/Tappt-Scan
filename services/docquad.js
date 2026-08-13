@@ -217,9 +217,22 @@ async function detectarDocumento(buffer) {
         : null;
     const respaldado = acuerdo === null ? true : acuerdo >= IOU_ACUERDO;
 
+    // Si NO hay acuerdo, alguno de los dos se equivocó, y lo que se dibuje
+    // debe ser la mejor apuesta disponible. Medido en Safari sobre una mesa
+    // de madera: con el documento chico, OpenCV devolvía áreas de 0.23-0.25
+    // —más grandes que el propio papel, o sea la mesa o el reflejo de la
+    // ventana— mientras DocQuad seguía en el documento. Contra ground truth
+    // DocQuad da 0.948 y 0.951; el umbral por brillo se deja engañar por la
+    // veta y los reflejos. Así que en desacuerdo se muestra el de DocQuad.
+    // Sigue siendo parcial: se dibuja para ajustar, no se recorta solo.
+    const geometriaDocQuad = Boolean(esquinasDocQuad && docquad?.validation?.geometryValid);
+    const esquinasMostradas =
+      !respaldado && geometriaDocQuad ? esquinasDocQuad : esquinasOpenCv;
+
     return {
-      esquinas: esquinasOpenCv,
+      esquinas: esquinasMostradas,
       confiable: respaldado,
+      fuenteDibujada: !respaldado && geometriaDocQuad ? 'docquad' : 'opencv',
       fuente: opencv.source || 'opencv',
       razonDocQuad,
       razon: respaldado ? undefined : 'SIN_ACUERDO_ENTRE_DETECTORES',

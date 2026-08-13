@@ -92,6 +92,7 @@ export default function EscanearScreen({ navigation }) {
       // aparecía el polígono; ahora dice quién contestó y por qué descartó.
       setUltimaDeteccion({
         fuente: respuesta.fuente,
+        dibujada: respuesta.fuenteDibujada || null,
         confiable: Boolean(confiable),
         razon: respuesta.razon || respuesta.razonDocQuad || null,
         acuerdo: respuesta.acuerdoIoU,
@@ -320,6 +321,7 @@ export default function EscanearScreen({ navigation }) {
                 ? `${ultimaDeteccion.fuente} · ${
                     ultimaDeteccion.confiable ? 'confiable' : 'parcial/nada'
                   } · ${ultimaDeteccion.httpMs}ms\n` +
+                  `dibuja=${ultimaDeteccion.dibujada || '—'} ` +
                   `area=${
                     ultimaDeteccion.area != null ? ultimaDeteccion.area.toFixed(3) : '—'
                   } acuerdo=${
