@@ -2,12 +2,12 @@ import React, { useRef, useState, useEffect, useCallback } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, Platform, ActivityIndicator } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useCameraPermissions } from 'expo-camera';
-import Svg, { Polygon } from 'react-native-svg';
 import CamaraDoc from '../components/CamaraDoc';
 import { api } from '../lib/api';
 import { useIdioma } from '../i18n';
 import { alertar } from '../lib/alerta';
 import Icono from '../components/Icono';
+import ContornoQuad from '../components/ContornoQuad';
 import { colores, espacio } from '../theme';
 import { AJUSTE_PREVIEW, proyectarEsquina } from '../lib/preview';
 
@@ -198,10 +198,7 @@ export default function EscanearScreen({ navigation }) {
 
   const puntos =
     deteccion.esquinas && cuadro && pantalla.ancho > 1
-      ? deteccion.esquinas
-          .map((e) => aPantalla(e))
-          .map((p) => `${p.x},${p.y}`)
-          .join(' ')
+      ? deteccion.esquinas.map((e) => aPantalla(e))
       : null;
 
   const colorPorEstado = {
@@ -242,15 +239,12 @@ export default function EscanearScreen({ navigation }) {
       />
 
       {puntos ? (
-        <Svg style={StyleSheet.absoluteFill} pointerEvents="none">
-          <Polygon
-            points={puntos}
-            fill={rellenoPorEstado[deteccion.estado]}
-            stroke={colorPorEstado[deteccion.estado]}
-            strokeWidth={2}
-            strokeLinejoin="round"
-          />
-        </Svg>
+        <ContornoQuad
+          puntos={puntos}
+          color={colorPorEstado[deteccion.estado]}
+          relleno={rellenoPorEstado[deteccion.estado]}
+          grosor={2}
+        />
       ) : null}
 
       <SafeAreaView style={estilos.capa} edges={['top', 'bottom']} pointerEvents="box-none">
