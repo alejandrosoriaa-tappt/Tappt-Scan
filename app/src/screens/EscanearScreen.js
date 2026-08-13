@@ -99,6 +99,7 @@ export default function EscanearScreen({ navigation }) {
         area: esquinas ? area(esquinas) : null,
         areaOpenCv: respuesta.diagnostico?.opencv?.area ?? null,
         razonOpenCv: respuesta.diagnostico?.opencv?.razon ?? null,
+        marcoCompleto: respuesta.diagnostico?.opencv?.marcoCompleto ?? null,
         minZ: respuesta.diagnostico?.docquad?.minConfidenceZ ?? null,
         httpMs: Date.now() - inicioHttp,
       });
@@ -334,7 +335,9 @@ export default function EscanearScreen({ navigation }) {
                     ultimaDeteccion.areaOpenCv != null
                       ? ultimaDeteccion.areaOpenCv.toFixed(3)
                       : '—'
-                  } ${ultimaDeteccion.razonOpenCv || 'ok'}`
+                  } ${ultimaDeteccion.razonOpenCv || 'ok'}${
+                    ultimaDeteccion.marcoCompleto ? ' · marcoCompleto' : ''
+                  }`
                 : 'aún no responde'}
             </Text>
             <Text style={estilos.diagLineaTenue}>{diag.navegador}</Text>

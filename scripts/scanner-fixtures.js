@@ -132,6 +132,13 @@ async function diagnosticoDocQuad(buffer) {
       iouDocQuad,
       zDocQuad: dq?.confidenceZ || null,
       razonDocQuad: dq?.suspiciousReason || null,
+      maskProb: dq?.mask?.meanProb ?? null,
+      maskArea: dq?.mask?.areaGt05 ?? null,
+      iouCornersMask:
+        dq?.candidates?.corners && dq?.candidates?.mask
+          ? iou(dq.candidates.corners, dq.candidates.mask)
+          : null,
+      areaDocQuad: dq?.area ?? null,
     });
   }
 
@@ -146,6 +153,10 @@ async function diagnosticoDocQuad(buffer) {
       `      docquad: IoU=${fmt(f.iouDocQuad)} ` +
         `z=[${(f.zDocQuad || []).map((z) => fmt(z, 2)).join(', ')}] ` +
         `descartado_por=${f.razonDocQuad || '—'}`
+    );
+    console.log(
+      `      mask: meanProb=${fmt(f.maskProb)} areaGt05=${f.maskArea ?? '—'} ` +
+        `IoU(corners,mask)=${fmt(f.iouCornersMask)} areaQuad=${fmt(f.areaDocQuad)}`
     );
   }
 

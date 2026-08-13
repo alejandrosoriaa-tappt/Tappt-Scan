@@ -132,6 +132,7 @@ function diagnosticoOpenCv(resultado) {
     epsilon: resultado.epsilon,
     thresholdValue: resultado.thresholdValue,
     timing: resultado.timing,
+    marcoCompleto: Boolean(resultado.marcoCompleto),
     razon: resultado.reason || null,
   };
 }
@@ -205,37 +206,56 @@ async function detectarDocumento(buffer) {
   const razonDocQuad =
     docquad?.suspiciousReason || (docquad ? 'DOCQUAD_INVALID' : 'DOCQUAD_NOT_READY');
 
+  const geometriaDocQuad = Boolean(esquinasDocQuad && docquad?.validation?.geometryValid);
+
+  // La ÚNICA objeción es el margen de pico. Medido en el banco: los picos de
+  // detecciones correctas van de 2.4 a 4.0 y nunca alcanzan el 5.0 que hereda
+  // MakeACopy, así que exigirlo equivale a apagar DocQuad. Bajar el número a
+  // secas NO sirve —el caso malo del banco tiene z 2.37-3.65, solapado con los
+  // buenos—, por eso en vez de mover el umbral se exige la condición de abajo.
+  const soloMargenDePico = docquad?.suspiciousReason === 'LOW_PEAK_MARGIN';
+
+  // Señal de "la imagen YA es el documento": OpenCV encontró superficie clara
+  // ocupando casi todo el cuadro. Es justo el caso donde DocQuad se equivoca
+  // (devuelve un parche dentro de la hoja, IoU 0.053) y donde además no hay
+  // nada que recortar. Con este guardrail se puede confiar en DocQuad en fotos
+  // de escena sin arriesgar ese caso.
+  const imagenYaRecortada = Boolean(opencv?.marcoCompleto);
+
+  const docquadConfiable = geometriaDocQuad && soloMargenDePico && !imagenYaRecortada;
+
   if (opencv?.valid) {
     const esquinasOpenCv = normalizarEsquinas(opencv.corners);
-    // ¿Coincide con lo que vio DocQuad, aunque a DocQuad lo hayamos
-    // descartado por confianza? Si sí, dos métodos distintos apuntan al
-    // mismo papel y eso basta para recortar solo. Si no, hay un quad pero
-    // nadie lo respalda: se muestra, no se recorta.
     const acuerdo =
-      esquinasDocQuad && esquinasOpenCv
-        ? iou(esquinasDocQuad, esquinasOpenCv)
-        : null;
-    const respaldado = acuerdo === null ? true : acuerdo >= IOU_ACUERDO;
+      esquinasDocQuad && esquinasOpenCv ? iou(esquinasDocQuad, esquinasOpenCv) : null;
 
-    // Si NO hay acuerdo, alguno de los dos se equivocó, y lo que se dibuje
-    // debe ser la mejor apuesta disponible. Medido en Safari sobre una mesa
-    // de madera: con el documento chico, OpenCV devolvía áreas de 0.23-0.25
-    // —más grandes que el propio papel, o sea la mesa o el reflejo de la
-    // ventana— mientras DocQuad seguía en el documento. Contra ground truth
-    // DocQuad da 0.948 y 0.951; el umbral por brillo se deja engañar por la
-    // veta y los reflejos. Así que en desacuerdo se muestra el de DocQuad.
-    // Sigue siendo parcial: se dibuja para ajustar, no se recorta solo.
-    const geometriaDocQuad = Boolean(esquinasDocQuad && docquad?.validation?.geometryValid);
-    const esquinasMostradas =
-      !respaldado && geometriaDocQuad ? esquinasDocQuad : esquinasOpenCv;
+    // Coinciden los dos: la mejor evidencia posible.
+    if (acuerdo === null || acuerdo >= IOU_ACUERDO) {
+      return {
+        esquinas: esquinasOpenCv,
+        confiable: true,
+        fuente: opencv.source || 'opencv',
+        fuenteDibujada: 'opencv',
+        razonDocQuad,
+        acuerdoIoU: acuerdo,
+        diagnostico: {
+          docquad: diagnosticoDocQuad(docquad),
+          opencv: diagnosticoOpenCv(opencv),
+        },
+      };
+    }
 
+    // No coinciden. Medido en Safari: sobre madera y sobre granito claro
+    // OpenCV devolvía la mesa entera (áreas 0.66-0.77) mientras DocQuad se
+    // quedaba en el documento (0.15). El umbral por brillo se deja engañar
+    // por vetas y reflejos; DocQuad no. Así que gana DocQuad.
     return {
-      esquinas: esquinasMostradas,
-      confiable: respaldado,
-      fuenteDibujada: !respaldado && geometriaDocQuad ? 'docquad' : 'opencv',
-      fuente: opencv.source || 'opencv',
+      esquinas: geometriaDocQuad ? esquinasDocQuad : esquinasOpenCv,
+      confiable: docquadConfiable,
+      fuente: docquadConfiable ? 'docquad' : opencv.source || 'opencv',
+      fuenteDibujada: geometriaDocQuad ? 'docquad' : 'opencv',
+      razon: docquadConfiable ? undefined : 'SIN_ACUERDO_ENTRE_DETECTORES',
       razonDocQuad,
-      razon: respaldado ? undefined : 'SIN_ACUERDO_ENTRE_DETECTORES',
       acuerdoIoU: acuerdo,
       diagnostico: {
         docquad: diagnosticoDocQuad(docquad),
@@ -244,14 +264,15 @@ async function detectarDocumento(buffer) {
     };
   }
 
-  // OpenCV no encontró nada, pero DocQuad puede traer un quad con geometría
-  // válida que solo falló por confianza. Antes se perdía aquí.
-  if (esquinasDocQuad && docquad?.validation?.geometryValid) {
+  // OpenCV no encontró nada. Si DocQuad trae geometría válida, es lo único
+  // que hay — y con el guardrail de arriba puede valer como confiable.
+  if (geometriaDocQuad) {
     return {
       esquinas: esquinasDocQuad,
-      confiable: false,
-      fuente: 'docquad-parcial',
-      razon: razonDocQuad,
+      confiable: docquadConfiable,
+      fuente: docquadConfiable ? 'docquad' : 'docquad-parcial',
+      fuenteDibujada: 'docquad',
+      razon: docquadConfiable ? undefined : razonDocQuad,
       diagnostico: {
         docquad: diagnosticoDocQuad(docquad),
         opencv: diagnosticoOpenCv(opencv),

@@ -146,6 +146,11 @@ function evaluarQuad(quad, areaContour, imgArea, opciones) {
 
 function mejorQuadDeContornos(cv, contours, imgArea, opciones) {
   let best = null;
+  // Un candidato descartado por ocupar casi todo el cuadro no sirve como
+  // detección, pero SÍ es información: significa que la superficie clara
+  // llena la foto, o sea que la imagen probablemente YA es el documento.
+  // Antes se descartaba en silencio y se perdía ese dato.
+  let marcoCompleto = false;
   const total = contours.size();
   for (let i = 0; i < total; i++) {
     const contour = contours.get(i);
@@ -159,6 +164,7 @@ function mejorQuadDeContornos(cv, contours, imgArea, opciones) {
         try {
           cv.approxPolyDP(contour, approx, perimeter * eps, true);
           if (approx.rows !== 4 || !cv.isContourConvex(approx)) continue;
+          if (areaNorm >= AREA_MAXIMA_CANDIDATO) marcoCompleto = true;
           const candidate = evaluarQuad(matPointVectorToArray(approx), area, imgArea, opciones);
           if (!candidate) continue;
           candidate.epsilon = eps;
@@ -171,12 +177,13 @@ function mejorQuadDeContornos(cv, contours, imgArea, opciones) {
       contour.delete();
     }
   }
-  return { best, total };
+  return { best, total, marcoCompleto };
 }
 
 function detectarPorPapelClaro(cv, gray, imgArea) {
   const thresholds = [120, 140, 160, 180];
   let best = null;
+  let marcoCompleto = false;
   for (const thresholdValue of thresholds) {
     const mask = new cv.Mat();
     const closed = new cv.Mat();
@@ -199,6 +206,7 @@ function detectarPorPapelClaro(cv, gray, imgArea) {
         minAspect: 0.3,
         maxAspect: 4.0,
       });
+      if (result.marcoCompleto) marcoCompleto = true;
       if (result.best) {
         const candidate = { ...result.best, source: 'opencv-paper', thresholdValue };
         if (!best || candidate.score > best.score) best = candidate;
@@ -213,7 +221,7 @@ function detectarPorPapelClaro(cv, gray, imgArea) {
       mask.delete();
     }
   }
-  return best;
+  return best ? { ...best, marcoCompleto } : marcoCompleto ? { marcoCompleto } : null;
 }
 
 function detectarPorPapelNeutro(cv, src, imgArea) {
@@ -255,9 +263,16 @@ function detectarPorPapelNeutro(cv, src, imgArea) {
       minAspect: 0.3,
       maxAspect: 4.0,
     });
-    return result.best
-      ? { ...result.best, source: 'opencv-neutral-paper', saturationMax: 25, valueMin: 100 }
-      : null;
+    if (result.best) {
+      return {
+        ...result.best,
+        source: 'opencv-neutral-paper',
+        saturationMax: 25,
+        valueMin: 100,
+        marcoCompleto: result.marcoCompleto,
+      };
+    }
+    return result.marcoCompleto ? { marcoCompleto: true } : null;
   } finally {
     contours.delete();
     hierarchy.delete();
@@ -275,7 +290,7 @@ function detectarPorPapelNeutro(cv, src, imgArea) {
 }
 
 function elegirMejorCandidato(...candidatos) {
-  return candidatos.filter(Boolean).reduce(
+  return candidatos.filter((c) => c && c.quad).reduce(
     (best, candidate) => (!best || candidate.score > best.score ? candidate : best),
     null
   );
@@ -341,8 +356,20 @@ class OpenCvDocumentDetector {
       const paperCandidate = detectarPorPapelClaro(cv, gray, imgArea);
       const neutralPaperCandidate = detectarPorPapelNeutro(cv, src, imgArea);
       const candidate = elegirMejorCandidato(cannyCandidate, paperCandidate, neutralPaperCandidate);
+      const marcoCompleto = Boolean(
+        contourResult.marcoCompleto ||
+          paperCandidate?.marcoCompleto ||
+          neutralPaperCandidate?.marcoCompleto
+      );
       if (!candidate) {
-        return { valid: false, source: 'opencv', reason: 'NO_QUAD', area: 0, timing: { totalMs: Date.now() - inicio } };
+        return {
+          valid: false,
+          source: 'opencv',
+          reason: 'NO_QUAD',
+          area: 0,
+          marcoCompleto,
+          timing: { totalMs: Date.now() - inicio },
+        };
       }
       const corners = candidate.quad.map((p) => ({ x: p.x / img.width, y: p.y / img.height }));
       const area = areaQuad(corners);
@@ -353,6 +380,7 @@ class OpenCvDocumentDetector {
         valid,
         source: candidate.source,
         reason: valid ? null : area < MIN_AREA_CONFIABLE ? 'AREA_TOO_SMALL' : 'INVALID_GEOMETRY',
+        marcoCompleto,
         corners,
         cornersPixels: corners.map((p) => ({ x: p.x * img.srcW, y: p.y * img.srcH })),
         area,
