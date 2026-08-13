@@ -190,10 +190,13 @@ export default function EscanearScreen({ navigation }) {
     listo: colores.primario,
   };
 
+  // Relleno muy tenue a propósito (benchmark CamScanner): el quad confirma
+  // el recorte, no debe tapar el documento — con 0.25 el papel se veía
+  // teñido de verde y ya no se juzgaba si el borde estaba bien puesto.
   const rellenoPorEstado = {
-    buscando: 'rgba(255,255,255,0.08)',
-    parcial: 'rgba(255,255,255,0.16)',
-    listo: 'rgba(24,184,117,0.25)',
+    buscando: 'rgba(255,255,255,0.06)',
+    parcial: 'rgba(255,255,255,0.10)',
+    listo: 'rgba(124,245,192,0.14)',
   };
 
   const textoPorEstado = {
@@ -224,7 +227,7 @@ export default function EscanearScreen({ navigation }) {
             points={puntos}
             fill={rellenoPorEstado[deteccion.estado]}
             stroke={colorPorEstado[deteccion.estado]}
-            strokeWidth={3}
+            strokeWidth={2}
             strokeLinejoin="round"
           />
         </Svg>
@@ -300,9 +303,14 @@ export default function EscanearScreen({ navigation }) {
               le decía al usuario "llena esto", que es justo lo contrario de
               lo que queremos (acercarse recorta el documento y le quita
               margen al detector). La única guía visual es el quad. */}
-          <View style={estilos.pistaCaja} pointerEvents="none">
-            <Text style={estilos.marcoTexto}>{textoPorEstado[deteccion.estado]}</Text>
-          </View>
+          {/* La pista solo aparece cuando NO hay quad. En cuanto el polígono
+              está en pantalla él mismo dice lo que hay que saber, y el texto
+              encima solo estorba (en el benchmark no existe). */}
+          {puntos ? null : (
+            <View style={estilos.pistaCaja} pointerEvents="none">
+              <Text style={estilos.marcoTexto}>{textoPorEstado[deteccion.estado]}</Text>
+            </View>
+          )}
         </View>
 
         <View style={estilos.controles}>
