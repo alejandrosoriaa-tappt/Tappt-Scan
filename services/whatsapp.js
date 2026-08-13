@@ -15,21 +15,33 @@ async function sendText(to, body) {
   });
 }
 async function sendButtons(to, bodyText, buttons) {
-  return client().post('/messages', {
-    messaging_product: 'whatsapp',
-    to,
-    type: 'interactive',
-    interactive: {
-      type: 'button',
-      body: { text: bodyText },
-      action: {
-        buttons: buttons.map((b) => ({
-          type: 'reply',
-          reply: { id: b.id, title: b.title },
-        })),
+  try {
+    return await client().post('/messages', {
+      messaging_product: 'whatsapp',
+      to,
+      type: 'interactive',
+      interactive: {
+        type: 'button',
+        body: { text: bodyText },
+        action: {
+          buttons: buttons.map((b) => ({
+            type: 'reply',
+            reply: { id: b.id, title: b.title },
+          })),
+        },
       },
-    },
-  });
+    });
+  } catch (err) {
+    // La confirmación de guardado no puede depender de que Meta acepte el
+    // formato interactivo. Si los botones son rechazados por la cuenta,
+    // sesión o capacidades del número, enviamos el mismo contenido como
+    // texto simple para que el usuario siempre sepa que el archivo se guardó.
+    console.warn('[whatsapp] mensaje interactivo rechazado; fallback a texto', {
+      status: err.response?.status,
+      data: err.response?.data,
+    });
+    return sendText(to, bodyText);
+  }
 }
 
 // Marca un mensaje entrante como leído (palomitas azules).
