@@ -375,12 +375,19 @@ class OpenCvDocumentDetector {
       const area = areaQuad(corners);
       const finite = corners.every((p) => Number.isFinite(p.x) && Number.isFinite(p.y));
       const inside = corners.every((p) => p.x >= 0 && p.x <= 1 && p.y >= 0 && p.y <= 1);
-      const valid = finite && inside && area >= MIN_AREA_CONFIABLE && area < AREA_MAXIMA_CANDIDATO;
+      // El tope del candidato se mide sobre el ÁREA DEL CONTORNO y este sobre
+      // el ÁREA DEL QUAD, y no siempre coinciden: un contorno de 0.93 puede
+      // aproximarse a un cuadrilátero de 0.997. Por eso la señal de marco
+      // completo también se levanta aquí, con el número final. Sin esto se
+      // colaba un quad que era la foto entera sin marcar la señal, y el
+      // guardrail de "imagen ya recortada" no se enteraba.
+      const quadEsMarcoCompleto = area >= AREA_MAXIMA_CANDIDATO;
+      const valid = finite && inside && area >= MIN_AREA_CONFIABLE && !quadEsMarcoCompleto;
       return {
         valid,
         source: candidate.source,
         reason: valid ? null : area < MIN_AREA_CONFIABLE ? 'AREA_TOO_SMALL' : 'INVALID_GEOMETRY',
-        marcoCompleto,
+        marcoCompleto: marcoCompleto || quadEsMarcoCompleto,
         corners,
         cornersPixels: corners.map((p) => ({ x: p.x * img.srcW, y: p.y * img.srcH })),
         area,

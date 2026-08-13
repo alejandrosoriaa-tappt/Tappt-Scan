@@ -208,21 +208,19 @@ async function detectarDocumento(buffer) {
 
   const geometriaDocQuad = Boolean(esquinasDocQuad && docquad?.validation?.geometryValid);
 
-  // La ÚNICA objeción es el margen de pico. Medido en el banco: los picos de
-  // detecciones correctas van de 2.4 a 4.0 y nunca alcanzan el 5.0 que hereda
-  // MakeACopy, así que exigirlo equivale a apagar DocQuad. Bajar el número a
-  // secas NO sirve —el caso malo del banco tiene z 2.37-3.65, solapado con los
-  // buenos—, por eso en vez de mover el umbral se exige la condición de abajo.
-  const soloMargenDePico = docquad?.suspiciousReason === 'LOW_PEAK_MARGIN';
-
-  // Señal de "la imagen YA es el documento": OpenCV encontró superficie clara
-  // ocupando casi todo el cuadro. Es justo el caso donde DocQuad se equivoca
-  // (devuelve un parche dentro de la hoja, IoU 0.053) y donde además no hay
-  // nada que recortar. Con este guardrail se puede confiar en DocQuad en fotos
-  // de escena sin arriesgar ese caso.
-  const imagenYaRecortada = Boolean(opencv?.marcoCompleto);
-
-  const docquadConfiable = geometriaDocQuad && soloMargenDePico && !imagenYaRecortada;
+  // INTENTO REVERTIDO (2026-08-13). Se probó dejar que DocQuad SOLO marcara
+  // confiable cuando su única objeción fuera LOW_PEAK_MARGIN y no hubiera
+  // señal de imagen ya recortada. En granito claro eso se rompió: DocQuad
+  // devolvía quads bastante más grandes que el papel (áreas 0.315 y 0.363,
+  // uno saliéndose del cuadro) y quedaban marcados confiables, o sea que se
+  // habría recortado mal en automático.
+  //
+  // Un verde equivocado es PEOR que un blanco correcto: el blanco pide
+  // ajuste, el verde recorta solo. Así que la confianza sigue exigiendo
+  // ACUERDO entre los dos detectores. DocQuad sin corroborar se dibuja como
+  // parcial, que es donde ya aporta valor: en granito y madera es el único
+  // que se queda en el documento cuando OpenCV se va a la mesa.
+  const docquadConfiable = false;
 
   if (opencv?.valid) {
     const esquinasOpenCv = normalizarEsquinas(opencv.corners);
