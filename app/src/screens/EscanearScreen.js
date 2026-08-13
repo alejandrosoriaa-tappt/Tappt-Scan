@@ -9,6 +9,7 @@ import { useIdioma } from '../i18n';
 import { alertar } from '../lib/alerta';
 import Icono from '../components/Icono';
 import { colores, espacio } from '../theme';
+import { AJUSTE_PREVIEW, proyectarEsquina } from '../lib/preview';
 
 const esWeb = Platform.OS === 'web';
 
@@ -166,23 +167,14 @@ export default function EscanearScreen({ navigation }) {
 
   /**
    * Convierte una esquina (fracción del cuadro analizado) a píxeles de
-   * pantalla.
+   * pantalla, deshaciendo el encaje del preview.
    *
-   * El preview se dibuja con `object-fit: cover`: el cuadro se escala hasta
-   * tapar la pantalla y lo que sobra se recorta por los lados o por arriba
-   * y abajo. Sin deshacer ese recorte, las fracciones caen en el lugar
-   * equivocado — es el bug que hacía que el marco verde apareciera corrido
-   * respecto al documento (2026-08-12).
+   * La lógica vive en `lib/preview.js` junto con el modo de ajuste, porque
+   * el componente de cámara y esta proyección TIENEN que usar el mismo: si
+   * se separan, el polígono sale corrido respecto al documento (ese fue el
+   * bug del 2026-08-12).
    */
-  const aPantalla = (esquina) => {
-    const escala = Math.max(pantalla.ancho / cuadro.ancho, pantalla.alto / cuadro.alto);
-    const anchoVisible = cuadro.ancho * escala;
-    const altoVisible = cuadro.alto * escala;
-    return {
-      x: (pantalla.ancho - anchoVisible) / 2 + esquina.x * anchoVisible,
-      y: (pantalla.alto - altoVisible) / 2 + esquina.y * altoVisible,
-    };
-  };
+  const aPantalla = (esquina) => proyectarEsquina(esquina, cuadro, pantalla);
 
   const puntos =
     deteccion.esquinas && cuadro && pantalla.ancho > 1
@@ -267,9 +259,23 @@ export default function EscanearScreen({ navigation }) {
             {diag.track ? (
               <Text style={estilos.diagLinea}>
                 TRACK {diag.track.width}×{diag.track.height} @{diag.track.frameRate || '?'}fps{'\n'}
-                facing: {diag.track.facingMode || '—'}
+                facing: {diag.track.facingMode || '—'} · ajuste: {diag.ajuste || '—'}
               </Text>
             ) : null}
+            {/* Sin esto no hay forma de saber si el navegador siquiera ofreció
+                una ultra-wide o control de zoom: en iOS suele exponer una sola
+                "Back Camera" virtual y ninguna capability de zoom, y entonces
+                el único campo visual que se puede ganar es el que se recuperó
+                al dejar de recortar con `cover`. */}
+            <Text style={estilos.diagLinea}>
+              CÁMARA {diag.label || '—'}
+              {'\n'}zoom:{' '}
+              {diag.capabilities?.zoom
+                ? `${diag.capabilities.zoom.min}–${diag.capabilities.zoom.max} · ahora ${
+                    diag.track?.zoom ?? '?'
+                  }`
+                : 'no expuesto'}
+            </Text>
             <Text style={estilos.diagLinea}>
               DETECTOR{' '}
               {ultimoFrame
@@ -290,8 +296,10 @@ export default function EscanearScreen({ navigation }) {
         ) : null}
 
         <View style={estilos.visor} pointerEvents="box-none">
-          {puntos ? null : <View style={estilos.marco} />}
-
+          {/* Ya no hay marco punteado grande: además de ensuciar el visor,
+              le decía al usuario "llena esto", que es justo lo contrario de
+              lo que queremos (acercarse recorta el documento y le quita
+              margen al detector). La única guía visual es el quad. */}
           <View style={estilos.pistaCaja} pointerEvents="none">
             <Text style={estilos.marcoTexto}>{textoPorEstado[deteccion.estado]}</Text>
           </View>
@@ -380,16 +388,6 @@ const estilos = StyleSheet.create({
   },
   botonPermisoTexto: { color: '#FFFFFF', fontSize: 15, fontWeight: '600' },
   visor: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: espacio.lg },
-  marco: {
-    width: '100%',
-    aspectRatio: 3 / 4,
-    borderWidth: 2,
-    borderColor: 'rgba(255,255,255,0.6)',
-    borderRadius: 16,
-    borderStyle: 'dashed',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
   marcoTexto: { color: 'rgba(255,255,255,0.85)', fontSize: 13, fontWeight: '600' },
   pistaCaja: {
     position: 'absolute',

@@ -1,10 +1,20 @@
 import React, { useRef, useEffect, useImperativeHandle, forwardRef } from 'react';
 import { View } from 'react-native';
+import { AJUSTE_PREVIEW } from '../lib/preview';
 
+// Todo va como `ideal` a propósito: `exact` lanza OverconstrainedError y nos
+// deja sin cámara si el dispositivo no puede cumplir, mientras que `ideal`
+// siempre negocia lo más cercano.
+//
+// 4:3 y no 16:9: el sensor de un teléfono es 4:3, así que pedir 16:9 hace
+// que el propio navegador recorte arriba y abajo antes de entregarnos nada.
+// Ese recorte es campo visual perdido que ya nunca se recupera — se ve como
+// zoom-in aunque estemos en la cámara más angular.
 const BASE_VIDEO = {
   facingMode: { ideal: 'environment' },
-  width: { ideal: 3840 },
-  height: { ideal: 2160 },
+  width: { ideal: 4032 },
+  height: { ideal: 3024 },
+  aspectRatio: { ideal: 4 / 3 },
 };
 
 function esTrasera(device) {
@@ -75,7 +85,11 @@ function CamaraDocWeb({ style, onLista, onError }, ref) {
     const el = document.createElement('video');
     el.autoplay = true; el.muted = true; el.playsInline = true;
     el.setAttribute('playsinline', 'true'); el.setAttribute('muted', 'true');
-    el.style.width = '100%'; el.style.height = '100%'; el.style.objectFit = 'cover'; el.style.display = 'block';
+    // `objectFit` sale de lib/preview.js, que es también quien proyecta el
+    // polígono. Con 'cover' el navegador recortaba el cuadro para tapar la
+    // pantalla: en vertical eso se come los costados del sensor y el visor
+    // se siente cerrado por más ultra-wide que se haya conseguido.
+    el.style.width = '100%'; el.style.height = '100%'; el.style.objectFit = AJUSTE_PREVIEW; el.style.display = 'block';
     nodo.appendChild(el); video.current = el;
 
     abrirStreamMasAbierto().then((s) => {
@@ -109,10 +123,13 @@ function CamaraDocWeb({ style, onLista, onError }, ref) {
         capabilities: track?.getCapabilities?.() || null,
         label: track?.label || '—',
         videoWidth: el?.videoWidth || 0, videoHeight: el?.videoHeight || 0,
+        ajuste: AJUSTE_PREVIEW,
       };
     },
   }));
 
-  return <View ref={contenedor} style={style} />;
+  // Fondo negro: con `contain` quedan bandas donde el video no llega, y sin
+  // esto se verían del color de la pantalla de atrás.
+  return <View ref={contenedor} style={[style, { backgroundColor: '#000' }]} />;
 }
 export default forwardRef(CamaraDocWeb);
