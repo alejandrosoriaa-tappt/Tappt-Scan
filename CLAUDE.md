@@ -299,38 +299,39 @@ sesión de Claude, leer inmediatamente:
 Rama activa: **`claude/new-session-9mhtdk`**. Desarrollar, commitear y
 pushear ahí. No abrir PR salvo que se pida explícitamente.
 
-## 👉 Retomando la sesión (actualizado 2026-08-12 15:10 CDMX)
+## 👉 Retomando la sesión (actualizado 2026-08-13 CDMX)
 
 **ORDEN DE LECTURA para retomar scanner:**
 
 1. `CLAUDE.md` (este archivo).
 2. `docs/ARQUITECTURA-SCANNER.md`.
-3. **`docs/HANDOFF-CHATGPT-2026-08-12.md`** — contiene los commits exactos,
-   pruebas de Safari, fixes de Recorte, warm-up/502 y el siguiente paso.
+3. `docs/HANDOFF-CHATGPT-2026-08-12.md` (histórico del relevo anterior).
 
-Estado actual del scanner:
+### Estado actual — validado en iPhone/Safari 2026-08-13
 
-- Foco de desarrollo: **iPhone + Web App Safari** y WhatsApp. Nativo
-  iOS/Android se valida después cuando existan cuentas/builds.
-- Captura web medida: `2160×3840` stream/track a 30 fps en el iPhone usado
-  para pruebas; la captura final ya tiene resolución suficiente.
-- Frames de detección medidos: alrededor de `640×1138`, 84–98 KB.
-- Otsu queda **abandonado**. No volver a ajustar ni reparar ese detector.
-- DocQuad ya está integrado en backend/spike y el workflow CI pasó modelo
-  verificado + golden input + smoke test.
-- El 502 observado al iniciar detección se trató con warm-up en background y
-  respuestas no bloqueantes mientras el modelo carga.
-- `RecorteScreen` ya corrige la geometría de `resizeMode="contain"` y usa las
-  dimensiones reales de la captura.
-- Una prueba sin documento correctamente no mostró quad.
-- **Última prueba real:** una hoja grande, clara y casi completa en Safari NO
-  mostró todavía el polígono. Antes de tocar umbrales o algoritmos hay que
-  instrumentar la respuesta real de DocQuad (`razon`, esquinas, confiable,
-  `minConfidenceZ`, máscara, tiempos y latencia HTTP).
-- Brecha conocida vs MakeACopy: nuestro postproceso usa principalmente las
-  corner heatmaps y la máscara como guardrail; MakeACopy tiene selección/
-  refinamiento adicional basado en máscara. Revisar esa brecha si la
-  instrumentación demuestra que el problema está en postproceso.
+**El escaneo funciona.** Medido en el dispositivo real, no en teoría:
+
+- Cámara: ultra-wide real a **0.5x** (Safari SÍ expone `zoom: 0.5-10`),
+  stream `3024×4032` (4:3), preview en `contain`. El campo visual abierto
+  del benchmark ya está.
+- Overlay en vivo: `acuerdo=0.98/0.99` entre los dos detectores, quad
+  verde pegado al papel, latencia ~400-560ms por ciclo.
+- Recorte y enderezado sobre la captura full-res (12.19MP): correcto,
+  incluso con perspectiva fuerte.
+
+**Sigue pendiente:** DocQuad en el navegador (pasos 3 y 6). Hoy cada ciclo
+es un viaje al servidor cada 1.4s; CamScanner corre en el teléfono a
+30fps. Esa es la brecha de FLUIDEZ que queda, no de acierto.
+
+### Cómo se toman decisiones aquí ahora
+
+`npm run scanner:fixtures` es la vara. Cualquier cambio al detector se
+justifica con IoU contra ground truth, no con una foto que "se ve bien".
+Esto no es burocracia: se perdieron varias sesiones ajustando contra un
+fixture que premiaba la respuesta incorrecta.
+
+**Prohibido mover umbrales a ojo.** Ya se intentó y los datos lo
+desmintieron dos veces (ver abajo).
 
 ### Hallazgo 2026-08-13 — por qué el scanner no avanzaba
 
@@ -351,9 +352,25 @@ Tres causas, todas nuestras, encontradas con el banco de fixtures nuevo:
    RECORTADA y se le exigía un quad de área < 0.95 — o sea, se premiaba
    la respuesta incorrecta. Se estuvo ajustando contra esa señal.
 
-**NO tocar `PEAK_SIGMA_THRESHOLD` a ojo.** Se recalibra cuando el banco
-tenga las 20 fotos con ground truth; `npm run scanner:fixtures` ya imprime
-los `z` por esquina de cada fixture justamente para juntar esa evidencia.
+**NO tocar `PEAK_SIGMA_THRESHOLD` a ojo — se midió y NO funciona.** La
+tentación es bajarlo de 5.0 a ~2.5 para que las detecciones reales pasen.
+Los datos lo desmienten: el caso donde DocQuad SE EQUIVOCA tiene
+z 2.37-3.65, **solapado** con los aciertos (2.97-3.96). Bajarlo dejaría
+pasar la detección mala. Tampoco separan la máscara (0.033 en un acierto
+vs 0.023 en el error) ni la concordancia interna corners/mask (0.238 en un
+acierto vs 0.668 en el error).
+
+Lo que SÍ separa ese caso: la imagen ya es el documento. Ahí OpenCV ve
+superficie clara ocupando casi todo el cuadro → señal `marcoCompleto`.
+Por eso el compuesto confía en DocQuad cuando su única objeción es
+`LOW_PEAK_MARGIN`, su geometría es válida y NO hay `marcoCompleto`.
+
+### Mínimos de área y el encuadre abierto
+
+Al pasar la cámara a 0.5x el documento ocupa ~5-10% del cuadro. Los
+mínimos de OpenCV (0.15/0.10) estaban calibrados para el visor recortado
+y dejaban ciego al detector justo en el encuadre que el producto pide.
+Están en 0.03/0.02, fijados por el fixture `camscanner-lejos`.
 
 Commits del relevo ChatGPT documentados en el handoff:
 
@@ -405,3 +422,17 @@ Otros pendientes de producto:
 - **Moneda:** la app no deja elegirla todavía; se usa la del usuario o
   `STRIPE_MONEDA`. El endpoint `PUT /api/cuenta/preferencias` ya la acepta.
 - Recordatorios de vencimiento (plan Negocio) y multi-usuario.
+- **Lote / múltiples documentos** (pedido 2026-08-13). Cuatro caras de una
+  sola función: modo Individual/Lote en la cámara, botón **+** para
+  agregar páginas, **mosaico previo** antes de mandar a Drive (con borrar
+  del temporal) y **compartir** desde ahí. El mosaico es la pieza que las
+  une: es el único punto donde el documento existe ANTES de irse a Drive.
+  `components/VistaMosaico.js` ya existe (se usa en el editor) y ya trae
+  compartir. OJO: no es solo UI — hoy `procesarDocumento` asume
+  1 documento = 1 foto = 1 PDF; lote implica varias páginas por PDF, un
+  temporal que sobrevive entre captura y subida, y decidir qué pasa si se
+  cierra la app a medias.
+- **Fotos del banco de fixtures: van 3 de 20** (una sintética). Las que más
+  falta hacen son las que ya fallaron en dispositivo: granito claro (OpenCV
+  se traga la barra entera, área 0.66-0.77) y reflejo de ventana. Sin la
+  imagen original no se pueden fijar como prueba de regresión.
