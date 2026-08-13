@@ -5,6 +5,9 @@ const { createCanvas, loadImage, ImageData } = require('@napi-rs/canvas');
 
 const MAX_EDGE = 720;
 const MIN_AREA_CONFIABLE = 0.10;
+// Tope compartido: por encima de esto un quad es "toda la foto", no un
+// documento. Se aplica al crear el candidato y al validar el resultado.
+const AREA_MAXIMA_CANDIDATO = 0.95;
 const EPSILONS = [0.01, 0.015, 0.02, 0.025, 0.03, 0.04, 0.05];
 
 function timeout(ms, codigo) {
@@ -121,6 +124,14 @@ function evaluarQuad(quad, areaContour, imgArea, opciones) {
   const rectRaw = rectScore(q, opciones.minAngle, opciones.maxAngle);
   if (rectRaw < 0 || aspect <= opciones.minAspect || aspect >= opciones.maxAspect) return null;
   const areaNorm = areaContour / imgArea;
+  // Un quad que ocupa casi todo el cuadro NO es una detección: es el detector
+  // devolviendo el marco de la foto. Se descarta aquí, al nacer el candidato,
+  // porque es el único punto por el que pasan los tres detectores. La regla
+  // existía suelta en la rama `paper` y `neutral-paper` no la tenía: como
+  // `score` premia el área, el marco completo (0.997) ganaba la comparación,
+  // tapaba al candidato legítimo más chico y recién al validar el resultado
+  // final se descartaba todo con INVALID_GEOMETRY. Ese era el fallo de CI.
+  if (areaNorm >= AREA_MAXIMA_CANDIDATO) return null;
   const score = 0.7 * areaNorm + 0.3 * (rectRaw / 120);
   return { quad: q, score, areaNorm, aspect, angles: angulosQuad(q) };
 }
@@ -182,7 +193,7 @@ function detectarPorPapelClaro(cv, gray, imgArea) {
       });
       if (result.best) {
         const candidate = { ...result.best, source: 'opencv-paper', thresholdValue };
-        if (candidate.areaNorm < 0.95 && (!best || candidate.score > best.score)) best = candidate;
+        if (!best || candidate.score > best.score) best = candidate;
       }
     } finally {
       contours.delete();
@@ -329,7 +340,7 @@ class OpenCvDocumentDetector {
       const area = areaQuad(corners);
       const finite = corners.every((p) => Number.isFinite(p.x) && Number.isFinite(p.y));
       const inside = corners.every((p) => p.x >= 0 && p.x <= 1 && p.y >= 0 && p.y <= 1);
-      const valid = finite && inside && area >= MIN_AREA_CONFIABLE && area < 0.95;
+      const valid = finite && inside && area >= MIN_AREA_CONFIABLE && area < AREA_MAXIMA_CANDIDATO;
       return {
         valid,
         source: candidate.source,
@@ -379,4 +390,5 @@ module.exports = {
   areaQuad,
   elegirMejorCandidato,
   MIN_AREA_CONFIABLE,
+  AREA_MAXIMA_CANDIDATO,
 };
