@@ -74,6 +74,18 @@ const FIXTURES = [
     ],
     minIoU: 0.9,
   },
+  {
+    id: 'camscanner-lejos',
+    tipo: 'escena',
+    sintetico: true,
+    derivadoDe: 'camscanner-nota',
+    factor: 2.6,
+    descripcion:
+      'La misma hoja vista DE LEJOS: ocupa ~5% del cuadro, como queda al ' +
+      'capturar con la cámara ultra-wide a 0.5x. Encuadre que el producto ' +
+      'pide (capturar con margen) y que los mínimos de área rechazaban.',
+    minIoU: 0.8,
+  },
 ];
 
 module.exports = { FIXTURES };

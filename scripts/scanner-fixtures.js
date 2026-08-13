@@ -22,6 +22,7 @@ const https = require('https');
 
 const { FIXTURES } = require('../scanner/fixtures/manifest');
 const { iou } = require('../scanner/fixtures/iou');
+const { derivarDocumentoChico } = require('../scanner/fixtures/derivar');
 const scanner = require('../services/docquad');
 const { DocQuadDetector } = require('../scanner/docquad/detector');
 
@@ -51,13 +52,28 @@ function descargar(url, redirecciones = 0) {
   });
 }
 
-async function asegurarFixture(fixture) {
+async function asegurarFixture(fixture, yaResueltos) {
+  // Fixture derivado: se construye a partir de otro ya resuelto, junto con
+  // su ground truth transformado. No se descarga nada.
+  if (fixture.derivadoDe) {
+    const base = yaResueltos.get(fixture.derivadoDe);
+    if (!base) throw new Error(`fixture base no resuelto: ${fixture.derivadoDe}`);
+    const { buffer, groundTruth } = await derivarDocumentoChico(
+      base.buffer,
+      base.groundTruth,
+      fixture.factor
+    );
+    return { buffer, groundTruth };
+  }
+
   const destino = path.join(CACHE, fixture.archivo);
-  if (fs.existsSync(destino) && fs.statSync(destino).size > 0) return fs.readFileSync(destino);
+  if (fs.existsSync(destino) && fs.statSync(destino).size > 0) {
+    return { buffer: fs.readFileSync(destino), groundTruth: fixture.groundTruth };
+  }
   fs.mkdirSync(CACHE, { recursive: true });
   const buffer = await descargar(fixture.url);
   fs.writeFileSync(destino, buffer);
-  return buffer;
+  return { buffer, groundTruth: fixture.groundTruth };
 }
 
 function fmt(n, d = 3) {
@@ -81,15 +97,17 @@ async function diagnosticoDocQuad(buffer) {
   await scanner.prepararMotores();
 
   const filas = [];
+  const resueltos = new Map();
   let fallos = 0;
 
   for (const fixture of FIXTURES) {
-    const buffer = await asegurarFixture(fixture);
+    const { buffer, groundTruth } = await asegurarFixture(fixture, resueltos);
+    resueltos.set(fixture.id, { buffer, groundTruth });
     const resultado = await scanner.detectarDocumento(buffer);
     const dq = await diagnosticoDocQuad(buffer);
 
-    const valorIoU = resultado.esquinas ? iou(resultado.esquinas, fixture.groundTruth) : 0;
-    const iouDocQuad = dq?.corners ? iou(dq.corners, fixture.groundTruth) : null;
+    const valorIoU = resultado.esquinas ? iou(resultado.esquinas, groundTruth) : 0;
+    const iouDocQuad = dq?.corners ? iou(dq.corners, groundTruth) : null;
 
     // En un fixture ya recortado el documento ES el cuadro completo, así que
     // "no recortar" es la respuesta correcta del producto: vale tanto

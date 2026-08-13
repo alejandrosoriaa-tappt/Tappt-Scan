@@ -69,6 +69,7 @@ export default function EscanearScreen({ navigation }) {
   const [diag, setDiag] = useState(null);
   const [ultimoFrame, setUltimoFrame] = useState(null);
   const [ultimaCaptura, setUltimaCaptura] = useState(null);
+  const [ultimaDeteccion, setUltimaDeteccion] = useState(null);
 
   const analizarFrame = useCallback(async () => {
     if (analizandoRef.current || !camara.current || !listaRef.current) return;
@@ -82,7 +83,24 @@ export default function EscanearScreen({ navigation }) {
 
       setCuadro({ ancho: foto.ancho, alto: foto.alto });
       setUltimoFrame(foto);
-      const { esquinas, confiable } = await api.detectarBordes(foto.base64);
+      const inicioHttp = Date.now();
+      const respuesta = await api.detectarBordes(foto.base64);
+      const { esquinas, confiable } = respuesta;
+
+      // Lo que responde el detector, tal cual, para el panel ⓘ. Sin esto el
+      // panel solo medía el frame local y había que adivinar por qué no
+      // aparecía el polígono; ahora dice quién contestó y por qué descartó.
+      setUltimaDeteccion({
+        fuente: respuesta.fuente,
+        confiable: Boolean(confiable),
+        razon: respuesta.razon || respuesta.razonDocQuad || null,
+        acuerdo: respuesta.acuerdoIoU,
+        area: esquinas ? area(esquinas) : null,
+        areaOpenCv: respuesta.diagnostico?.opencv?.area ?? null,
+        razonOpenCv: respuesta.diagnostico?.opencv?.razon ?? null,
+        minZ: respuesta.diagnostico?.docquad?.minConfidenceZ ?? null,
+        httpMs: Date.now() - inicioHttp,
+      });
 
       setDeteccion({
         esquinas,
@@ -293,6 +311,29 @@ export default function EscanearScreen({ navigation }) {
                     1e6
                   ).toFixed(2)}MP · ${Math.round(ultimaCaptura.bytes / 1024)}KB · ${ultimaCaptura.ms}ms`
                 : 'aún no capturas'}
+            </Text>
+            {/* La respuesta REAL del detector. `DETECTOR` de arriba mide el
+                frame local; esto mide lo que contestó el servidor. */}
+            <Text style={estilos.diagLinea}>
+              DETECCIÓN{' '}
+              {ultimaDeteccion
+                ? `${ultimaDeteccion.fuente} · ${
+                    ultimaDeteccion.confiable ? 'confiable' : 'parcial/nada'
+                  } · ${ultimaDeteccion.httpMs}ms\n` +
+                  `area=${
+                    ultimaDeteccion.area != null ? ultimaDeteccion.area.toFixed(3) : '—'
+                  } acuerdo=${
+                    ultimaDeteccion.acuerdo != null ? ultimaDeteccion.acuerdo.toFixed(2) : '—'
+                  } minZ=${
+                    ultimaDeteccion.minZ != null ? ultimaDeteccion.minZ.toFixed(2) : '—'
+                  }\n` +
+                  `razon=${ultimaDeteccion.razon || '—'}\n` +
+                  `opencv: area=${
+                    ultimaDeteccion.areaOpenCv != null
+                      ? ultimaDeteccion.areaOpenCv.toFixed(3)
+                      : '—'
+                  } ${ultimaDeteccion.razonOpenCv || 'ok'}`
+                : 'aún no responde'}
             </Text>
             <Text style={estilos.diagLineaTenue}>{diag.navegador}</Text>
           </View>

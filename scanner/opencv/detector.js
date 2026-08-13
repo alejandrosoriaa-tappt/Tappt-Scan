@@ -4,7 +4,15 @@ const cvModule = require('@techstark/opencv-js');
 const { createCanvas, loadImage, ImageData } = require('@napi-rs/canvas');
 
 const MAX_EDGE = 720;
-const MIN_AREA_CONFIABLE = 0.10;
+// Mínimos de área. Estaban en 0.10/0.15, calibrados cuando el visor iba
+// recortado con `object-fit: cover` y el papel llenaba la pantalla. Al pasar
+// la cámara a ultra-wide (0.5x) el documento pasa a ocupar ~5% del cuadro —
+// que es el encuadre que el producto PIDE, capturar de lejos con margen— y
+// con los valores viejos OpenCV se quedaba ciego justo ahí: no producía
+// ningún candidato, así que no había con qué corroborar a DocQuad y todo
+// terminaba en parcial. Medido en `camscanner-lejos` del banco de fixtures.
+const MIN_AREA_CONFIABLE = 0.02;
+const AREA_MINIMA_CANDIDATO = 0.03;
 // Tope compartido: por encima de esto un quad es "toda la foto", no un
 // documento. Se aplica al crear el candidato y al validar el resultado.
 const AREA_MAXIMA_CANDIDATO = 0.95;
@@ -185,7 +193,7 @@ function detectarPorPapelClaro(cv, gray, imgArea) {
       cv.morphologyEx(closed, opened, cv.MORPH_OPEN, openKernel);
       cv.findContours(opened, contours, hierarchy, cv.RETR_EXTERNAL, cv.CHAIN_APPROX_SIMPLE);
       const result = mejorQuadDeContornos(cv, contours, imgArea, {
-        minArea: 0.15,
+        minArea: AREA_MINIMA_CANDIDATO,
         minAngle: 20,
         maxAngle: 160,
         minAspect: 0.3,
@@ -241,7 +249,7 @@ function detectarPorPapelNeutro(cv, src, imgArea) {
     cv.morphologyEx(closed, opened, cv.MORPH_OPEN, openKernel);
     cv.findContours(opened, contours, hierarchy, cv.RETR_EXTERNAL, cv.CHAIN_APPROX_SIMPLE);
     const result = mejorQuadDeContornos(cv, contours, imgArea, {
-      minArea: 0.15,
+      minArea: AREA_MINIMA_CANDIDATO,
       minAngle: 20,
       maxAngle: 160,
       minAspect: 0.3,
@@ -390,5 +398,6 @@ module.exports = {
   areaQuad,
   elegirMejorCandidato,
   MIN_AREA_CONFIABLE,
+  AREA_MINIMA_CANDIDATO,
   AREA_MAXIMA_CANDIDATO,
 };
