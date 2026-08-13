@@ -207,15 +207,6 @@ export default function EscanearScreen({ navigation }) {
     listo: colores.primario,
   };
 
-  // Relleno muy tenue a propósito (benchmark CamScanner): el quad confirma
-  // el recorte, no debe tapar el documento — con 0.25 el papel se veía
-  // teñido de verde y ya no se juzgaba si el borde estaba bien puesto.
-  const rellenoPorEstado = {
-    buscando: 'rgba(255,255,255,0.06)',
-    parcial: 'rgba(255,255,255,0.10)',
-    listo: 'rgba(124,245,192,0.14)',
-  };
-
   const textoPorEstado = {
     buscando: t('alineaDocumento'),
     parcial: t('sigueAjustando'),
@@ -239,12 +230,7 @@ export default function EscanearScreen({ navigation }) {
       />
 
       {puntos ? (
-        <ContornoQuad
-          puntos={puntos}
-          color={colorPorEstado[deteccion.estado]}
-          relleno={rellenoPorEstado[deteccion.estado]}
-          grosor={2}
-        />
+        <ContornoQuad puntos={puntos} color={colorPorEstado[deteccion.estado]} grosor={2} />
       ) : null}
 
       <SafeAreaView style={estilos.capa} edges={['top', 'bottom']} pointerEvents="box-none">

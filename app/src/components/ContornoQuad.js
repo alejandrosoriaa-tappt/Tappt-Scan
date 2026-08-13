@@ -18,7 +18,7 @@ import { View, StyleSheet } from 'react-native';
  * `puntos` van en píxeles de pantalla ya proyectados (ver lib/preview.js),
  * en orden, y se cierra el polígono solo.
  */
-export default function ContornoQuad({ puntos, color, relleno, grosor = 2 }) {
+export default function ContornoQuad({ puntos, color, grosor = 2 }) {
   if (!puntos || puntos.length !== 4) return null;
 
   const lados = puntos.map((p1, i) => {
@@ -28,24 +28,14 @@ export default function ContornoQuad({ puntos, color, relleno, grosor = 2 }) {
     return { key: i, left: p1.x, top: p1.y, width: largo, angulo };
   });
 
-  // El relleno se aproxima con la caja que envuelve al quad. No es el
-  // polígono exacto —sin SVG no hay forma barata de rellenar uno—, pero a
-  // 0.14 de opacidad la diferencia no se nota y evita volver a depender de
-  // una pieza que no funciona en el navegador de destino.
-  const xs = puntos.map((p) => p.x);
-  const ys = puntos.map((p) => p.y);
-  const caja = {
-    left: Math.min(...xs),
-    top: Math.min(...ys),
-    width: Math.max(...xs) - Math.min(...xs),
-    height: Math.max(...ys) - Math.min(...ys),
-  };
-
+  // SIN RELLENO, a propósito. Se intentó aproximarlo con la caja que envuelve
+  // al quad y en el dispositivo se veía mal: con el documento inclinado esa
+  // caja es bastante más grande que el cuadrilátero, así que la mancha
+  // sugería una detección distinta —y mayor— de la que en realidad hubo. Un
+  // overlay que miente sobre lo que detectó es peor que uno sin relleno, y el
+  // benchmark tampoco lo necesita: su quad es una línea fina y limpia.
   return (
     <View style={StyleSheet.absoluteFill} pointerEvents="none">
-      {relleno ? (
-        <View style={[estilos.relleno, caja, { backgroundColor: relleno }]} />
-      ) : null}
       {lados.map((lado) => (
         <View
           key={lado.key}
@@ -70,9 +60,5 @@ const estilos = StyleSheet.create({
   lado: {
     position: 'absolute',
     transformOrigin: 'left center',
-  },
-  relleno: {
-    position: 'absolute',
-    borderRadius: 2,
   },
 });
