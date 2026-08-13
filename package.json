@@ -6,6 +6,7 @@
   "scripts": {
     "start": "node server.js",
     "dev": "nodemon server.js",
+    "build:web": "npm --prefix app ci && npm --prefix app run build:web",
     "variables": "node scripts/variables.js",
     "variables:revisar": "node scripts/variables.js --revisar",
     "docquad:model": "node scripts/docquad-model.js",
