@@ -66,6 +66,13 @@ async function asegurarFixture(fixture, yaResueltos) {
     return { buffer, groundTruth };
   }
 
+  // Toma real del dispositivo: vive en el repo, no se descarga nada.
+  if (fixture.local) {
+    const origen = path.join(__dirname, '..', 'scanner', 'fixtures', 'fotos', fixture.archivo);
+    if (!fs.existsSync(origen)) throw new Error(`falta la foto del fixture: ${origen}`);
+    return { buffer: fs.readFileSync(origen), groundTruth: fixture.groundTruth };
+  }
+
   const destino = path.join(CACHE, fixture.archivo);
   if (fs.existsSync(destino) && fs.statSync(destino).size > 0) {
     return { buffer: fs.readFileSync(destino), groundTruth: fixture.groundTruth };
@@ -118,12 +125,16 @@ async function diagnosticoDocQuad(buffer) {
         ? !resultado.confiable || valorIoU >= fixture.minIoU
         : valorIoU >= fixture.minIoU && resultado.confiable;
 
-    if (!ok) fallos++;
+    // Un caso abierto se mide y se imprime, pero no tumba el CI: ya se sabe
+    // que no está resuelto. Sirve para ver si un cambio lo mueve.
+    if (!ok && !fixture.abierto) fallos++;
 
     filas.push({
       id: fixture.id,
       tipo: fixture.tipo,
       ok,
+      abierto: Boolean(fixture.abierto),
+      notaAbierto: fixture.notaAbierto,
       fuente: resultado.fuente,
       iou: valorIoU,
       confiable: resultado.confiable,
@@ -144,8 +155,9 @@ async function diagnosticoDocQuad(buffer) {
 
   console.log('\n== Banco de fixtures del scanner ==\n');
   for (const f of filas) {
+    const veredicto = f.ok ? 'OK   ' : f.abierto ? 'ABIER' : 'FALLA';
     console.log(
-      `${f.ok ? 'OK  ' : 'FALLA'} ${f.id.padEnd(24)} tipo=${f.tipo.padEnd(9)} ` +
+      `${veredicto} ${f.id.padEnd(24)} tipo=${f.tipo.padEnd(9)} ` +
         `fuente=${String(f.fuente).padEnd(15)} IoU=${fmt(f.iou)} ` +
         `confiable=${f.confiable} acuerdo=${fmt(f.acuerdo)}`
     );
@@ -158,11 +170,15 @@ async function diagnosticoDocQuad(buffer) {
       `      mask: meanProb=${fmt(f.maskProb)} areaGt05=${f.maskArea ?? '—'} ` +
         `IoU(corners,mask)=${fmt(f.iouCornersMask)} areaQuad=${fmt(f.areaDocQuad)}`
     );
+    if (f.abierto && !f.ok) console.log(`      abierto: ${f.notaAbierto || 'caso sin resolver'}`);
   }
 
+  const abiertos = filas.filter((f) => f.abierto && !f.ok).length;
   console.log(
-    `\n${filas.length - fallos}/${filas.length} fixtures OK` +
-      (fallos ? ` — ${fallos} con fallo\n` : '\n')
+    `\n${filas.filter((f) => f.ok).length}/${filas.length} fixtures OK` +
+      (fallos ? ` — ${fallos} con fallo` : '') +
+      (abiertos ? ` — ${abiertos} caso(s) abierto(s), no tumban el CI` : '') +
+      '\n'
   );
 
   process.exit(fallos ? 1 : 0);

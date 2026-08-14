@@ -32,9 +32,26 @@
  * FÍSICO DEL PAPEL — nunca una tabla o un recuadro impreso adentro.
  * Anotadas a mano sobre la imagen con una rejilla de décimos.
  *
- * PENDIENTE: el plan pide 20 fixtures. Van 2. Cada foto nueva que se
- * agregue aquí (con su ground truth) vale más que cualquier ajuste de
- * umbral hecho a ojo.
+ * DE DÓNDE SALE LA IMAGEN
+ * -----------------------
+ * - `url`        se descarga y se cachea (fixtures públicos de referencia).
+ * - `local: true` el archivo vive en `scanner/fixtures/fotos/`. Son las
+ *                tomas reales del dispositivo, sacadas con el botón
+ *                "Compartir fixture" del panel de diagnóstico: el frame
+ *                EXACTO que recibió el detector, no una captura de pantalla.
+ * - `derivadoDe` se construye a partir de otro fixture ya resuelto.
+ *
+ * CASOS ABIERTOS (`abierto: true`)
+ * --------------------------------
+ * Un fixture puede describir un caso que HOY el producto no resuelve. Se
+ * registra igual y se mide igual, pero no tumba el CI: sirve para ver si
+ * un cambio lo mejora o lo empeora. Marcar rojo algo que ya se sabe roto
+ * solo entrena al equipo a ignorar el rojo. Cuando el caso se resuelva se
+ * le quita la marca y pasa a ser prueba de regresión de verdad.
+ *
+ * PENDIENTE: el plan pide 20 fixtures. Van 3 reales + 1 sintético. Cada
+ * foto nueva que se agregue aquí (con su ground truth) vale más que
+ * cualquier ajuste de umbral hecho a ojo.
  */
 
 const FIXTURES = [
@@ -85,6 +102,37 @@ const FIXTURES = [
       'capturar con la cámara ultra-wide a 0.5x. Encuadre que el producto ' +
       'pide (capturar con margen) y que los mínimos de área rechazaban.',
     minIoU: 0.8,
+  },
+  {
+    id: 'granito-centrado',
+    tipo: 'escena',
+    local: true,
+    archivo: 'granito-centrado.jpg',
+    descripcion:
+      'Hoja de texto sobre barra de granito claro, encuadre amplio (0.5x), ' +
+      'perspectiva fuerte desde arriba. Toma real de iPhone/Safari, ' +
+      '2026-08-14. Es el caso de superficie clara que se venía describiendo ' +
+      'sin poder medir. Diagnóstico del dispositivo en granito-centrado.json.',
+    // Anotado a mano sobre rejilla de centésimos, siguiendo el perímetro
+    // físico del papel.
+    groundTruth: [
+      { x: 0.366, y: 0.303 },
+      { x: 0.635, y: 0.306 },
+      { x: 0.697, y: 0.556 },
+      { x: 0.293, y: 0.554 },
+    ],
+    minIoU: 0.85,
+    // ABIERTO: DocQuad acierta (IoU 0.982 contra este ground truth) pero
+    // OpenCV se traga la barra entera (área 0.744), los dos no concuerdan
+    // (acuerdo 0.111) y el compuesto degrada a `parcial` → contorno blanco,
+    // sin recorte automático. Esa degradación es la conducta correcta
+    // mientras no haya evidencia para confiar; lo que falta es la evidencia.
+    // Es justo el caso que el intento revertido del 2026-08-13 quiso forzar
+    // a `confiable` a ojo, con quads malos como resultado.
+    abierto: true,
+    notaAbierto:
+      'DocQuad acierta y OpenCV falla; el compuesto no puede distinguirlo ' +
+      'todavía sin más tomas de superficie clara.',
   },
 ];
 

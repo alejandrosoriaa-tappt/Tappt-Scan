@@ -15,7 +15,7 @@ reescaladas y recomprimidas, y el detector nunca ve esa imagen.
 
 | # | Escenario | Estado |
 |---|---|---|
-| 1 | Granito claro, documento centrado | falta |
+| 1 | Granito claro, documento centrado | ✅ `granito-centrado` (2026-08-14) |
 | 2 | Granito claro, documento de lado | falta |
 | 3 | Granito solo, SIN documento (el detector no debe inventar nada) | falta |
 | 4 | Madera con reflejo de ventana | falta |
@@ -26,8 +26,11 @@ reescaladas y recomprimidas, y el detector nunca ve esa imagen.
 | 9 | Superficie oscura | falta |
 | 10 | Dos hojas encimadas (debe tomar la de arriba) | falta |
 
-Prioridad si solo salen unas pocas: **1, 3, 4 y 9** — cubren los dos fallos ya
-observados en dispositivo más el caso de "no inventes".
+Prioridad de lo que falta: **3, 4 y 9**. La 3 (granito SIN documento) es la
+más importante de todas: la #1 mostró que en granito DocQuad acierta y OpenCV
+falla, así que la pregunta que decide el diseño del compuesto es si DocQuad
+inventa un documento cuando no hay ninguno. Si inventa, "confiarle a DocQuad
+en superficie clara" queda descartado sin más discusión.
 
 ## Qué pasa después
 

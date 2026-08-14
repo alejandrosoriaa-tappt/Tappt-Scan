@@ -436,9 +436,43 @@ Commits del relevo ChatGPT documentados en el handoff:
 - `cb968e8` — warm-up al arranque + estado en `/health`.
 - `99cff3d` — conserva quad parcial si la geometría es válida.
 
+### Fixture `granito-centrado` (2026-08-14) — el granito ya es medible
+
+Entró la **primera toma real del dispositivo** al banco: hoja de texto sobre
+barra de granito claro, encuadre amplio, perspectiva fuerte desde arriba.
+Trae su JSON de diagnóstico al lado (`scanner/fixtures/fotos/`). El banco
+reproduce en Node exactamente lo que pasó en el iPhone, así que el caso de
+superficie clara **ya no se discute de memoria, se mide**.
+
+Lo que dice el número, y corrige lo que se creía:
+
+```
+granito-centrado  IoU=0.982  confiable=false  acuerdo=0.111
+   docquad: IoU=0.982  z=[3.15, 3.21, 3.34, 3.50]  descartado_por=LOW_PEAK_MARGIN
+   opencv:  area=0.744 (se traga la barra entera)
+```
+
+**DocQuad no falla en granito: acierta con IoU 0.982.** El `CLAUDE.md` decía
+"los dos fallan"; con la foto en la mano, el que falla es OpenCV. Lo que
+degrada la respuesta a `parcial` es el **desacuerdo** (0.111) entre un
+detector que acertó y otro que se fue a la mesa — más el 5σ, que descarta a
+DocQuad como siempre (z 3.15-3.50).
+
+Se registra como **caso abierto** (`abierto: true` en el manifiesto): se
+mide e imprime, pero no tumba el CI. Marcar rojo algo que ya se sabe roto
+solo entrena a ignorar el rojo.
+
+**Sigue sin haber con qué arreglarlo.** La tentación obvia —"si DocQuad
+acierta, hazle caso"— es exactamente el cambio que se revirtió el
+2026-08-13. Con UNA foto no se distingue de las dos donde DocQuad se
+equivocaba. Y el `IoU(corners,mask)` de esta toma es **0.766**, más cerca
+del caso malo (0.668) que del bueno (0.605): esa métrica tampoco separa.
+Falta sobre todo **granito SIN documento** — si el detector inventa un quad
+ahí, "confiar en DocQuad" queda descartado de entrada.
+
 ### 🔴 SIGUIENTE PASO — bloqueado esperando datos
 
-**Las 10 tomas del banco de fixtures.** Es lo único que falta para poder
+**Las 9 tomas que faltan del banco de fixtures.** Es lo único que falta para poder
 avanzar en el caso del granito y para revisar si el 5σ ya se puede mover.
 Instrucciones y lista de escenarios en `scanner/fixtures/fotos/README.md`.
 
@@ -501,7 +535,7 @@ el handoff anterior. El orden acordado sigue siendo:
 0    Captura full-res + overlay             en validación web / nativo pendiente
 1    PNG → JPEG                             avanzado/resuelto en web actual
 1.5  Spike DocQuad (3 runtimes)            Node avanzado; web/native pendientes
-1.6  scanner-fixtures (20 + ground truth)  banco y metrica IoU listos; van 2/20 fotos
+1.6  scanner-fixtures (20 + ground truth)  banco y metrica IoU listos; van 4/20 fotos
 2    DocQuad Node / WhatsApp                integración en curso
 3    DocQuad Web + Native                   pendiente
 4    AutoCapture + Quality                  pendiente
@@ -538,7 +572,8 @@ Otros pendientes de producto:
   1 documento = 1 foto = 1 PDF; lote implica varias páginas por PDF, un
   temporal que sobrevive entre captura y subida, y decidir qué pasa si se
   cierra la app a medias.
-- **Fotos del banco de fixtures: van 3 de 20** (una sintética). Las que más
-  falta hacen son las que ya fallaron en dispositivo: granito claro (OpenCV
-  se traga la barra entera, área 0.66-0.77) y reflejo de ventana. Sin la
-  imagen original no se pueden fijar como prueba de regresión.
+- **Fotos del banco de fixtures: van 4 de 20** (una sintética). Ya entró la
+  primera toma real del dispositivo, `granito-centrado` (ver abajo). Las que
+  más falta hacen ahora: **granito SIN documento**, madera con reflejo de
+  ventana y superficie oscura. Sin la imagen original no se pueden fijar
+  como prueba de regresión.
