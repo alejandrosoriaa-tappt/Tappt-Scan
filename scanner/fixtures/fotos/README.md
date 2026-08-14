@@ -11,12 +11,18 @@ tapptscan-fixture-<sello>.json    lo que el detector respondió en ese instante
 No sirven capturas de pantalla del teléfono: traen la interfaz encima, están
 reescaladas y recomprimidas, y el detector nunca ve esa imagen.
 
+**Tampoco sirve el `-visual-` solo.** El botón comparte además una imagen
+`tapptscan-fixture-visual-*.jpg` con el contorno ya dibujado encima: sirve
+para enseñar de un vistazo qué vio el detector, pero como fixture no vale
+—lleva el overlay quemado y no trae el JSON al lado—. Si de una toma solo
+llega el visual, esa toma no se puede registrar; hay que repetirla.
+
 ## Escenarios pendientes
 
 | # | Escenario | Estado |
 |---|---|---|
 | 1 | Granito claro, documento centrado | ✅ `granito-centrado` (2026-08-14) |
-| 2 | Granito claro, documento de lado | falta |
+| 2 | Granito claro, documento de lado | ✅ `granito-de-lado` (2026-08-14) |
 | 3 | Granito solo, SIN documento (el detector no debe inventar nada) | falta |
 | 4 | Madera con reflejo de ventana | falta |
 | 5 | Documento lejos, chico en el cuadro | falta |

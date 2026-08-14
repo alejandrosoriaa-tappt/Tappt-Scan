@@ -134,6 +134,34 @@ const FIXTURES = [
       'DocQuad acierta y OpenCV falla; el compuesto no puede distinguirlo ' +
       'todavía sin más tomas de superficie clara.',
   },
+  {
+    id: 'granito-de-lado',
+    tipo: 'escena',
+    local: true,
+    archivo: 'granito-de-lado.jpg',
+    descripcion:
+      'La misma barra de granito con la hoja girada ~20° y más inclinada, ' +
+      'con la esquina superior levantada. Toma real de iPhone/Safari, ' +
+      '2026-08-14. Diagnóstico del dispositivo en granito-de-lado.json.',
+    // Anotado con el perímetro del papel medido sobre la propia imagen
+    // (componente blanca conexa → casco convexo → cuadrilátero de área
+    // máxima), no a ojo: en esta toma la hoja está girada y la rejilla de
+    // décimos no daba para colocar las esquinas con confianza.
+    groundTruth: [
+      { x: 0.411, y: 0.285 },
+      { x: 0.68, y: 0.376 },
+      { x: 0.814, y: 0.71 },
+      { x: 0.47, y: 0.775 },
+    ],
+    minIoU: 0.85,
+    // ABIERTO por lo mismo que `granito-centrado`: DocQuad queda en IoU
+    // 0.894 (se pasa en la esquina superior derecha) mientras OpenCV vuelve
+    // a tragarse la barra (área 0.867), acuerdo 0.160 → parcial.
+    abierto: true,
+    notaAbierto:
+      'Segunda confirmación del patrón de superficie clara: DocQuad ' +
+      'aceptable, OpenCV se traga la barra, el compuesto degrada a parcial.',
+  },
 ];
 
 module.exports = { FIXTURES };
