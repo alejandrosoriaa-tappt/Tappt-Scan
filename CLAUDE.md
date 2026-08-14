@@ -199,10 +199,17 @@ App nativa (`app/`, Expo / React Native, JS sin TypeScript):
   propia porque el botón central va elevado sobre ella.
 - `src/screens/DashboardScreen.js` — saludo, stats (documentos, gasto del
   mes), banner de upgrade y lista de recientes.
-- `src/screens/EscanearScreen.js` — cámara de respaldo y overlay live. En web
-  usa frames ~640 px para detección y captura final full-res. El panel ⓘ es
-  diagnóstico temporal; actualmente el tiempo mostrado junto a `DETECTOR`
-  es el tiempo de generar/comprimir el frame local, NO inferencia DocQuad.
+- `src/screens/EscanearScreen.js` — cámara de respaldo y overlay en vivo. En
+  web usa frames ~640 px para detección y captura final full-res. El panel ⓘ
+  muestra cámara real y la respuesta del detector (ver "Panel de diagnóstico").
+  El contorno se dibuja con `components/ContornoQuad.js`, **no con SVG**.
+- `src/components/ContornoQuad.js` — dibuja el cuadrilátero con cuatro Views
+  rotadas. Es la única técnica que pinta en Safari/iPhone; ver la sección
+  "El overlay NO usa SVG".
+- `src/lib/preview.js` — **fuente única** del modo de ajuste del preview
+  (`contain` en web, `cover` en nativo) y de la proyección de esquinas a
+  píxeles de pantalla. El componente de cámara y el overlay TIENEN que usar
+  el mismo: si se separan, el quad sale corrido.
 - `src/screens/DriveScreen.js` — explorador del árbol real de Drive, con
   migas de pan. Los archivos propios abren el detalle; el resto va a Drive.
 - `src/screens/DocumentoScreen.js` — detalle, datos extraídos y acciones
@@ -235,9 +242,16 @@ conectado → Onboarding; todo listo → tabs.
 **Autenticación:** no hay Supabase Auth. La identidad es el número de
 WhatsApp; el backend firma su propio token. Ver `services/sesiones.js`.
 
-**Variables de la app** (`app/.env.example`): `EXPO_PUBLIC_SUPABASE_URL`,
-`EXPO_PUBLIC_SUPABASE_ANON_KEY`, `EXPO_PUBLIC_API_URL` (el backend
-desplegado, nunca `localhost`: el teléfono de un tester no ve tu máquina).
+**Variables de la app** (`app/.env.example`): `EXPO_PUBLIC_API_URL` (el
+backend desplegado, nunca `localhost`: el teléfono de un tester no ve tu
+máquina). En la **web app** es opcional: `src/lib/api.js` cae al propio
+origen, porque el backend sirve `app/dist`. En nativo sí es obligatoria.
+
+**Build web:** `app/dist` NO se versiona. Railway lo genera en cada deploy
+con `npm run build:web` (raíz), que instala `app/`, corre `expo export` y
+después `app/scripts/postbuild-web.js` (apple-touch-icon, manifest y meta
+tags de PWA). Si algún día la web app responde 404, lo primero a revisar es
+si Railway ejecutó ese `buildCommand`.
 
 **Web app espejo:** el mismo código corre en el navegador con React Native
 Web (`npm run web`). Dos piezas tienen variante `.web.js` porque no existen
@@ -309,19 +323,59 @@ pushear ahí. No abrir PR salvo que se pida explícitamente.
 
 ### Estado actual — validado en iPhone/Safari 2026-08-13
 
-**El escaneo funciona.** Medido en el dispositivo real, no en teoría:
+**El escaneo funciona de punta a punta en la web app.** Medido en el
+dispositivo, no en teoría:
 
 - Cámara: ultra-wide real a **0.5x** (Safari SÍ expone `zoom: 0.5-10`),
   stream `3024×4032` (4:3), preview en `contain`. El campo visual abierto
   del benchmark ya está.
-- Overlay en vivo: `acuerdo=0.98/0.99` entre los dos detectores, quad
-  verde pegado al papel, latencia ~400-560ms por ciclo.
+- **Contorno en vivo antes de disparar**: sobre madera da `acuerdo=0.98/0.99`
+  entre los dos detectores y el quad verde queda pegado al papel. Latencia
+  ~300-560ms por ciclo.
 - Recorte y enderezado sobre la captura full-res (12.19MP): correcto,
   incluso con perspectiva fuerte.
 
+**Caso abierto: superficies claras (granito, mármol claro, acero).** Ahí
+OpenCV se traga la barra entera (áreas medidas 0.66-0.77) y DocQuad
+devuelve quads más grandes que el papel. Los dos fallan. Hoy el producto
+responde con contorno BLANCO —detecté algo pero no me fío, ajústalo tú— y
+NO recorta solo, que es la conducta correcta mientras no se pueda medir.
+No tocar ese caso sin fixtures: ya se intentó a ojo y salió mal (abajo).
+
 **Sigue pendiente:** DocQuad en el navegador (pasos 3 y 6). Hoy cada ciclo
-es un viaje al servidor cada 1.4s; CamScanner corre en el teléfono a
-30fps. Esa es la brecha de FLUIDEZ que queda, no de acierto.
+es un viaje al servidor; CamScanner corre en el teléfono a 30fps. Esa es la
+brecha de FLUIDEZ que queda, no de acierto.
+
+### Reglas del compuesto (`services/docquad.js`)
+
+Tres niveles: **confiable** (recorta solo) · **parcial** (se dibuja para
+ajustar, nunca recorta) · **sin quad**.
+
+`confiable` exige **ACUERDO entre los dos detectores** (IoU ≥ 0.8), o que
+DocQuad pase sus propios guardrails. En desacuerdo se dibuja el quad de
+**DocQuad** —en madera y granito es el único que se queda en el documento
+cuando OpenCV se va a la mesa— pero marcado como parcial.
+
+**Intento revertido el 2026-08-13:** se permitió que DocQuad SOLO marcara
+confiable cuando su única objeción fuera `LOW_PEAK_MARGIN` y no hubiera
+señal de imagen ya recortada. En granito eso produjo quads confiables
+visiblemente equivocados (áreas 0.315 y 0.363, uno saliéndose del cuadro),
+o sea recorte automático malo. **Un verde equivocado es peor que un blanco
+correcto:** el blanco pide ajuste, el verde recorta. No reintentarlo sin
+fixtures de superficie clara que lo respalden.
+
+### El overlay NO usa SVG — y no debe volver a usarlo
+
+`react-native-svg` con `<Svg style={StyleSheet.absoluteFill}>` **no pinta
+nada en Safari/iPhone**, aun cuando el detector responde `confiable` con
+acuerdo 0.98. `RecorteScreen` siempre funcionó porque dibuja con Views
+rotadas. Esa técnica está extraída en `components/ContornoQuad.js` y la
+usan las dos pantallas.
+
+Va **sin relleno** a propósito: aproximarlo con la caja envolvente del quad
+se veía mal con el documento inclinado (la mancha sugería una detección
+mayor que la real). Un overlay que miente sobre lo que detectó es peor que
+uno sin relleno.
 
 ### Cómo se toman decisiones aquí ahora
 
@@ -382,9 +436,61 @@ Commits del relevo ChatGPT documentados en el handoff:
 - `cb968e8` — warm-up al arranque + estado en `/health`.
 - `99cff3d` — conserva quad parcial si la geometría es válida.
 
-**Siguiente paso, sin desviarse:** instrumentar el panel de diagnóstico para
-mostrar lo que realmente responde DocQuad sobre la hoja real. No tocar Otsu.
-No bajar guardrails a ciegas.
+### 🔴 SIGUIENTE PASO — bloqueado esperando datos
+
+**Las 10 tomas del banco de fixtures.** Es lo único que falta para poder
+avanzar en el caso del granito y para revisar si el 5σ ya se puede mover.
+Instrucciones y lista de escenarios en `scanner/fixtures/fotos/README.md`.
+
+Se sacan con el botón **"Compartir fixture"** de
+`scan.tappt.lat/?scannerDebug=1` — entrega el frame EXACTO que recibió el
+detector más el JSON de lo que respondió. **No sirven capturas de pantalla
+del teléfono**: traen la interfaz encima y están reescaladas.
+
+Prioridad de escenarios: granito con documento, granito SIN documento (el
+detector no debe inventar), madera con reflejo, superficie oscura.
+
+**Esperar el set completo antes de tocar el detector.** En esta sesión se
+avanzó con la mitad de las fotos y el resultado fue un cambio que hubo que
+revertir.
+
+### Panel de diagnóstico ⓘ (temporal, solo web)
+
+Ya muestra la respuesta real del detector, no solo el frame local:
+
+```
+DETECCIÓN <fuente> · confiable|parcial · <ms>
+dibuja=<docquad|opencv> area=<n> acuerdo=<n> minZ=<n>
+razon=<...>
+opencv: area=<n> <razon> [· marcoCompleto]
+```
+
+`DETECTOR` mide el frame local; `DETECCIÓN` mide lo que contestó el
+servidor. No confundirlos.
+
+## Posicionamiento (2026-08-13): expo industrial
+
+Se está postulando TapptScan a un encuentro industrial. El encuadre que se
+definió ahí y que conviene sostener en producto:
+
+- **Público:** equipos de campo saturados —obra, mantenimiento, logística,
+  planta— que generan remisiones, vales, órdenes de trabajo y certificados
+  de calidad, y no tienen tiempo de capturarlos.
+- **Argumento de adopción:** cero instalación, cero licencias por usuario,
+  cero capacitación. La entrada es una foto por WhatsApp.
+- **Argumento para TI:** el archivo vive en el Google Workspace **del
+  cliente**, con scope mínimo `drive.file` (no puede leer el resto de su
+  Drive). Nosotros solo guardamos metadatos.
+- **Requisito duro del prospecto:** que ya use Google Workspace.
+
+Dos consecuencias para el orden de trabajo:
+
+1. **Lote/mosaico sube de prioridad.** Un equipo de campo trae un FAJO de
+   remisiones, no una hoja. Con este posicionamiento deja de ser una
+   función bonita y pasa a ser necesaria.
+2. **Robustez en superficies claras es crítica.** Acero inoxidable, lámina
+   y mesas de trabajo claras son el pan de cada día en una planta — y es
+   justo el caso que hoy falla.
 
 ## Estado / pendientes generales
 
