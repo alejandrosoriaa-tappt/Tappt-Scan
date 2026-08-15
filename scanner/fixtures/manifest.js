@@ -24,6 +24,12 @@
  *              La respuesta correcta es el marco entero. Distinguirlo
  *              importa: la regla "casi todo el cuadro no es detección",
  *              que es correcta en `escena`, aquí daría la respuesta mala.
+ * - `vacio`    NO hay documento. La respuesta correcta es no dar nada por
+ *              confiable, y ojalá ni siquiera dibujar. No lleva ground
+ *              truth: no hay nada que encerrar. Este tipo es el que
+ *              impide que "detectar más" se confunda con "detectar bien" —
+ *              un detector que siempre devuelve un quad saca IoU decente
+ *              en todos los demás fixtures y falla solo en éste.
  *
  * GROUND TRUTH
  * ------------
@@ -161,6 +167,22 @@ const FIXTURES = [
     notaAbierto:
       'Segunda confirmación del patrón de superficie clara: DocQuad ' +
       'aceptable, OpenCV se traga la barra, el compuesto degrada a parcial.',
+  },
+  {
+    id: 'granito-vacio',
+    tipo: 'vacio',
+    local: true,
+    archivo: 'granito-vacio.jpg',
+    descripcion:
+      'La misma barra de granito SIN documento encima. Toma real de ' +
+      'iPhone/Safari, 2026-08-14. La respuesta correcta es no detectar ' +
+      'nada. Diagnóstico del dispositivo en granito-vacio.json.',
+    // Sin groundTruth: no hay documento que encerrar.
+    abierto: true,
+    notaAbierto:
+      'Los dos detectores inventan: OpenCV devuelve la barra (área 0.765) ' +
+      'y DocQuad un quad de 0.02. El producto no recorta (parcial), pero ' +
+      'igual dibuja un contorno donde no hay nada.',
   },
 ];
 

@@ -113,15 +113,20 @@ async function diagnosticoDocQuad(buffer) {
     const resultado = await scanner.detectarDocumento(buffer);
     const dq = await diagnosticoDocQuad(buffer);
 
-    const valorIoU = resultado.esquinas ? iou(resultado.esquinas, groundTruth) : 0;
-    const iouDocQuad = dq?.corners ? iou(dq.corners, groundTruth) : null;
+    const vacio = fixture.tipo === 'vacio';
+    const valorIoU = !vacio && resultado.esquinas ? iou(resultado.esquinas, groundTruth) : 0;
+    const iouDocQuad = !vacio && dq?.corners ? iou(dq.corners, groundTruth) : null;
 
     // En un fixture ya recortado el documento ES el cuadro completo, así que
     // "no recortar" es la respuesta correcta del producto: vale tanto
     // devolver el marco entero como no devolver quad. Exigirle un quad más
     // chico —como hacía el CI viejo— es pedirle que se equivoque.
-    const ok =
-      fixture.tipo === 'recortado'
+    // Sin documento la única respuesta correcta es no afirmar nada. Se pide
+    // además que no dibuje: un contorno sobre una mesa vacía le dice al
+    // usuario "ahí hay algo" cuando no lo hay.
+    const ok = vacio
+      ? !resultado.confiable && !resultado.esquinas
+      : fixture.tipo === 'recortado'
         ? !resultado.confiable || valorIoU >= fixture.minIoU
         : valorIoU >= fixture.minIoU && resultado.confiable;
 
@@ -158,7 +163,8 @@ async function diagnosticoDocQuad(buffer) {
     const veredicto = f.ok ? 'OK   ' : f.abierto ? 'ABIER' : 'FALLA';
     console.log(
       `${veredicto} ${f.id.padEnd(24)} tipo=${f.tipo.padEnd(9)} ` +
-        `fuente=${String(f.fuente).padEnd(15)} IoU=${fmt(f.iou)} ` +
+        `fuente=${String(f.fuente).padEnd(15)} ` +
+        (f.tipo === 'vacio' ? `dibuja=${f.esquinas}    ` : `IoU=${fmt(f.iou)} `) +
         `confiable=${f.confiable} acuerdo=${fmt(f.acuerdo)}`
     );
     console.log(

@@ -85,7 +85,10 @@ function guardarFixtureScanner(imagen, resultado) {
   boton = document.createElement('button');
   boton.id = 'tapptscan-scanner-fixture';
   boton.type = 'button';
-  boton.textContent = 'Compartir fixture';
+  // Este es el bueno: entrega el frame crudo + el JSON, que es lo único
+  // registrable en el banco. El botón gris que inyecta server.js solo
+  // muestra el render con el quad encima. Ver la nota en server.js.
+  boton.textContent = 'Compartir fixture (jpg + json)';
   boton.style.position = 'fixed';
   boton.style.left = '16px';
   boton.style.bottom = '150px';

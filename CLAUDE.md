@@ -477,6 +477,60 @@ midió sobre la propia imagen (componente blanca conexa → casco convexo →
 cuadrilátero de área máxima) y se verificó dibujándolo encima. Es el método
 a repetir cuando el papel no esté alineado con el cuadro.
 
+### `granito-vacio` (2026-08-14) — la máscara sí separa
+
+Entró la toma que faltaba: **la misma barra sin documento**. Fixture de tipo
+`vacio`, sin ground truth (no hay nada que encerrar); la respuesta correcta
+es no dar nada por confiable y ni siquiera dibujar.
+
+```
+granito-vacio  dibuja=true  confiable=false  acuerdo=0.008
+   docquad: z=[2.67, 2.40, 2.28, 2.52]  area=0.020  chosenSource=MASK
+   opencv:  area=0.765  ← la barra otra vez
+```
+
+**Los dos inventan.** OpenCV devuelve la barra; DocQuad, con sus esquinas
+penalizadas, cae a la máscara y devuelve un quad de 0.02. El producto no
+recorta —queda en parcial— pero igual pinta un contorno donde no hay nada,
+y eso le dice al usuario "ahí hay algo".
+
+Lo importante es que **por primera vez una métrica separa**, y es la máscara
+de DocQuad, no las z:
+
+```
+                     areaGt05   meanProb
+camscanner-nota          702      0.171
+granito-de-lado          393      0.098
+granito-centrado         263      0.064
+camscanner-lejos         133      0.033
+makeacopy-recortado       97      0.023
+granito-vacio             11      0.004   ← sin documento
+```
+
+Un orden de magnitud de distancia contra el mínimo de todo lo que sí lleva
+documento. Es la primera candidata seria a puerta de "no inventes", y de
+paso la vara con la que se puede volver a discutir el 5σ: si la máscara ya
+dice que no hay papel, el 5σ deja de ser la única defensa.
+
+**No se implementa todavía**: es UNA sola toma vacía. Un umbral sacado de un
+punto es exactamente el error que costó las sesiones anteriores. Con dos o
+tres vacíos más (madera, oscuro), la puerta se puede fijar con evidencia.
+
+El tipo `vacio` es además la pieza que faltaba en el banco: sin él,
+"detectar más" se confunde con "detectar bien" — un detector que siempre
+devuelve un quad saca IoU decente en todos los demás fixtures.
+
+### Bug de captura de fixtures — dos botones encimados (arreglado)
+
+Los dos botones del panel de depuración vivían en el mismo sitio
+(`left:16px; bottom:150px`) y quedaban uno encima del otro: el de la app
+(`app/src/lib/api.js`, entrega **jpg + json**, lo único registrable) y el
+que inyecta `server.js` (entrega solo el render con el quad encima). No se
+podía saber cuál se estaba tocando, y por eso llegaron tomas con solo el
+visual, que hubo que repetir. Ahora el visual va arriba, en gris y como
+"Ver detección (solo imagen)"; el bueno va abajo, en verde y con el formato
+en el nombre.
+
 ### 🔴 SIGUIENTE PASO — bloqueado esperando datos
 
 **Las 9 tomas que faltan del banco de fixtures.** Es lo único que falta para poder
@@ -542,7 +596,7 @@ el handoff anterior. El orden acordado sigue siendo:
 0    Captura full-res + overlay             en validación web / nativo pendiente
 1    PNG → JPEG                             avanzado/resuelto en web actual
 1.5  Spike DocQuad (3 runtimes)            Node avanzado; web/native pendientes
-1.6  scanner-fixtures (20 + ground truth)  banco y metrica IoU listos; van 5/20 fotos
+1.6  scanner-fixtures (20 + ground truth)  banco y metrica IoU listos; van 6/20 fotos
 2    DocQuad Node / WhatsApp                integración en curso
 3    DocQuad Web + Native                   pendiente
 4    AutoCapture + Quality                  pendiente
@@ -579,7 +633,7 @@ Otros pendientes de producto:
   1 documento = 1 foto = 1 PDF; lote implica varias páginas por PDF, un
   temporal que sobrevive entre captura y subida, y decidir qué pasa si se
   cierra la app a medias.
-- **Fotos del banco de fixtures: van 5 de 20** (una sintética). Ya entraron
+- **Fotos del banco de fixtures: van 6 de 20** (una sintética). Ya entraron
   las dos primeras tomas reales del dispositivo, `granito-centrado` y
   `granito-de-lado` (ver abajo). Las que más falta hacen ahora: **granito
   SIN documento**, madera con reflejo de ventana y superficie oscura. Sin

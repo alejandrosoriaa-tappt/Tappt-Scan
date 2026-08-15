@@ -23,7 +23,7 @@ llega el visual, esa toma no se puede registrar; hay que repetirla.
 |---|---|---|
 | 1 | Granito claro, documento centrado | ✅ `granito-centrado` (2026-08-14) |
 | 2 | Granito claro, documento de lado | ✅ `granito-de-lado` (2026-08-14) |
-| 3 | Granito solo, SIN documento (el detector no debe inventar nada) | falta |
+| 3 | Granito solo, SIN documento (el detector no debe inventar nada) | ✅ `granito-vacio` (2026-08-14) |
 | 4 | Madera con reflejo de ventana | falta |
 | 5 | Documento lejos, chico en el cuadro | falta |
 | 6 | Documento muy inclinado | falta |
@@ -32,11 +32,14 @@ llega el visual, esa toma no se puede registrar; hay que repetirla.
 | 9 | Superficie oscura | falta |
 | 10 | Dos hojas encimadas (debe tomar la de arriba) | falta |
 
-Prioridad de lo que falta: **3, 4 y 9**. La 3 (granito SIN documento) es la
-más importante de todas: la #1 mostró que en granito DocQuad acierta y OpenCV
-falla, así que la pregunta que decide el diseño del compuesto es si DocQuad
-inventa un documento cuando no hay ninguno. Si inventa, "confiarle a DocQuad
-en superficie clara" queda descartado sin más discusión.
+Prioridad de lo que falta: **4 (madera con reflejo) y 9 (superficie oscura)**,
+que son las otras dos que ya se sabe que dan guerra. Las demás completan el
+set de 20.
+
+La #3 ya entró y contestó su pregunta: sobre granito vacío los dos detectores
+inventan, pero la **máscara de DocQuad se apaga** (`areaGt05=11`,
+`meanProb=0.004`, contra ≥97 y ≥0.023 en todas las que sí tienen documento).
+Es la primera señal medida que separa "no hay nada" de "hay algo".
 
 ## Qué pasa después
 
