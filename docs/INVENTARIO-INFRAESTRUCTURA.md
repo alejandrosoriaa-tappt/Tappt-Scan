@@ -75,6 +75,42 @@ llaves reales viven **solo en Railway** (ver `docs/PUESTA-EN-MARCHA.md`).
   alta un número nuevo** dentro de esta misma WABA/app, ya con el nombre
   "TapptScan" limpio desde el inicio, y se apunta `WHATSAPP_PHONE_NUMBER_ID`
   /`EXPECTED_WHATSAPP_PHONE_NUMBER_ID` a ese número nuevo en Railway.
+- **En curso (2026-08-15):** se está dando de alta ese número nuevo en Meta.
+  Anotar aquí, al terminar, el número y su `WHATSAPP_PHONE_NUMBER_ID`.
+
+### Cambiar el número: qué se toca y qué no
+
+El código no lleva el número en ningún lado — `services/whatsapp.js` lee
+`process.env` en cada llamada, así que el cambio es **solo de variables**.
+
+Se cambian **tres**, y las dos del id se guardan **a la vez**:
+
+| Variable | Valor |
+|---|---|
+| `WHATSAPP_PHONE_NUMBER_ID` | el id del número nuevo (Meta → API Setup) |
+| `EXPECTED_WHATSAPP_PHONE_NUMBER_ID` | el mismo id, repetido |
+| `WHATSAPP_NUMERO` | el número nuevo en formato internacional |
+
+Si se guarda una y luego la otra, entre guardado y guardado el server
+arranca, ve que no coinciden y se mata a propósito: queda en ciclo de
+reinicios hasta que cuadren. Es el guardrail haciendo su trabajo, no una
+falla.
+
+**No se tocan** —y por eso el cambio es barato— mientras el número nuevo
+viva en la misma app/WABA:
+
+- `WHATSAPP_TOKEN`: el token permanente es del usuario de sistema sobre la
+  app y su WABA, no de un número.
+- `WHATSAPP_APP_SECRET` y `WHATSAPP_VERIFY_TOKEN`: el webhook se configura
+  **por app**, no por número. La URL registrada en Meta sigue igual.
+
+Lo único que hay que revisar en Meta es que el número nuevo quede
+**suscrito al webhook** de la app.
+
+Efecto para los usuarios: las sesiones y los documentos van amarrados al
+número DEL USUARIO, así que nadie pierde nada. Lo que sí se rompe es el
+chat viejo: quien tenga guardado el número anterior le seguirá escribiendo
+a un número que ya no atiende.
 - Token: **permanente**, generado con un usuario de sistema propio
   (`TapptScan Backend`, rol Employee — el límite de admins del portfolio
   "Tappt" ya estaba tomado por `tappt-system`) con acceso total a la app

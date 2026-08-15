@@ -109,8 +109,11 @@ const VARIABLES = [
       },
       {
         clave: 'WHATSAPP_NUMERO',
-        pregunta: 'Número de TapptScan en formato internacional',
-        defecto: '+5215644170712',
+        pregunta: 'Número de TapptScan en formato internacional (ej. +52155...)',
+        // Sin default a propósito: el número es una decisión, no algo que se
+        // herede dándole Enter. Tener uno precargado es cómo se acaba
+        // apuntando a un número de otra etapa sin darse cuenta.
+        valida: noVacio,
         nota: 'con esto la app arma el enlace wa.me del acceso',
       },
     ],
