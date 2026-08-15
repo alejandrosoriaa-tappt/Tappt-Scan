@@ -69,13 +69,16 @@ app.get('/', (req, res, next) => {
     if (document.getElementById('tapptscan-debug-fixture-button')) return;
     var b = document.createElement('button');
     // OJO: este botón y el de app/src/lib/api.js son DOS cosas distintas y
-    // estaban los dos en left:16px/bottom:150px, encimados — no se podía
-    // saber cuál se estaba tocando, y por eso llegaron tomas con solo el
-    // visual (que como fixture no sirve). Este va arriba y en gris: es el
-    // secundario, sirve para MIRAR lo que detectó. El de abajo, en verde,
-    // es el que entrega el par jpg+json que sí se puede registrar.
+    // estaban los dos en left:16px/bottom:150px, uno encima del otro — no se
+    // podía saber cuál se estaba tocando, y por eso llegaron tomas con solo
+    // el visual, que como fixture no sirve.
+    //
+    // Los dos se mudan ARRIBA, apilados bajo la fila de ✕/ⓘ. Abajo no cabían:
+    // ahí ya están el obturador y la pista de la cámara (`pistaCaja`), así
+    // que separarlos entre sí solo habría movido el choque al tercero.
+    // Éste es el secundario —solo para MIRAR lo que detectó— y va en gris.
     b.id = 'tapptscan-debug-fixture-button'; b.textContent = 'Ver detección (solo imagen)';
-    b.style.cssText = 'position:fixed;left:16px;bottom:198px;z-index:2147483647;border:1px solid rgba(255,255,255,.45);border-radius:999px;padding:9px 14px;background:rgba(0,0,0,.75);color:rgba(255,255,255,.85);font:600 12px -apple-system,BlinkMacSystemFont,sans-serif;box-shadow:0 2px 12px rgba(0,0,0,.35)';
+    b.style.cssText = 'position:fixed;left:16px;top:112px;z-index:2147483647;border:1px solid rgba(255,255,255,.45);border-radius:999px;padding:9px 14px;background:rgba(0,0,0,.75);color:rgba(255,255,255,.85);font:600 12px -apple-system,BlinkMacSystemFont,sans-serif;box-shadow:0 2px 12px rgba(0,0,0,.35)';
     b.onclick = function () { compartir().catch(function (e) { alert('No se pudo compartir: ' + (e.message || e)); }); };
     document.body.appendChild(b);
   }

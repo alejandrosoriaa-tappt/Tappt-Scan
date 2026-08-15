@@ -91,7 +91,9 @@ function guardarFixtureScanner(imagen, resultado) {
   boton.textContent = 'Compartir fixture (jpg + json)';
   boton.style.position = 'fixed';
   boton.style.left = '16px';
-  boton.style.bottom = '150px';
+  // Arriba, debajo del botón gris de server.js. La franja de abajo ya la
+  // ocupan el obturador y la pista de la cámara.
+  boton.style.top = '160px';
   boton.style.zIndex = '2147483647';
   boton.style.border = '1px solid rgba(124,245,192,.8)';
   boton.style.borderRadius = '999px';

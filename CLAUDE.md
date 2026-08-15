@@ -527,9 +527,14 @@ Los dos botones del panel de depuración vivían en el mismo sitio
 (`app/src/lib/api.js`, entrega **jpg + json**, lo único registrable) y el
 que inyecta `server.js` (entrega solo el render con el quad encima). No se
 podía saber cuál se estaba tocando, y por eso llegaron tomas con solo el
-visual, que hubo que repetir. Ahora el visual va arriba, en gris y como
-"Ver detección (solo imagen)"; el bueno va abajo, en verde y con el formato
-en el nombre.
+visual, que hubo que repetir.
+
+En realidad eran **tres** elementos peleando la misma franja: los dos
+botones más la pista de la cámara (`pistaCaja` en `EscanearScreen`), que
+queda justo ahí. Por eso los dos botones se mudan **arriba**, apilados bajo
+la fila de ✕/ⓘ (`top:112px` el gris, `top:160px` el verde): separarlos entre
+sí abajo solo habría movido el choque al tercero. El gris dice "Ver
+detección (solo imagen)"; el verde, "Compartir fixture (jpg + json)".
 
 ### 🔴 SIGUIENTE PASO — bloqueado esperando datos
 
