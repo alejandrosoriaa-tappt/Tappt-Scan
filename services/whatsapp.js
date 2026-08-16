@@ -45,18 +45,29 @@ async function sendButtons(to, bodyText, buttons) {
 }
 
 // Marca un mensaje entrante como leído (palomitas azules).
-// Si showTyping = true, además activa el indicador de "escribiendo..."
-// por hasta 25s o hasta que mandes la siguiente respuesta, lo que ocurra primero.
-async function markAsRead(messageId, showTyping = false) {
-  const payload = {
+//
+// Va SOLA, sin el indicador de "escribiendo...", a propósito: ese campo
+// (`typing_indicator`) es de v22.0 en adelante y aquí el cliente apunta a
+// v19.0, así que mandarlo junto hacía que Meta rechazara el payload entero
+// y se perdiera también la palomita, que sí está soportada. Una cosa
+// cosmética que no funciona no debe llevarse por delante a la que sí.
+async function markAsRead(messageId) {
+  return client().post('/messages', {
     messaging_product: 'whatsapp',
     status: 'read',
     message_id: messageId,
-  };
-  if (showTyping) {
-    payload.typing_indicator = { type: 'text' };
-  }
-  return client().post('/messages', payload);
+  });
+}
+
+// "Escribiendo..." mientras procesamos algo lento (una foto). Best-effort y
+// aparte: si la versión de la API no lo soporta, se pierde solo esto.
+async function showTyping(messageId) {
+  return client().post('/messages', {
+    messaging_product: 'whatsapp',
+    status: 'read',
+    message_id: messageId,
+    typing_indicator: { type: 'text' },
+  });
 }
 
 async function getMediaUrl(mediaId) {
@@ -72,4 +83,4 @@ async function downloadMedia(mediaUrl) {
   });
   return data;
 }
-module.exports = { sendText, sendButtons, markAsRead, getMediaUrl, downloadMedia };
+module.exports = { sendText, sendButtons, markAsRead, showTyping, getMediaUrl, downloadMedia };
