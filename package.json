@@ -8,6 +8,7 @@
     "dev": "nodemon server.js",
     "build:web": "npm --prefix app ci && npm --prefix app run build:web",
     "variables": "node scripts/variables.js",
+    "whatsapp:registrar": "node scripts/registrar-numero.js",
     "variables:revisar": "node scripts/variables.js --revisar",
     "docquad:model": "node scripts/docquad-model.js",
     "docquad:spike": "node scripts/docquad-spike.js",
