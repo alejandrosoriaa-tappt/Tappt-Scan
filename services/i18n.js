@@ -17,7 +17,11 @@ const MENSAJES = {
       'Todavía no tienes tu Google Drive conectado. Baja la app de TapptScan para conectarlo y guardar tus documentos automáticamente.',
     limite:
       'Ya usaste tus {limite} escaneos gratis de este mes. Pásate al plan Personal y escanea sin límite — escríbeme "quiero personal" y te mando el link.',
-    guardado: 'Listo 📄\n\n*{archivo}*{paginas}\n📁 {ruta}{editar}\n\n¿Todo bien?',
+    guardado: 'Listo 📄\n\n*{archivo}*{paginas}\n📁 {ruta}{drive}{editar}\n\n¿Todo bien?',
+    // El link a Drive va en el CUERPO, no como cuarto botón: Meta topa los
+    // botones de respuesta en 3 —ya ocupados— y no deja mezclarlos con un
+    // botón de URL en el mismo mensaje. Como línea queda igual de tocable.
+    guardadoDrive: '\n\n📂 Abrir en Drive:\n{driveLink}',
     guardadoEditar: '\n\n✏️ ¿Quieres editarlo o firmarlo? Entra a la app:\n{appUrl}',
     paginas: ' ({n} páginas)',
     formatoNoSoportado:
@@ -53,7 +57,8 @@ const MENSAJES = {
       "You haven't connected your Google Drive yet. Download the TapptScan app to connect it and save your documents automatically.",
     limite:
       'You\'ve used your {limite} free scans this month. Upgrade to Personal for unlimited scans — reply "I want personal" and I\'ll send you the link.',
-    guardado: 'Done 📄\n\n*{archivo}*{paginas}\n📁 {ruta}{editar}\n\nAll good?',
+    guardado: 'Done 📄\n\n*{archivo}*{paginas}\n📁 {ruta}{drive}{editar}\n\nAll good?',
+    guardadoDrive: '\n\n📂 Open in Drive:\n{driveLink}',
     guardadoEditar: '\n\n✏️ Want to edit or sign it? Open the app:\n{appUrl}',
     paginas: ' ({n} pages)',
     formatoNoSoportado:

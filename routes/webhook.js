@@ -162,7 +162,7 @@ async function recibirArchivo(from, medio, mimePorDefecto) {
   const mediaUrl = await whatsapp.getMediaUrl(medio.id);
   const buffer = await whatsapp.downloadMedia(mediaUrl);
 
-  const { nombreArchivo, ruta, paginas } = await procesarDocumento.procesarArchivo(
+  const { documento, nombreArchivo, ruta, paginas } = await procesarDocumento.procesarArchivo(
     user,
     buffer,
     medio.mime_type || mimePorDefecto,
@@ -177,6 +177,11 @@ async function recibirArchivo(from, medio, mimePorDefecto) {
       archivo: nombreArchivo,
       ruta,
       paginas: paginas > 1 ? t(idioma, 'paginas', { n: paginas }) : '',
+      // Igual que con la app: sin link no se manda la línea vacía. Drive
+      // devuelve webViewLink al subir, pero no se da por hecho.
+      drive: documento?.drive_link
+        ? t(idioma, 'guardadoDrive', { driveLink: documento.drive_link })
+        : '',
       // Si no hay dominio público configurado en Railway, no se inventa un
       // link roto — se omite la línea completa en vez de mandarla vacía.
       editar: appUrl ? t(idioma, 'guardadoEditar', { appUrl }) : '',
