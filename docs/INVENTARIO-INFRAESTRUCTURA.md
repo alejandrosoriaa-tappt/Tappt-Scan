@@ -77,8 +77,16 @@ llaves reales viven **solo en Railway** (ver `docs/PUESTA-EN-MARCHA.md`).
   /`EXPECTED_WHATSAPP_PHONE_NUMBER_ID` a ese número nuevo en Railway.
 - **Número nuevo, de producción (alta 2026-08-15):** `+52 1 446 521 8420`
   (`WHATSAPP_PHONE_NUMBER_ID = 1288694927663258`), nombre visible
-  `TapptScan`, **en revisión** por Meta al momento de anotarlo. Vive en la
-  misma app/WABA, así que reusa el token permanente.
+  `TapptScan`, en revisión por Meta al momento del alta. Vive en la misma
+  app/WABA, así que reusa el token permanente.
+  **Registrado y probado end-to-end el 2026-08-15**: mensaje entrante →
+  webhook → respuesta del bot. El PIN de verificación en dos pasos está en
+  el gestor de contraseñas, no aquí.
+- **El alta en Meta NO basta**: un número recién dado de alta no manda ni
+  recibe por la API hasta que se **registra** por Graph
+  (`POST /{phone_number_id}/register`, ver `scripts/registrar-numero.js`).
+  Mientras falte ese paso el `/health` sale verde y el webhook nunca
+  dispara — parece backend roto y no lo está. Costó un rato encontrarlo.
 - El número anterior (`+52 1 56 4417 0712`) queda solo para pruebas: su
   nombre visible `Tappt TaniaIA` fue **rechazado** por infringir las normas
   de nombres visibles. No se reintenta — el número nuevo nace ya con el
