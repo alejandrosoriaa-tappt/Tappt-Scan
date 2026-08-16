@@ -74,29 +74,18 @@ router.post('/', async (req, res) => {
 
     from = msg.from;
 
-    // Palomita azul. Cosmético: si Meta lo rechaza NO debe tumbar el
-    // procesamiento del archivo, por eso va en su propio try/catch y nunca
-    // se relanza.
+    // Palomita azul + "escribiendo..." mientras procesamos. Esto es
+    // cosmético — si Meta lo rechaza (p. ej. la cuenta aún no tiene
+    // habilitado typing_indicator) NO debe tumbar el procesamiento del
+    // archivo, por eso va en su propio try/catch y nunca se relanza.
     try {
-      await whatsapp.markAsRead(msg.id);
+      const mostrarTyping = msg.type === 'image' || msg.type === 'document';
+      await whatsapp.markAsRead(msg.id, mostrarTyping);
     } catch (errRead) {
       console.warn('[webhook] no se pudo marcar como leído (no bloqueante)', {
         status: errRead.response?.status,
         data: errRead.response?.data,
       });
-    }
-
-    // "Escribiendo..." en lo que tarda una foto. Va en llamada APARTE de la
-    // palomita: `typing_indicator` necesita v22.0+ y el cliente está en
-    // v19.0, así que juntarlos hacía que se perdieran los dos.
-    if (msg.type === 'image' || msg.type === 'document') {
-      try {
-        await whatsapp.showTyping(msg.id);
-      } catch (errTyping) {
-        console.warn('[webhook] sin indicador de escritura (no bloqueante)', {
-          status: errTyping.response?.status,
-        });
-      }
     }
 
     if (msg.type === 'image') {
