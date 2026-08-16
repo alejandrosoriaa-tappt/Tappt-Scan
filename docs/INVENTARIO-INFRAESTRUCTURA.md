@@ -75,8 +75,42 @@ llaves reales viven **solo en Railway** (ver `docs/PUESTA-EN-MARCHA.md`).
   alta un número nuevo** dentro de esta misma WABA/app, ya con el nombre
   "TapptScan" limpio desde el inicio, y se apunta `WHATSAPP_PHONE_NUMBER_ID`
   /`EXPECTED_WHATSAPP_PHONE_NUMBER_ID` a ese número nuevo en Railway.
-- **En curso (2026-08-15):** se está dando de alta ese número nuevo en Meta.
-  Anotar aquí, al terminar, el número y su `WHATSAPP_PHONE_NUMBER_ID`.
+- **Número nuevo, de producción (alta 2026-08-15):** `+52 1 446 521 8420`
+  (`WHATSAPP_PHONE_NUMBER_ID = 1288694927663258`), nombre visible
+  `TapptScan`, **en revisión** por Meta al momento de anotarlo. Vive en la
+  misma app/WABA, así que reusa el token permanente.
+- El número anterior (`+52 1 56 4417 0712`) queda solo para pruebas: su
+  nombre visible `Tappt TaniaIA` fue **rechazado** por infringir las normas
+  de nombres visibles. No se reintenta — el número nuevo nace ya con el
+  nombre correcto, que era justo el motivo de la migración.
+
+### Perfil de WhatsApp Business (texto aprobado 2026-08-15)
+
+Nombre visible: `TapptScan` · Categoría: Servicios profesionales.
+
+Acerca de (límite 139):
+
+> Mandas la foto de un documento y te lo devuelvo en PDF, nombrado y
+> guardado en tu Google Drive.
+
+Descripción (límite 512, van 472):
+
+> Escanea, clasifica y firma documentos desde WhatsApp. Mandas la foto de un
+> recibo, una factura, una remisión o un contrato y TapptScan lo lee, deduce
+> de qué es, de quién y de cuándo, y lo guarda como PDF ya nombrado en la
+> carpeta que le toca dentro de tu propio Google Drive. También puedes
+> reenviarnos un PDF que te llegó en otro chat. Nada se queda en nuestros
+> servidores: el archivo vive en tu Drive. En la app puedes editar, firmar y
+> llevar el control de gastos.
+
+Sitios: `https://scan.tappt.lat` y `https://tappt.lat`.
+
+Dos decisiones del texto, para no revertirlas sin querer: se dice explícito
+que **el archivo vive en tu Drive** (es el argumento para el área de TI del
+cliente, ver el posicionamiento de expo industrial en `CLAUDE.md`), y se
+nombran las **remisiones** porque es el vocabulario del público de planta.
+Si el perfil se dirige a uso doméstico, ahí se cambia por "recibos,
+facturas y contratos".
 
 ### Cambiar el número: qué se toca y qué no
 
