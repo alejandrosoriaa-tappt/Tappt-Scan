@@ -74,7 +74,7 @@ app.get('/', (req, res, next) => {
     // el visual, que como fixture no sirve.
     //
     // Los dos se mudan ARRIBA, apilados bajo la fila de ✕/ⓘ. Abajo no cabían:
-    // ahí ya están el obturador y la pista de la cámara (`pistaCaja`), así
+    // ahí ya están el obturador y la pista de la cámara (pistaCaja), así
     // que separarlos entre sí solo habría movido el choque al tercero.
     // Éste es el secundario —solo para MIRAR lo que detectó— y va en gris.
     b.id = 'tapptscan-debug-fixture-button'; b.textContent = 'Ver detección (solo imagen)';
