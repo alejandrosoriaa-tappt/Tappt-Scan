@@ -164,6 +164,39 @@ async function intentarOpenCv(buffer) {
 const IOU_ACUERDO = 0.8;
 
 /**
+ * Puerta de "no inventes": la máscara de DocQuad apagada = no hay papel.
+ *
+ * Medido en el banco (2026-08-18), con dos tomas SIN documento y nueve con
+ * documento:
+ *
+ *   madera-vacia         areaGt05    0   meanProb 0.0000146   ← sin papel
+ *   granito-vacio        areaGt05   11   meanProb 0.004       ← sin papel
+ *   ────────────────────────────────────────────────────────────────────
+ *   escritorio-angulo    areaGt05   82   meanProb 0.024       ← el mínimo
+ *   camscanner-nota      areaGt05  702   meanProb 0.171       ← el máximo
+ *
+ * Hueco de 7× entre el vacío más alto y el mínimo con documento. Los
+ * umbrales van deliberadamente PEGADOS AL LADO VACÍO (40 y 0.012, o sea 2×
+ * por debajo del mínimo con papel): equivocarse hacia abajo solo deja el
+ * comportamiento de hoy —dibujar de más—, mientras que equivocarse hacia
+ * arriba borraría el contorno de un documento real, que es mucho peor.
+ *
+ * Se exigen las DOS señales a la vez, no una: con solo dos tomas vacías,
+ * pedir que ambas coincidan es más difícil de romper que un umbral suelto.
+ */
+const MASCARA_AREA_MINIMA = 40;
+const MASCARA_PROB_MINIMA = 0.012;
+
+function mascaraApagada(docquad) {
+  const mask = docquad?.mask;
+  // Sin datos de máscara no se opina: la puerta solo actúa con evidencia.
+  if (!mask || !Number.isFinite(mask.areaGt05) || !Number.isFinite(mask.meanProb)) {
+    return false;
+  }
+  return mask.areaGt05 < MASCARA_AREA_MINIMA && mask.meanProb < MASCARA_PROB_MINIMA;
+}
+
+/**
  * Detector compuesto de producto.
  *
  * Tres niveles de respuesta, no dos:
@@ -207,6 +240,28 @@ async function detectarDocumento(buffer) {
     docquad?.suspiciousReason || (docquad ? 'DOCQUAD_INVALID' : 'DOCQUAD_NOT_READY');
 
   const geometriaDocQuad = Boolean(esquinasDocQuad && docquad?.validation?.geometryValid);
+
+  // Puerta de "no inventes". Va ANTES de mirar a OpenCV, y eso es lo
+  // importante: sobre la barra de granito vacía OpenCV devuelve la barra
+  // entera con toda confianza (área 0.765). Si aquí solo se anulara el quad
+  // de DocQuad, el acuerdo quedaría en `null` y la rama de abajo trataría
+  // esa barra como confiable — o sea, recorte automático de la mesa. Peor
+  // que el contorno fantasma que se está arreglando.
+  //
+  // Con la máscara apagada no se cree ni a uno ni a otro: no hay papel.
+  if (mascaraApagada(docquad)) {
+    return {
+      esquinas: null,
+      confiable: false,
+      fuente: 'scanner',
+      razon: 'MASCARA_SIN_DOCUMENTO',
+      razonDocQuad,
+      diagnostico: {
+        docquad: diagnosticoDocQuad(docquad),
+        opencv: diagnosticoOpenCv(opencv),
+      },
+    };
+  }
 
   // INTENTO REVERTIDO (2026-08-13). Se probó dejar que DocQuad SOLO marcara
   // confiable cuando su única objeción fuera LOW_PEAK_MARGIN y no hubiera

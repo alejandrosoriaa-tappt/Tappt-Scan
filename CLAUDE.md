@@ -635,6 +635,37 @@ de "no inventes" ya no depende de un solo punto: hay un hueco de 7× entre
 el vacío más alto (11) y el mínimo con documento (82). Ese era el requisito
 que faltaba para poder implementarla con datos en vez de a ojo.
 
+### ✅ Puerta de máscara — IMPLEMENTADA (2026-08-18)
+
+`mascaraApagada()` en `services/docquad.js`. Si la máscara de DocQuad está
+apagada, no se dibuja nada: no hay papel.
+
+```js
+MASCARA_AREA_MINIMA = 40      // vs. 11 el vacío más alto, 82 el mínimo con papel
+MASCARA_PROB_MINIMA = 0.012   // vs. 0.004 y 0.024
+```
+
+Tres decisiones de diseño, todas por lo mismo —solo hay dos tomas vacías—:
+
+1. **Umbrales pegados al lado vacío** (2× por debajo del mínimo con papel).
+   Errar hacia abajo solo deja el comportamiento de hoy; errar hacia arriba
+   borraría el contorno de un documento real, que es mucho peor.
+2. **Se exigen las DOS señales a la vez** (`areaGt05` Y `meanProb`). Pedir
+   que ambas coincidan es más difícil de romper que un umbral suelto.
+3. **La puerta va ANTES de mirar a OpenCV**, y eso es lo que importa: en
+   `granito-vacio` OpenCV devuelve la barra entera con toda confianza
+   (0.765). Anular solo el quad de DocQuad dejaría el acuerdo en `null`, y
+   la rama de abajo trataría esa barra como **confiable** — recorte
+   automático de la mesa, peor que el contorno fantasma que se arreglaba.
+
+Resultado en el banco: `granito-vacio` y `madera-vacia` pasan a `dibuja=false`
+y **cero regresión** — los nueve fixtures con documento conservan IoU y
+estado idénticos. Los dos vacíos dejan de ser casos abiertos y quedan como
+prueba de regresión: si alguien afloja la puerta, se ponen rojos.
+
+Sin datos de máscara la puerta **no opina** (`return false`): solo actúa
+con evidencia, nunca por ausencia de ella.
+
 Nota: en `madera-vacia` **OpenCV acierta** (`NO_QUAD`, no devuelve nada) y
 el que inventa es DocQuad (área 0.121). Es el espejo exacto del caso de
 granito — cada detector falla en el escenario donde el otro acierta, y por

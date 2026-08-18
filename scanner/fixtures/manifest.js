@@ -178,11 +178,13 @@ const FIXTURES = [
       'iPhone/Safari, 2026-08-14. La respuesta correcta es no detectar ' +
       'nada. Diagnóstico del dispositivo en granito-vacio.json.',
     // Sin groundTruth: no hay documento que encerrar.
-    abierto: true,
-    notaAbierto:
-      'Los dos detectores inventan: OpenCV devuelve la barra (área 0.765) ' +
-      'y DocQuad un quad de 0.02. El producto no recorta (parcial), pero ' +
-      'igual dibuja un contorno donde no hay nada.',
+    //
+    // RESUELTO 2026-08-18 por la puerta de máscara (`mascaraApagada` en
+    // services/docquad.js). Antes los dos inventaban —OpenCV devolvía la
+    // barra (área 0.765) y DocQuad un quad de 0.02— y el producto pintaba
+    // un contorno sobre una superficie vacía. Ya no dibuja nada.
+    // Deja de ser caso abierto y pasa a ser prueba de regresión: si alguien
+    // afloja la puerta, este fixture se pone rojo.
   },
   {
     id: 'escritorio-cuaderno',
@@ -302,14 +304,11 @@ const FIXTURES = [
       'y reflejo. Toma real de iPhone/Safari, 2026-08-18. Segundo fixture ' +
       'de tipo vacio, el que faltaba para poder fijar la puerta de la ' +
       'máscara con más de un punto.',
-    // ABIERTO: OpenCV acierta aquí (NO_QUAD, no devuelve nada), pero
-    // DocQuad sí inventa un quad (área 0.121) y el producto lo dibuja como
-    // parcial sobre una mesa vacía. Mismo síntoma que granito-vacio.
-    abierto: true,
-    notaAbierto:
-      'OpenCV acierta (NO_QUAD) y DocQuad inventa un quad de área 0.121 ' +
-      'que igual se dibuja. Pero su máscara queda en CERO absoluto ' +
-      '(areaGt05=0, meanProb=0.0000146) — la señal más limpia del banco.',
+    // RESUELTO 2026-08-18 por la puerta de máscara. Aquí OpenCV acertaba
+    // (NO_QUAD) y el que inventaba era DocQuad, con un quad de área 0.121
+    // que igual se dibujaba. Su máscara en CERO absoluto (areaGt05=0,
+    // meanProb=0.0000146) es la señal más limpia del banco y la que fijó
+    // el umbral. Prueba de regresión de la puerta.
   },
 ];
 
