@@ -555,6 +555,32 @@ Señal de que el par SÍ es válido: el `.jpg` trae dimensiones de frame de
 cámara (640×853 en las tomas de esta sesión), no las de una foto normal de
 galería, y su nombre comparte sello exacto con el `.json` de al lado.
 
+### Pedido "que encuadre como CamScanner, en ángulo" (2026-08-18) — medido, no es umbral
+
+Se pidió que el overlay se pintara verde con transparencia y encuadrara
+aunque la cámara no esté perfectamente cenital, citando CamScanner de
+referencia. Antes de tocar nada se pidió el fixture que probara el caso:
+`escritorio-lejos`, la libreta chica y lejos en el cuadro, en la posición
+donde hoy sale blanco.
+
+El candidato que devuelve el detector en esa foto **no seguía el borde del
+papel**: cae sobre un reflejo/brillo de la página y corta casi media hoja
+(**IoU 0.375** contra el ground truth de la página derecha). El blanco no
+es un umbral de más — es la respuesta correcta ante un candidato roto.
+
+Esto es la contraparte exacta del intento revertido el 2026-08-13
+(aflojar el umbral produjo verdes malos en granito): la petición de
+"que encuadre siempre" choca con el mismo hecho de siempre, medido dos
+veces ahora en escenas distintas — **cuando el candidato es malo, ponerlo
+confiable no arregla el candidato, solo esconde que está mal.** El overlay
+sin relleno (ver arriba) tampoco se toca por la misma razón: rellenarlo de
+verde en un caso como este mentiría sobre una detección que no existe.
+
+Lo que SÍ falta para acercarse a CamScanner sin repetir el error: mejores
+candidatos cuando el documento es chico (subir resolución del recorte que
+ve OpenCV, o que DocQuad no dependa tanto del 5σ en escenas lejanas), no
+bajar la vara de qué se pinta verde.
+
 ### 🔴 SIGUIENTE PASO — bloqueado esperando datos
 
 **Las 9 tomas que faltan del banco de fixtures.** Es lo único que falta para poder
@@ -620,7 +646,7 @@ el handoff anterior. El orden acordado sigue siendo:
 0    Captura full-res + overlay             en validación web / nativo pendiente
 1    PNG → JPEG                             avanzado/resuelto en web actual
 1.5  Spike DocQuad (3 runtimes)            Node avanzado; web/native pendientes
-1.6  scanner-fixtures (20 + ground truth)  banco y metrica IoU listos; van 7/20 fotos
+1.6  scanner-fixtures (20 + ground truth)  banco y metrica IoU listos; van 8/20 fotos
 2    DocQuad Node / WhatsApp                integración en curso
 3    DocQuad Web + Native                   pendiente
 4    AutoCapture + Quality                  pendiente
@@ -657,9 +683,9 @@ Otros pendientes de producto:
   1 documento = 1 foto = 1 PDF; lote implica varias páginas por PDF, un
   temporal que sobrevive entre captura y subida, y decidir qué pasa si se
   cierra la app a medias.
-- **Fotos del banco de fixtures: van 7 de 20** (una sintética). Cuatro tomas
+- **Fotos del banco de fixtures: van 8 de 20** (una sintética). Cinco tomas
   reales del dispositivo: `granito-centrado`, `granito-de-lado`,
-  `granito-vacio` y `escritorio-cuaderno` (ver abajo). Las que más falta
-  hacen ahora: madera con reflejo de ventana y superficie oscura, cada una
-  con documento y vacía. Sin la imagen original no se pueden fijar como
-  prueba de regresión.
+  `granito-vacio`, `escritorio-cuaderno` y `escritorio-lejos` (ver abajo).
+  Las que más falta hacen ahora: madera con reflejo de ventana y superficie
+  oscura, cada una con documento y vacía. Sin la imagen original no se
+  pueden fijar como prueba de regresión.

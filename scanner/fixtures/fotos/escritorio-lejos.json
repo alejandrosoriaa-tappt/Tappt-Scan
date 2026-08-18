@@ -1,0 +1,77 @@
+{
+  "fecha": "2026-08-18T14:12:39.395Z",
+  "resultado": {
+    "esquinas": [
+      {
+        "x": 0.49419724962940254,
+        "y": 0.5014677423067
+      },
+      {
+        "x": 0.7286942788058669,
+        "y": 0.4973594067934239
+      },
+      {
+        "x": 0.7439890856357236,
+        "y": 0.5268773913810519
+      },
+      {
+        "x": 0.5114257135023268,
+        "y": 0.7191439319461455
+      }
+    ],
+    "confiable": false,
+    "fuente": "opencv-paper",
+    "fuenteDibujada": "docquad",
+    "razon": "SIN_ACUERDO_ENTRE_DETECTORES",
+    "razonDocQuad": "LOW_PEAK_MARGIN",
+    "acuerdoIoU": 0.1585475962049285,
+    "diagnostico": {
+      "docquad": {
+        "area": 0.030460340867469612,
+        "minConfidenceZ": 2.4488629964204223,
+        "mask": {
+          "areaGt05": 119,
+          "meanProb": 0.0291398738873651
+        },
+        "timing": {
+          "inferenceMs": 91,
+          "totalMs": 96
+        },
+        "validation": {
+          "finite": true,
+          "plausibleBounds": true,
+          "convex": true,
+          "area": 0.030460340867469612,
+          "geometryValid": true
+        },
+        "chosenSource": "CORNERS",
+        "penalties": {
+          "corners": 20,
+          "cornersGeometry": 0,
+          "mask": 0,
+          "agreementMax": 45.746981042264125
+        },
+        "razon": "LOW_PEAK_MARGIN"
+      },
+      "opencv": {
+        "source": "opencv-paper",
+        "area": 0.17994855967078188,
+        "score": 0.31598773460782914,
+        "aspect": 0.36445106543216055,
+        "angles": [
+          107.18570614422441,
+          100.23994652268703,
+          68.70656983076759,
+          83.8677775023208
+        ],
+        "epsilon": 0.05,
+        "thresholdValue": 120,
+        "timing": {
+          "totalMs": 60
+        },
+        "marcoCompleto": false,
+        "razon": null
+      }
+    }
+  }
+}

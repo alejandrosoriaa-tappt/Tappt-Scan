@@ -203,6 +203,37 @@ const FIXTURES = [
     ],
     minIoU: 0.85,
   },
+  {
+    id: 'escritorio-lejos',
+    tipo: 'escena',
+    local: true,
+    archivo: 'escritorio-lejos.jpg',
+    descripcion:
+      'La misma libreta, esta vez chica y lejos en el cuadro (documento ' +
+      'ocupa ~8% del cuadro): el encuadre que se preguntó si estaba mal ' +
+      'rechazado por el detector. Toma real de iPhone/Safari, 2026-08-18. ' +
+      'Ground truth es la página DERECHA de la libreta —único documento ' +
+      'que cabe entero en el cuadro—, medido sobre la imagen.',
+    groundTruth: [
+      { x: 0.502, y: 0.498 },
+      { x: 0.722, y: 0.479 },
+      { x: 0.881, y: 0.748 },
+      { x: 0.512, y: 0.754 },
+    ],
+    minIoU: 0.8,
+    // ABIERTO, pero al revés de los de granito: aquí el rechazo (parcial,
+    // sin recorte) es la conducta CORRECTA. El candidato que devuelve
+    // OpenCV (dibujado por venir de docquad en el compuesto) tiene IoU
+    // 0.375 contra la página real — corta casi media hoja. No es un falso
+    // rechazo por umbral estricto: es un candidato genuinamente malo.
+    // Contraejemplo útil a la petición de "que encuadre siempre, aunque el
+    // ángulo no sea perfecto" — aflojar aquí pondría verde un recorte roto.
+    abierto: true,
+    notaAbierto:
+      'El candidato disponible corta la página (IoU 0.375 vs. ground ' +
+      'truth): el rechazo es correcto, no un umbral de más. Documento chico ' +
+      'y lejos en el cuadro sigue siendo un caso sin solución medida.',
+  },
 ];
 
 module.exports = { FIXTURES };
