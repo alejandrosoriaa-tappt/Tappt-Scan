@@ -581,6 +581,27 @@ candidatos cuando el documento es chico (subir resolución del recorte que
 ve OpenCV, o que DocQuad no dependa tanto del 5σ en escenas lejanas), no
 bajar la vara de qué se pinta verde.
 
+**Segunda medición (`escritorio-angulo`, mismo día):** la misma libreta en
+ángulo oblicuo, y el candidato es todavía peor — una esquina se sube al
+**teclado**, metiendo área negra al quad (IoU 0.385). Dos escenas, dos
+veces el mismo resultado: el ángulo no es lo que rompe la detección, el
+candidato ya venía roto.
+
+**Y la máscara vuelve a separar.** Comparando las tres tomas de escritorio:
+
+```
+                       areaGt05  meanProb  IoU final
+escritorio-cuaderno        370     0.090     0.891  OK
+escritorio-lejos           119     0.029     0.375  malo
+escritorio-angulo           82     0.024     0.385  malo
+```
+
+Es la misma señal que apareció con `granito-vacio` (11 / 0.004). La
+máscara de DocQuad no solo distingue "no hay documento": **predice si el
+candidato va a servir**. Sigue siendo la mejor candidata a puerta, ahora
+con dos familias de evidencia en vez de una. Faltan las tomas de madera
+con reflejo y superficie oscura para fijarla con números y no a ojo.
+
 ### 🔴 SIGUIENTE PASO — bloqueado esperando datos
 
 **Las 9 tomas que faltan del banco de fixtures.** Es lo único que falta para poder
@@ -646,7 +667,7 @@ el handoff anterior. El orden acordado sigue siendo:
 0    Captura full-res + overlay             en validación web / nativo pendiente
 1    PNG → JPEG                             avanzado/resuelto en web actual
 1.5  Spike DocQuad (3 runtimes)            Node avanzado; web/native pendientes
-1.6  scanner-fixtures (20 + ground truth)  banco y metrica IoU listos; van 8/20 fotos
+1.6  scanner-fixtures (20 + ground truth)  banco y metrica IoU listos; van 9/20 fotos
 2    DocQuad Node / WhatsApp                integración en curso
 3    DocQuad Web + Native                   pendiente
 4    AutoCapture + Quality                  pendiente
@@ -683,9 +704,9 @@ Otros pendientes de producto:
   1 documento = 1 foto = 1 PDF; lote implica varias páginas por PDF, un
   temporal que sobrevive entre captura y subida, y decidir qué pasa si se
   cierra la app a medias.
-- **Fotos del banco de fixtures: van 8 de 20** (una sintética). Cinco tomas
+- **Fotos del banco de fixtures: van 9 de 20** (una sintética). Seis tomas
   reales del dispositivo: `granito-centrado`, `granito-de-lado`,
-  `granito-vacio`, `escritorio-cuaderno` y `escritorio-lejos` (ver abajo).
-  Las que más falta hacen ahora: madera con reflejo de ventana y superficie
-  oscura, cada una con documento y vacía. Sin la imagen original no se
-  pueden fijar como prueba de regresión.
+  `granito-vacio`, `escritorio-cuaderno`, `escritorio-lejos` y
+  `escritorio-angulo` (ver abajo). Las que más falta hacen ahora: madera con
+  reflejo de ventana y superficie oscura, cada una con documento y vacía.
+  Sin la imagen original no se pueden fijar como prueba de regresión.

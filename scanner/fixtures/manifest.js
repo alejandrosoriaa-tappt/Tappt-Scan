@@ -234,6 +234,36 @@ const FIXTURES = [
       'truth): el rechazo es correcto, no un umbral de más. Documento chico ' +
       'y lejos en el cuadro sigue siendo un caso sin solución medida.',
   },
+  {
+    id: 'escritorio-angulo',
+    tipo: 'escena',
+    local: true,
+    archivo: 'escritorio-angulo.jpg',
+    descripcion:
+      'La misma libreta vista en ángulo oblicuo desde la silla, con el ' +
+      'teclado oscuro justo detrás. Toma real de iPhone/Safari, ' +
+      '2026-08-18. Ground truth: el cuaderno abierto completo (las dos ' +
+      'páginas), medido sobre la imagen — la sombra que cruza el lomo ' +
+      'parte la componente blanca en dos, así que hay que puentearla ' +
+      'antes de sacar el casco convexo.',
+    groundTruth: [
+      { x: 0.27, y: 0.359 },
+      { x: 0.619, y: 0.317 },
+      { x: 0.803, y: 0.445 },
+      { x: 0.334, y: 0.56 },
+    ],
+    minIoU: 0.8,
+    // ABIERTO, misma familia que `escritorio-lejos` y por la misma razón:
+    // el rechazo es correcto. Aquí el candidato es aún PEOR — una esquina
+    // se sube al teclado (0.397, 0.212), metiendo área negra al quad, y
+    // sale IoU 0.385. Segunda medición del pedido "que encuadre aunque el
+    // ángulo no sea perfecto": el ángulo no es lo que falla, falla el
+    // candidato.
+    abierto: true,
+    notaAbierto:
+      'El candidato se sube al teclado (IoU 0.385): en ángulo oblicuo el ' +
+      'quad disponible no sigue el papel. Rechazar es correcto.',
+  },
 ];
 
 module.exports = { FIXTURES };
