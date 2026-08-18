@@ -1,0 +1,48 @@
+{
+  "fecha": "2026-08-18T16:06:45.511Z",
+  "resultado": {
+    "esquinas": null,
+    "confiable": false,
+    "fuente": "scanner",
+    "razon": "MASCARA_SIN_DOCUMENTO",
+    "razonDocQuad": "LOW_PEAK_MARGIN",
+    "diagnostico": {
+      "docquad": {
+        "area": 0.20686002471378484,
+        "minConfidenceZ": 2.346225767745108,
+        "mask": {
+          "areaGt05": 2,
+          "meanProb": 0.002148833695594877
+        },
+        "timing": {
+          "inferenceMs": 128,
+          "totalMs": 139
+        },
+        "validation": {
+          "finite": true,
+          "plausibleBounds": true,
+          "convex": true,
+          "area": 0.20686002471378484,
+          "geometryValid": true
+        },
+        "chosenSource": "CORNERS",
+        "penalties": {
+          "corners": 763.2213709698763,
+          "cornersGeometry": 663.2213709698763,
+          "mask": null,
+          "agreementMax": null
+        },
+        "razon": "LOW_PEAK_MARGIN"
+      },
+      "opencv": {
+        "source": "opencv",
+        "area": 0,
+        "timing": {
+          "totalMs": 91
+        },
+        "marcoCompleto": false,
+        "razon": "NO_QUAD"
+      }
+    }
+  }
+}

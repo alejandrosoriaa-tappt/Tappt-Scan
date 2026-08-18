@@ -310,6 +310,26 @@ const FIXTURES = [
     // meanProb=0.0000146) es la señal más limpia del banco y la que fijó
     // el umbral. Prueba de regresión de la puerta.
   },
+  {
+    id: 'oscuro-vacio',
+    tipo: 'vacio',
+    local: true,
+    archivo: 'oscuro-vacio.jpg',
+    descripcion:
+      'Tapete de escritorio negro (fibra de carbono) SIN documento, luz de ' +
+      'oficina baja. Toma real de iPhone/Safari, 2026-08-18. Es el TERCER ' +
+      'vacío del banco y el que faltaba para validar la puerta de máscara ' +
+      'en el escenario donde más podía fallar: fondo oscuro, donde una ' +
+      'máscara podría apagarse por falta de contraste y no por falta de ' +
+      'papel. Diagnóstico del dispositivo en oscuro-vacio.json — trae ya la ' +
+      'puerta actuando en producción (razon: MASCARA_SIN_DOCUMENTO).',
+    // Sin groundTruth: no hay documento.
+    //
+    // La máscara da areaGt05=2, meanProb=0.0021 — otra vez pegada a cero,
+    // igual que granito (11) y madera (0), y muy por debajo del umbral.
+    // Con tres vacíos en tres superficies distintas (clara, media y oscura)
+    // la puerta deja de depender del tipo de fondo.
+  },
 ];
 
 module.exports = { FIXTURES };

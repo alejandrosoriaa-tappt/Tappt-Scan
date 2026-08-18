@@ -666,6 +666,27 @@ prueba de regresión: si alguien afloja la puerta, se ponen rojos.
 Sin datos de máscara la puerta **no opina** (`return false`): solo actúa
 con evidencia, nunca por ausencia de ella.
 
+**Validada en el dispositivo el mismo día**, en el escenario donde más podía
+fallar. El riesgo que se introdujo con la puerta era un falso negativo sobre
+**fondo oscuro**: que la máscara se apagara por falta de contraste y no por
+falta de papel, borrando el contorno de un documento real. Se midió el par:
+
+```
+tapete negro VACÍO     areaGt05    2   meanProb 0.0021   → MASCARA_SIN_DOCUMENTO ✅
+tapete negro CON doc   areaGt05  239   meanProb 0.059    → la puerta NO dispara ✅
+```
+
+**120× de separación en la misma superficie oscura.** El JSON del vacío trae
+`razon: "MASCARA_SIN_DOCUMENTO"` — la puerta actuando en producción. Y con
+tres vacíos en tres superficies distintas (clara 11, media 0, oscura 2), ya
+no depende del tipo de fondo:
+
+```
+granito-vacio   11   ·  madera-vacia   0   ·  oscuro-vacio   2
+                    ────────────────────────
+mínimo CON documento: 82
+```
+
 ### Comparación con CamScanner (2026-08-18) — la brecha es LATENCIA, no puntería
 
 Se revisaron capturas de CamScanner en vivo sobre la misma libreta. Primera
@@ -859,7 +880,7 @@ el handoff anterior. El orden acordado sigue siendo:
 0    Captura full-res + overlay             en validación web / nativo pendiente
 1    PNG → JPEG                             avanzado/resuelto en web actual
 1.5  Spike DocQuad (3 runtimes)            Node avanzado; web/native pendientes
-1.6  scanner-fixtures (20 + ground truth)  banco y metrica IoU listos; van 11/20 fotos
+1.6  scanner-fixtures (20 + ground truth)  banco y metrica IoU listos; van 12/20 fotos
 2    DocQuad Node / WhatsApp                integración en curso
 3    DocQuad Web + Native                   pendiente
 4    AutoCapture + Quality                  pendiente

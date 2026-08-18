@@ -29,20 +29,19 @@ llega el visual, esa toma no se puede registrar; hay que repetirla.
 | 6 | Documento muy inclinado | ✅ `escritorio-angulo` |
 | 7 | Documento cortado por el borde del cuadro | **falta** |
 | 8 | Poca luz | **falta** |
-| 9 | Superficie oscura | **falta** |
+| 9 | Superficie oscura | ✅ `oscuro-vacio` (vacía) · falta CON documento |
 | 10 | Dos hojas encimadas (debe tomar la de arriba) | **falta** |
 | — | Madera SIN documento (extra) | ✅ `madera-vacia` |
 | — | Escritorio, caso ordinario que sí funciona (extra) | ✅ `escritorio-cuaderno` |
 
-**Van 11 de 20** (8 reales del dispositivo + 2 de referencia + 1 sintético).
+**Van 12 de 20** (9 reales del dispositivo + 2 de referencia + 1 sintético).
 
 ### Lo que falta, por orden de valor
 
-1. **Superficie oscura, CON y SIN documento** (#9). Las dos tomas vacías que
-   ya hay —granito y madera— fijaron la puerta de máscara con dos puntos.
-   Una tercera, sobre fondo oscuro, es la que más la refuerza: es el caso
-   donde una máscara podría apagarse por falta de contraste y provocar un
-   falso negativo, o sea borrar el contorno de un documento real.
+1. **Superficie oscura CON documento** (#9). La vacía ya entró y validó la
+   puerta; falta fijar como regresión la contraparte, cuyo diagnóstico del
+   dispositivo ya se midió (máscara 239 / 0.059, o sea sana) pero llegó sin
+   su jpg.
 2. **Poca luz** (#8) — el otro escenario donde la máscara puede debilitarse.
 3. **Documento cortado por el borde** (#7) — hoy nada en el banco lo cubre.
 4. **Dos hojas encimadas** (#10) — el único caso de desambiguación.
