@@ -17,29 +17,38 @@ para enseñar de un vistazo qué vio el detector, pero como fixture no vale
 —lleva el overlay quemado y no trae el JSON al lado—. Si de una toma solo
 llega el visual, esa toma no se puede registrar; hay que repetirla.
 
-## Escenarios pendientes
+## Escenarios
 
 | # | Escenario | Estado |
 |---|---|---|
-| 1 | Granito claro, documento centrado | ✅ `granito-centrado` (2026-08-14) |
-| 2 | Granito claro, documento de lado | ✅ `granito-de-lado` (2026-08-14) |
-| 3 | Granito solo, SIN documento (el detector no debe inventar nada) | ✅ `granito-vacio` (2026-08-14) |
-| 4 | Madera con reflejo de ventana | falta |
-| 5 | Documento lejos, chico en el cuadro | falta |
-| 6 | Documento muy inclinado | falta |
-| 7 | Documento cortado por el borde del cuadro | falta |
-| 8 | Poca luz | falta |
-| 9 | Superficie oscura | falta |
-| 10 | Dos hojas encimadas (debe tomar la de arriba) | falta |
+| 1 | Granito claro, documento centrado | ✅ `granito-centrado` |
+| 2 | Granito claro, documento de lado | ✅ `granito-de-lado` |
+| 3 | Granito solo, SIN documento | ✅ `granito-vacio` |
+| 4 | Madera con reflejo de ventana | ✅ `madera-libreta` |
+| 5 | Documento lejos, chico en el cuadro | ✅ `escritorio-lejos` |
+| 6 | Documento muy inclinado | ✅ `escritorio-angulo` |
+| 7 | Documento cortado por el borde del cuadro | **falta** |
+| 8 | Poca luz | **falta** |
+| 9 | Superficie oscura | **falta** |
+| 10 | Dos hojas encimadas (debe tomar la de arriba) | **falta** |
+| — | Madera SIN documento (extra) | ✅ `madera-vacia` |
+| — | Escritorio, caso ordinario que sí funciona (extra) | ✅ `escritorio-cuaderno` |
 
-Prioridad de lo que falta: **4 (madera con reflejo) y 9 (superficie oscura)**,
-que son las otras dos que ya se sabe que dan guerra. Las demás completan el
-set de 20.
+**Van 11 de 20** (8 reales del dispositivo + 2 de referencia + 1 sintético).
 
-La #3 ya entró y contestó su pregunta: sobre granito vacío los dos detectores
-inventan, pero la **máscara de DocQuad se apaga** (`areaGt05=11`,
-`meanProb=0.004`, contra ≥97 y ≥0.023 en todas las que sí tienen documento).
-Es la primera señal medida que separa "no hay nada" de "hay algo".
+### Lo que falta, por orden de valor
+
+1. **Superficie oscura, CON y SIN documento** (#9). Las dos tomas vacías que
+   ya hay —granito y madera— fijaron la puerta de máscara con dos puntos.
+   Una tercera, sobre fondo oscuro, es la que más la refuerza: es el caso
+   donde una máscara podría apagarse por falta de contraste y provocar un
+   falso negativo, o sea borrar el contorno de un documento real.
+2. **Poca luz** (#8) — el otro escenario donde la máscara puede debilitarse.
+3. **Documento cortado por el borde** (#7) — hoy nada en el banco lo cubre.
+4. **Dos hojas encimadas** (#10) — el único caso de desambiguación.
+
+Las #1 a #6 ya están cubiertas y varias resultaron ser el mismo caso abierto
+(DocQuad acierta, OpenCV falla, el desacuerdo lo degrada a parcial).
 
 ## Qué pasa después
 

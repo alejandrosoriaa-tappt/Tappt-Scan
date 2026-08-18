@@ -666,6 +666,128 @@ prueba de regresión: si alguien afloja la puerta, se ponen rojos.
 Sin datos de máscara la puerta **no opina** (`return false`): solo actúa
 con evidencia, nunca por ausencia de ella.
 
+### Comparación con CamScanner (2026-08-18) — la brecha es LATENCIA, no puntería
+
+Se revisaron capturas de CamScanner en vivo sobre la misma libreta. Primera
+lectura: "acierta 2 de 5". **Corrección del usuario: eran fotogramas de
+tránsito** —movía la cámara rápido a propósito— y CamScanner converge
+rapidísimo después de cada movimiento. La lectura correcta es que no es más
+preciso que nosotros; es incomparablemente más **rápido**.
+
+```
+                  TapptScan hoy        CamScanner
+dónde corre       servidor (red)       en el teléfono
+ciclo             ~300-560 ms          ~33 ms (30fps)
+inferencia sola   79-157 ms            —
+al mover          se queda atrás       sigue continuo
+```
+
+Un orden de magnitud. Eso es exactamente lo que ya estaba en el plan como
+**pasos 3 y 6** (DocQuad en navegador + OneEuro/Worker), y confirma que son
+los que faltan, no más ajuste de umbrales.
+
+### 🔴 La cámara SIEMPRE pasa por Recorte — y eso invalida un argumento
+
+Hallazgo al revisar el flujo: `capturar()` en `EscanearScreen` **siempre**
+navega a `Recorte`. Desde la cámara nunca se recorta solo.
+
+Consecuencia directa: la regla escrita arriba —*"un verde equivocado es peor
+que un blanco correcto: el blanco pide ajuste, el verde recorta"*— **es
+falsa para el camino de cámara**. Ahí nadie recorta solo; la red de
+seguridad ya existe. Solo aplica al camino de **WhatsApp**, donde
+`procesarDocumento` sí corrige perspectiva sin preguntar
+(`if (confiable && esquinas?.length === 4 …)`).
+
+Y hay un costo real por no haberlo notado:
+
+```js
+// RecorteScreen.js
+const [esquinas, setEsquinas] = useState(esquinasIniciales || MARCO_COMPLETO);
+// EscanearScreen.js — solo pasa si estado === 'listo'
+esquinasIniciales: deteccion.estado === 'listo' ? deteccion.esquinas : null,
+```
+
+Cuando el contorno sale blanco **se tira el quad** y el usuario recibe un
+marco de cuadro completo para arrastrar las cuatro esquinas desde cero. En
+`madera-libreta` eso significa desechar una detección de **IoU 0.935**.
+CamScanner enseña su quad —a veces peor— y el usuario lo ajusta tantito.
+
+Lo correcto es **separar las dos decisiones**:
+
+- **Cámara:** dibujar siempre el mejor quad disponible (verde con relleno) y
+  pasarlo a `Recorte` como punto de partida, aunque sea parcial.
+- **WhatsApp:** `confiable` sigue estricto, porque ahí sí actúa solo.
+
+La puerta de máscara es lo que hace seguro el "siempre dibujar": sobre mesa
+vacía ya no inventa nada.
+
+### Scanners open source revisados (2026-08-18)
+
+| Proyecto | Licencia | Detección | Qué aporta |
+|---|---|---|---|
+| **FairScan** | **GPLv3** ⚠️ | Segmentación propia (DeepLabV3+ / MobileNetV2, Dice > 0.94) con **LiteRT en el teléfono** | La arquitectura a imitar |
+| **MakeACopy** | Apache 2.0 | OpenCV **+ modelo ONNX propio** (UVDoc, SmartDoc, CORD) | De aquí sale nuestro DocQuad |
+| OSS-DocumentScanner | — | OpenCV / C++ nativo | Filtros, menos relevante al detector |
+| OpenScan | BSD-3 | Flutter, enfoque clásico | UX/PDF; no basar el detector aquí |
+
+**Cuidado legal:** FairScan es **GPLv3** y este repo es propietario
+(`UNLICENSED`). Se puede estudiar su arquitectura y sus ideas; **no** copiar
+código. MakeACopy es Apache 2.0 —incluido su modelo ONNX, el que ya
+usamos— así que ahí sí se puede reutilizar con atribución.
+
+### Dirección propuesta: la MÁSCARA como fuente primaria de geometría
+
+Lo que hacen los scanners modernos, y lo que la evidencia de este banco ya
+está señalando por su cuenta:
+
+```
+segmentación → máscara → morfología → componente conexa → casco convexo
+  → simplificar a 4 lados → score geométrico → (comparar OpenCV)
+  → estabilidad temporal → perspectiva
+```
+
+En vez de: `Canny → buscar polígono → ¿parece papel?`
+
+Hoy usamos la máscara solo como **señal de veto** (la puerta de arriba) y
+seguimos tomando la geometría de las cuatro esquinas de DocQuad o de
+OpenCV. La propuesta es que la máscara **produzca** el contorno.
+
+Dos razones de peso, y la segunda es la que convence:
+
+1. Ataca justo los casos abiertos —documento chico, lejano, en ángulo—
+   donde los bordes son débiles pero la mancha de papel sigue siendo clara.
+2. **Ya está probado en este repo.** El ground truth de `granito-de-lado`,
+   `escritorio-angulo` y `madera-libreta` se anotó exactamente con ese
+   pipeline (componente conexa → casco → cuadrilátero de área máxima),
+   sobre píxeles RGB, y dio contornos correctos en todos. Aplicarlo sobre
+   la máscara del modelo —que ya distingue papel de mesa— debería ser
+   mejor, no peor.
+
+Ojo con lo que NO cambia: la máscara de DocQuad es de 256×256, así que da
+un contorno grueso. Sirve para *encontrar* el documento; el refinamiento
+fino de esquinas sigue necesitando el otro camino.
+
+### Lectura estratégica (2026-08-18): CamScanner también se mueve a organizar
+
+CamScanner está empujando hacia unificar escaneo + PDF + OCR + QR en un
+flujo de trabajo documental. O sea: **el escaneo se está volviendo commodity
+y la pelea real se muda a la organización**, que es exactamente donde
+TapptScan ya tiene ventaja (clasificación con IA, taxonomía, archivo en el
+Drive del propio cliente).
+
+Consecuencia para el orden de trabajo, y es un cambio de énfasis:
+
+- **La organización va bien** — es el diferenciador y ya funciona.
+- **El escaneo es lo que nos frena**, y encima es donde el competidor está
+  más maduro. Es deuda que hay que pagar rápido, no pulir indefinidamente.
+- **La entrada por WhatsApp sigue siendo el foso**: cero instalación, cero
+  capacitación. Ninguno de los scanners revisados —ni CamScanner ni los
+  open source— tiene nada parecido.
+
+Traducido a prioridades: cerrar la experiencia de captura al nivel del
+benchmark **cuanto antes**, sin abrir frentes nuevos, y volver a invertir
+en organización una vez que escanear se sienta bien.
+
 Nota: en `madera-vacia` **OpenCV acierta** (`NO_QUAD`, no devuelve nada) y
 el que inventa es DocQuad (área 0.121). Es el espejo exacto del caso de
 granito — cada detector falla en el escenario donde el otro acierta, y por
