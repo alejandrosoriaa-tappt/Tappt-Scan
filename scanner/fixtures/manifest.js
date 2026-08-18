@@ -264,6 +264,53 @@ const FIXTURES = [
       'El candidato se sube al teclado (IoU 0.385): en ángulo oblicuo el ' +
       'quad disponible no sigue el papel. Rechazar es correcto.',
   },
+  {
+    id: 'madera-libreta',
+    tipo: 'escena',
+    local: true,
+    archivo: 'madera-libreta.jpg',
+    descripcion:
+      'Libreta abierta sobre mesa de madera barnizada con sol directo ' +
+      'entrando por la ventana: reflejo fuerte en la superficie y mitad ' +
+      'del cuadro en sombra. Toma real de iPhone/Safari, 2026-08-18. ' +
+      'Escenario 4 de la lista (madera con reflejo).',
+    groundTruth: [
+      { x: 0.352, y: 0.354 },
+      { x: 0.656, y: 0.352 },
+      { x: 0.689, y: 0.545 },
+      { x: 0.331, y: 0.547 },
+    ],
+    minIoU: 0.85,
+    // ABIERTO, y es la TERCERA superficie donde pasa exactamente lo mismo
+    // que en granito: DocQuad acierta —IoU 0.935, el mejor de todas las
+    // tomas reales del banco— y el compuesto lo degrada a parcial porque
+    // OpenCV discrepa (acuerdo 0.216). No es un caso nuevo: es el mismo
+    // caso abierto, ahora en madera con reflejo.
+    abierto: true,
+    notaAbierto:
+      'DocQuad acierta con IoU 0.935 (el mejor del banco) y se degrada a ' +
+      'parcial por desacuerdo con OpenCV (0.216). Tercera superficie con ' +
+      'el mismo patrón, después de granito centrado y de lado.',
+  },
+  {
+    id: 'madera-vacia',
+    tipo: 'vacio',
+    local: true,
+    archivo: 'madera-vacia.jpg',
+    descripcion:
+      'La misma mesa de madera barnizada SIN documento, con el mismo sol ' +
+      'y reflejo. Toma real de iPhone/Safari, 2026-08-18. Segundo fixture ' +
+      'de tipo vacio, el que faltaba para poder fijar la puerta de la ' +
+      'máscara con más de un punto.',
+    // ABIERTO: OpenCV acierta aquí (NO_QUAD, no devuelve nada), pero
+    // DocQuad sí inventa un quad (área 0.121) y el producto lo dibuja como
+    // parcial sobre una mesa vacía. Mismo síntoma que granito-vacio.
+    abierto: true,
+    notaAbierto:
+      'OpenCV acierta (NO_QUAD) y DocQuad inventa un quad de área 0.121 ' +
+      'que igual se dibuja. Pero su máscara queda en CERO absoluto ' +
+      '(areaGt05=0, meanProb=0.0000146) — la señal más limpia del banco.',
+  },
 ];
 
 module.exports = { FIXTURES };

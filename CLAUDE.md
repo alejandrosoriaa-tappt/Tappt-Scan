@@ -598,9 +598,48 @@ escritorio-angulo           82     0.024     0.385  malo
 
 Es la misma señal que apareció con `granito-vacio` (11 / 0.004). La
 máscara de DocQuad no solo distingue "no hay documento": **predice si el
-candidato va a servir**. Sigue siendo la mejor candidata a puerta, ahora
-con dos familias de evidencia en vez de una. Faltan las tomas de madera
-con reflejo y superficie oscura para fijarla con números y no a ojo.
+candidato va a servir**.
+
+### Madera con reflejo (2026-08-18) — el banco ya tiene con qué decidir
+
+Entraron `madera-libreta` y `madera-vacia`: mesa barnizada con sol directo
+por la ventana, media escena en sombra. Las dos cierran una discusión cada
+una.
+
+**1. `madera-libreta` es la TERCERA superficie con el mismo patrón.**
+
+```
+madera-libreta   IoU=0.935  confiable=false  acuerdo=0.216
+   docquad: IoU=0.935  ← el mejor de TODAS las tomas reales del banco
+   opencv:  discrepa → el compuesto degrada a parcial
+```
+
+DocQuad acierta mejor que en ninguna otra foto del dispositivo, y aun así
+sale contorno blanco. Ya son tres superficies distintas —granito centrado,
+granito de lado, madera con reflejo— donde **el que falla es OpenCV y el
+desacuerdo se lleva por delante una detección buena**.
+
+**2. `madera-vacia` da la señal más limpia del banco:**
+
+```
+                  areaGt05   meanProb
+madera-vacia            0    0.0000146   ← sin documento
+granito-vacio          11    0.004       ← sin documento
+──────────────────────────────────────
+escritorio-angulo      82    0.024       ← el mínimo CON documento
+camscanner-nota       702    0.171       ← el máximo
+```
+
+**Cero absoluto.** Con dos vacíos medidos y siete con documento, la puerta
+de "no inventes" ya no depende de un solo punto: hay un hueco de 7× entre
+el vacío más alto (11) y el mínimo con documento (82). Ese era el requisito
+que faltaba para poder implementarla con datos en vez de a ojo.
+
+Nota: en `madera-vacia` **OpenCV acierta** (`NO_QUAD`, no devuelve nada) y
+el que inventa es DocQuad (área 0.121). Es el espejo exacto del caso de
+granito — cada detector falla en el escenario donde el otro acierta, y por
+eso el acuerdo entre ambos sigue siendo mejor evidencia que cualquiera por
+separado.
 
 ### 🔴 SIGUIENTE PASO — bloqueado esperando datos
 
@@ -667,7 +706,7 @@ el handoff anterior. El orden acordado sigue siendo:
 0    Captura full-res + overlay             en validación web / nativo pendiente
 1    PNG → JPEG                             avanzado/resuelto en web actual
 1.5  Spike DocQuad (3 runtimes)            Node avanzado; web/native pendientes
-1.6  scanner-fixtures (20 + ground truth)  banco y metrica IoU listos; van 9/20 fotos
+1.6  scanner-fixtures (20 + ground truth)  banco y metrica IoU listos; van 11/20 fotos
 2    DocQuad Node / WhatsApp                integración en curso
 3    DocQuad Web + Native                   pendiente
 4    AutoCapture + Quality                  pendiente
@@ -704,9 +743,9 @@ Otros pendientes de producto:
   1 documento = 1 foto = 1 PDF; lote implica varias páginas por PDF, un
   temporal que sobrevive entre captura y subida, y decidir qué pasa si se
   cierra la app a medias.
-- **Fotos del banco de fixtures: van 9 de 20** (una sintética). Seis tomas
+- **Fotos del banco de fixtures: van 11 de 20** (una sintética). Ocho tomas
   reales del dispositivo: `granito-centrado`, `granito-de-lado`,
-  `granito-vacio`, `escritorio-cuaderno`, `escritorio-lejos` y
-  `escritorio-angulo` (ver abajo). Las que más falta hacen ahora: madera con
-  reflejo de ventana y superficie oscura, cada una con documento y vacía.
-  Sin la imagen original no se pueden fijar como prueba de regresión.
+  `granito-vacio`, `escritorio-cuaderno`, `escritorio-lejos`,
+  `escritorio-angulo`, `madera-libreta` y `madera-vacia` (ver abajo). Falta
+  sobre todo **superficie oscura**, con documento y vacía. Sin la imagen
+  original no se pueden fijar como prueba de regresión.
