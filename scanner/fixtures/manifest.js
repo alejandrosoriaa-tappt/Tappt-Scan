@@ -367,6 +367,25 @@ const FIXTURES = [
       'desacuerdo con OpenCV (acuerdo 0.664). Cuarta superficie con el ' +
       'mismo caso abierto.',
   },
+  {
+    id: 'oscuro-libreta',
+    tipo: 'escena',
+    local: true,
+    archivo: 'oscuro-libreta.jpg',
+    descripcion:
+      'Libreta abierta sobre el mismo tapete de escritorio negro (fibra de ' +
+      'carbono), luz de oficina baja. Toma real de iPhone/Safari, ' +
+      '2026-08-18. A diferencia de `oscuro-documento`, aquí los dos ' +
+      'detectores SÍ concuerdan (acuerdo 0.982) — caso de éxito ordinario ' +
+      'en fondo oscuro, contraparte "todo bien" de la pareja abierta.',
+    groundTruth: [
+      { x: 0.161, y: 0.321 },
+      { x: 0.813, y: 0.314 },
+      { x: 0.848, y: 0.750 },
+      { x: 0.085, y: 0.719 },
+    ],
+    minIoU: 0.85,
+  },
 ];
 
 module.exports = { FIXTURES };

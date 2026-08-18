@@ -718,6 +718,27 @@ Corrido en el banco (`npm run scanner:fixtures`) sin tocar el detector:
 **cero regresión**, los 12 fixtures anteriores conservan IoU y estado
 idénticos. `oscuro-documento` entra como caso abierto (no tumba CI).
 
+### `oscuro-libreta` (2026-08-18) — el par completo: mismo fondo, caso normal
+
+Llegó también el JSON que le faltaba a la foto de la libreta sobre el mismo
+tapete oscuro (se había capturado antes que `oscuro-documento`, en la misma
+sesión de fotos, pero el JSON se traspapeló). A diferencia de
+`oscuro-documento`, aquí **los dos detectores concuerdan** (acuerdo 0.982) y
+el resultado es `confiable: true` — el caso ordinario que sí funciona.
+
+```
+oscuro-libreta   IoU=0.999  confiable=true  acuerdo=0.982
+   docquad: IoU=0.981  z=[3.54, 3.13, 2.83, 3.15]  LOW_PEAK_MARGIN (igual descartado, pero coincide con OpenCV)
+   opencv:  opencv-paper, sin discrepancia
+   mask:    areaGt05=928  meanProb=0.225  ← la más alta del banco
+```
+
+Con `oscuro-documento` y `oscuro-libreta` ya hay, en la MISMA superficie
+oscura, el par completo: vacío (puerta se apaga), documento con desacuerdo
+(caso abierto, degrada a parcial) y documento con acuerdo (caso normal,
+confiable). Es la primera superficie del banco con los tres estados
+cubiertos a la vez. Cero regresión en el resto del banco.
+
 ### Comparación con CamScanner (2026-08-18) — la brecha es LATENCIA, no puntería
 
 Se revisaron capturas de CamScanner en vivo sobre la misma libreta. Primera
@@ -911,7 +932,7 @@ el handoff anterior. El orden acordado sigue siendo:
 0    Captura full-res + overlay             en validación web / nativo pendiente
 1    PNG → JPEG                             avanzado/resuelto en web actual
 1.5  Spike DocQuad (3 runtimes)            Node avanzado; web/native pendientes
-1.6  scanner-fixtures (20 + ground truth)  banco y metrica IoU listos; van 13/20 fotos
+1.6  scanner-fixtures (20 + ground truth)  banco y metrica IoU listos; van 14/20 fotos
 2    DocQuad Node / WhatsApp                integración en curso
 3    DocQuad Web + Native                   pendiente
 4    AutoCapture + Quality                  pendiente
@@ -948,11 +969,13 @@ Otros pendientes de producto:
   1 documento = 1 foto = 1 PDF; lote implica varias páginas por PDF, un
   temporal que sobrevive entre captura y subida, y decidir qué pasa si se
   cierra la app a medias.
-- **Fotos del banco de fixtures: van 13 de 20** (una sintética). Diez tomas
+- **Fotos del banco de fixtures: van 14 de 20** (una sintética). Once tomas
   reales del dispositivo: `granito-centrado`, `granito-de-lado`,
   `granito-vacio`, `escritorio-cuaderno`, `escritorio-lejos`,
-  `escritorio-angulo`, `madera-libreta`, `madera-vacia`, `oscuro-vacio` y
-  `oscuro-documento` (ver arriba). Escenario 9 (superficie oscura) ya
-  cerrado, vacía y con documento. Falta: poca luz (#8), documento cortado
-  por el borde (#7) y dos hojas de verdad encimadas (#10) — ver
-  `scanner/fixtures/fotos/README.md` para el checklist completo.
+  `escritorio-angulo`, `madera-libreta`, `madera-vacia`, `oscuro-vacio`,
+  `oscuro-documento` y `oscuro-libreta` (ver arriba). Escenario 9
+  (superficie oscura) ya cerrado, vacía y con documento, con los tres
+  estados del compuesto cubiertos en la misma superficie. Falta: poca luz
+  (#8), documento cortado por el borde (#7) y dos hojas de verdad
+  encimadas (#10) — ver `scanner/fixtures/fotos/README.md` para el
+  checklist completo.
