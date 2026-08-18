@@ -184,6 +184,25 @@ const FIXTURES = [
       'y DocQuad un quad de 0.02. El producto no recorta (parcial), pero ' +
       'igual dibuja un contorno donde no hay nada.',
   },
+  {
+    id: 'escritorio-cuaderno',
+    tipo: 'escena',
+    local: true,
+    archivo: 'escritorio-cuaderno.jpg',
+    descripcion:
+      'Libreta abierta sobre escritorio de madera/piel naranja, luz de ' +
+      'oficina, sombra parcial de mano y torso sobre el papel. Toma real ' +
+      'de iPhone/Safari, 2026-08-18. No es un caso difícil —los dos ' +
+      'detectores concuerdan (acuerdo 0.984)— pero es una escena nueva del ' +
+      'dispositivo y sirve como caso de éxito ordinario en el banco.',
+    groundTruth: [
+      { x: 0.375, y: 0.32 },
+      { x: 0.742, y: 0.319 },
+      { x: 0.756, y: 0.573 },
+      { x: 0.278, y: 0.576 },
+    ],
+    minIoU: 0.85,
+  },
 ];
 
 module.exports = { FIXTURES };

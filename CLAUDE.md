@@ -536,6 +536,25 @@ la fila de ✕/ⓘ (`top:112px` el gris, `top:160px` el verde): separarlos entre
 sí abajo solo habría movido el choque al tercero. El gris dice "Ver
 detección (solo imagen)"; el verde, "Compartir fixture (jpg + json)".
 
+### Cómo NO se pierde el jpg al recolectar (2026-08-18)
+
+Recolectando `escritorio-cuaderno` se repitió **cuatro veces** el mismo
+JSON (mismo sello `T134607347Z`) sin su jpg, antes de que llegara un par
+bueno. Dos causas, para no repetirlas:
+
+1. **Reenviar la foto ya guardada NO es un fixture nuevo.** El botón verde
+   hay que tocarlo de nuevo sobre la escena actual; reenviar desde la
+   galería una imagen que ya se compartió antes solo repite el sello viejo
+   — el detector nunca volvió a correr sobre nada.
+2. **AirDrop va al Mac, no a esta conversación.** Si la sesión de Claude se
+   usa solo desde el iPhone, la ruta es "Guardar en Archivos" desde el
+   panel de compartir de iOS, y adjuntar desde ahí con el clip 📎 — nunca
+   hay una carpeta del teléfono visible para quien lee los fixtures.
+
+Señal de que el par SÍ es válido: el `.jpg` trae dimensiones de frame de
+cámara (640×853 en las tomas de esta sesión), no las de una foto normal de
+galería, y su nombre comparte sello exacto con el `.json` de al lado.
+
 ### 🔴 SIGUIENTE PASO — bloqueado esperando datos
 
 **Las 9 tomas que faltan del banco de fixtures.** Es lo único que falta para poder
@@ -601,7 +620,7 @@ el handoff anterior. El orden acordado sigue siendo:
 0    Captura full-res + overlay             en validación web / nativo pendiente
 1    PNG → JPEG                             avanzado/resuelto en web actual
 1.5  Spike DocQuad (3 runtimes)            Node avanzado; web/native pendientes
-1.6  scanner-fixtures (20 + ground truth)  banco y metrica IoU listos; van 6/20 fotos
+1.6  scanner-fixtures (20 + ground truth)  banco y metrica IoU listos; van 7/20 fotos
 2    DocQuad Node / WhatsApp                integración en curso
 3    DocQuad Web + Native                   pendiente
 4    AutoCapture + Quality                  pendiente
@@ -638,8 +657,9 @@ Otros pendientes de producto:
   1 documento = 1 foto = 1 PDF; lote implica varias páginas por PDF, un
   temporal que sobrevive entre captura y subida, y decidir qué pasa si se
   cierra la app a medias.
-- **Fotos del banco de fixtures: van 6 de 20** (una sintética). Ya entraron
-  las dos primeras tomas reales del dispositivo, `granito-centrado` y
-  `granito-de-lado` (ver abajo). Las que más falta hacen ahora: **granito
-  SIN documento**, madera con reflejo de ventana y superficie oscura. Sin
-  la imagen original no se pueden fijar como prueba de regresión.
+- **Fotos del banco de fixtures: van 7 de 20** (una sintética). Cuatro tomas
+  reales del dispositivo: `granito-centrado`, `granito-de-lado`,
+  `granito-vacio` y `escritorio-cuaderno` (ver abajo). Las que más falta
+  hacen ahora: madera con reflejo de ventana y superficie oscura, cada una
+  con documento y vacía. Sin la imagen original no se pueden fijar como
+  prueba de regresión.
