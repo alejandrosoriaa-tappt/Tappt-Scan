@@ -687,6 +687,37 @@ granito-vacio   11   ·  madera-vacia   0   ·  oscuro-vacio   2
 mínimo CON documento: 82
 ```
 
+### `oscuro-documento` (2026-08-18) — cierra el escenario 9, cuarta superficie con el mismo patrón
+
+Entró la contraparte de `oscuro-vacio`: el mismo tapete de fibra de carbono,
+ahora con dos hojas encima (una con texto arriba, una en blanco debajo,
+traslapadas un poco). El ground truth es la hoja en blanco —la que detectó
+el dispositivo—, trazado a mano sobre su contorno visible y verificado
+dibujándolo encima (`scanner/fixtures/manifest.js`).
+
+```
+oscuro-documento   IoU=0.996  confiable=false  acuerdo=0.664
+   docquad: IoU=0.996  z=[3.26, 3.67, 3.47, 2.83]  LOW_PEAK_MARGIN
+   opencv:  SIN_ACUERDO_ENTRE_DETECTORES
+   mask:    areaGt05=239  meanProb=0.059  ← sana, muy arriba del umbral (40 / 0.012)
+```
+
+Dos cosas confirmadas:
+
+1. **La puerta de máscara no se dispara en falso.** Es justo el par que se
+   necesitaba: `oscuro-vacio` (areaGt05=2) vs. `oscuro-documento`
+   (areaGt05=239) — 120× de separación en la misma superficie, con
+   documento real de por medio, no solo medido en teoría.
+2. **Es la CUARTA superficie con el caso abierto de siempre**: DocQuad
+   acierta (IoU 0.996, prácticamente perfecto) y el compuesto lo degrada a
+   parcial porque OpenCV no está de acuerdo (0.664). Mismo patrón que
+   granito centrado, granito de lado y madera — ya son cuatro superficies
+   distintas donde el que falla es OpenCV, no DocQuad.
+
+Corrido en el banco (`npm run scanner:fixtures`) sin tocar el detector:
+**cero regresión**, los 12 fixtures anteriores conservan IoU y estado
+idénticos. `oscuro-documento` entra como caso abierto (no tumba CI).
+
 ### Comparación con CamScanner (2026-08-18) — la brecha es LATENCIA, no puntería
 
 Se revisaron capturas de CamScanner en vivo sobre la misma libreta. Primera
@@ -880,7 +911,7 @@ el handoff anterior. El orden acordado sigue siendo:
 0    Captura full-res + overlay             en validación web / nativo pendiente
 1    PNG → JPEG                             avanzado/resuelto en web actual
 1.5  Spike DocQuad (3 runtimes)            Node avanzado; web/native pendientes
-1.6  scanner-fixtures (20 + ground truth)  banco y metrica IoU listos; van 12/20 fotos
+1.6  scanner-fixtures (20 + ground truth)  banco y metrica IoU listos; van 13/20 fotos
 2    DocQuad Node / WhatsApp                integración en curso
 3    DocQuad Web + Native                   pendiente
 4    AutoCapture + Quality                  pendiente
@@ -917,9 +948,11 @@ Otros pendientes de producto:
   1 documento = 1 foto = 1 PDF; lote implica varias páginas por PDF, un
   temporal que sobrevive entre captura y subida, y decidir qué pasa si se
   cierra la app a medias.
-- **Fotos del banco de fixtures: van 11 de 20** (una sintética). Ocho tomas
+- **Fotos del banco de fixtures: van 13 de 20** (una sintética). Diez tomas
   reales del dispositivo: `granito-centrado`, `granito-de-lado`,
   `granito-vacio`, `escritorio-cuaderno`, `escritorio-lejos`,
-  `escritorio-angulo`, `madera-libreta` y `madera-vacia` (ver abajo). Falta
-  sobre todo **superficie oscura**, con documento y vacía. Sin la imagen
-  original no se pueden fijar como prueba de regresión.
+  `escritorio-angulo`, `madera-libreta`, `madera-vacia`, `oscuro-vacio` y
+  `oscuro-documento` (ver arriba). Escenario 9 (superficie oscura) ya
+  cerrado, vacía y con documento. Falta: poca luz (#8), documento cortado
+  por el borde (#7) y dos hojas de verdad encimadas (#10) — ver
+  `scanner/fixtures/fotos/README.md` para el checklist completo.

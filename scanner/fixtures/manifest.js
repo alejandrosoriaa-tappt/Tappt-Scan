@@ -330,6 +330,43 @@ const FIXTURES = [
     // Con tres vacíos en tres superficies distintas (clara, media y oscura)
     // la puerta deja de depender del tipo de fondo.
   },
+  {
+    id: 'oscuro-documento',
+    tipo: 'escena',
+    local: true,
+    archivo: 'oscuro-documento.jpg',
+    descripcion:
+      'Mismo tapete de escritorio negro (fibra de carbono), luz de oficina ' +
+      'baja, con DOS hojas encima que se traslapan un poco: una hoja con ' +
+      'texto arriba y una hoja en blanco debajo, parcialmente tapada por ' +
+      'la primera. Toma real de iPhone/Safari, 2026-08-18. Contraparte de ' +
+      '`oscuro-vacio` — cierra el escenario 9 (superficie oscura) y de ' +
+      'paso es el primer fixture con dos documentos en el mismo cuadro. ' +
+      'Ground truth es la hoja en blanco (la que detectó el dispositivo), ' +
+      'trazada sobre su contorno visible y verificada dibujándola encima.',
+    groundTruth: [
+      { x: 0.533, y: 0.314 },
+      { x: 0.840, y: 0.321 },
+      { x: 0.857, y: 0.556 },
+      { x: 0.391, y: 0.539 },
+    ],
+    minIoU: 0.85,
+    // Diagnóstico del dispositivo (oscuro-documento.json): máscara
+    // areaGt05=239, meanProb=0.059 — sana, muy por arriba del umbral de la
+    // puerta (40 / 0.012) y del mínimo con documento del resto del banco.
+    // Confirma en el dispositivo lo que ya se había medido: la puerta no
+    // se dispara sobre fondo oscuro CON documento, solo sobre fondo oscuro
+    // vacío. docquad cae en LOW_PEAK_MARGIN (chosenSource: CORNERS) y
+    // OpenCV discrepa (SIN_ACUERDO_ENTRE_DETECTORES, acuerdo IoU 0.664) —
+    // el mismo patrón que granito y madera: el candidato de DocQuad es
+    // bueno, el desacuerdo con OpenCV lo degrada a parcial.
+    abierto: true,
+    notaAbierto:
+      'Mismo patrón que granito/madera: DocQuad da un candidato bueno ' +
+      'sobre la hoja en blanco y el compuesto lo degrada a parcial por ' +
+      'desacuerdo con OpenCV (acuerdo 0.664). Cuarta superficie con el ' +
+      'mismo caso abierto.',
+  },
 ];
 
 module.exports = { FIXTURES };

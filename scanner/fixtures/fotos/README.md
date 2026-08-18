@@ -29,25 +29,25 @@ llega el visual, esa toma no se puede registrar; hay que repetirla.
 | 6 | Documento muy inclinado | ✅ `escritorio-angulo` |
 | 7 | Documento cortado por el borde del cuadro | **falta** |
 | 8 | Poca luz | **falta** |
-| 9 | Superficie oscura | ✅ `oscuro-vacio` (vacía) · falta CON documento |
-| 10 | Dos hojas encimadas (debe tomar la de arriba) | **falta** |
+| 9 | Superficie oscura | ✅ `oscuro-vacio` (vacía) · ✅ `oscuro-documento` (con documento) |
+| 10 | Dos hojas encimadas (debe tomar la de arriba) | **falta** (parcial: `oscuro-documento` trae dos hojas traslapadas, pero no es el escenario de desambiguación dedicado) |
 | — | Madera SIN documento (extra) | ✅ `madera-vacia` |
 | — | Escritorio, caso ordinario que sí funciona (extra) | ✅ `escritorio-cuaderno` |
 
-**Van 12 de 20** (9 reales del dispositivo + 2 de referencia + 1 sintético).
+**Van 13 de 20** (10 reales del dispositivo + 2 de referencia + 1 sintético).
 
 ### Lo que falta, por orden de valor
 
-1. **Superficie oscura CON documento** (#9). La vacía ya entró y validó la
-   puerta; falta fijar como regresión la contraparte, cuyo diagnóstico del
-   dispositivo ya se midió (máscara 239 / 0.059, o sea sana) pero llegó sin
-   su jpg.
-2. **Poca luz** (#8) — el otro escenario donde la máscara puede debilitarse.
-3. **Documento cortado por el borde** (#7) — hoy nada en el banco lo cubre.
-4. **Dos hojas encimadas** (#10) — el único caso de desambiguación.
+1. **Poca luz** (#8) — el otro escenario donde la máscara puede debilitarse.
+2. **Documento cortado por el borde** (#7) — hoy nada en el banco lo cubre.
+3. **Dos hojas encimadas** (#10) — el único caso de desambiguación dedicado
+   (`oscuro-documento` ayuda pero traslapa poco; falta una toma donde de
+   verdad estén una encima de la otra).
 
-Las #1 a #6 ya están cubiertas y varias resultaron ser el mismo caso abierto
-(DocQuad acierta, OpenCV falla, el desacuerdo lo degrada a parcial).
+Las #1 a #6 y la #9 ya están cubiertas y varias resultaron ser el mismo caso
+abierto (DocQuad acierta, OpenCV falla, el desacuerdo lo degrada a parcial).
+`oscuro-documento` es la CUARTA superficie con ese mismo patrón, después de
+granito centrado, granito de lado y madera.
 
 ## Qué pasa después
 
