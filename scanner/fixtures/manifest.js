@@ -416,6 +416,43 @@ const FIXTURES = [
       'traga tapete+encimera (area 0.704) y el desacuerdo (0.440) degrada ' +
       'a parcial.',
   },
+  {
+    id: 'poca-luz',
+    tipo: 'escena',
+    local: true,
+    archivo: 'poca-luz.jpg',
+    descripcion:
+      'Documento sobre la tapa blanca de un excusado, baño con luz muy ' +
+      'baja (brillo medio ~53/255). Toma real de iPhone/Safari, ' +
+      '2026-08-19. Escenario 8 de la lista (poca luz) y de paso blanco ' +
+      'sobre blanco, la combinación más dura del banco: el borde entre ' +
+      'papel y tapa casi no tiene contraste. Ground truth anotado con ' +
+      'realce gamma (0.4) y verificado dibujándolo encima — el borde ' +
+      'superior salió ~2% más abajo que el quad crudo de DocQuad, el ' +
+      'resto (derecho, inferior, izquierdo) coincidía.',
+    groundTruth: [
+      { x: 0.267, y: 0.166 },
+      { x: 0.653, y: 0.174 },
+      { x: 0.633, y: 0.686 },
+      { x: 0.246, y: 0.678 },
+    ],
+    minIoU: 0.75,
+    // minIoU más laxo que el resto del banco (0.85): la propia anotación
+    // tiene más incertidumbre por el bajo contraste, no solo el detector.
+    //
+    // docquad cae en LOW_PEAK_MARGIN con penalties de esquinas altísimas
+    // (2000050/2000000, prácticamente "no confíes en las esquinas") y
+    // termina usando chosenSource=MASK — la máscara es lo único que
+    // sobrevive en poca luz. OpenCV discrepa fuerte (acuerdo 0.440,
+    // area=0.434 vs. 0.207 de DocQuad). Confiable=false, correcto: ninguno
+    // de los dos está seguro aquí y no deberían.
+    abierto: true,
+    notaAbierto:
+      'Poca luz fuerza a DocQuad a MASK (esquinas descartadas con penalty ' +
+      'extremo) y OpenCV discrepa fuerte (acuerdo 0.440). El rechazo a ' +
+      'confiable es correcto: ninguno de los dos detectores tiene ' +
+      'evidencia sólida en esta escena.',
+  },
 ];
 
 module.exports = { FIXTURES };

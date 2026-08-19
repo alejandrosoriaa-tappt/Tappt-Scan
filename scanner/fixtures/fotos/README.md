@@ -28,7 +28,7 @@ llega el visual, esa toma no se puede registrar; hay que repetirla.
 | 5 | Documento lejos, chico en el cuadro | ✅ `escritorio-lejos` |
 | 6 | Documento muy inclinado | ✅ `escritorio-angulo` |
 | 7 | Documento cortado por el borde del cuadro | **falta** |
-| 8 | Poca luz | **falta** |
+| 8 | Poca luz | ✅ `poca-luz` |
 | 9 | Superficie oscura | ✅ `oscuro-vacio` (vacía) · ✅ `oscuro-documento` (con documento) |
 | 10 | Dos hojas encimadas (debe tomar la de arriba) | **falta** (parcial: `oscuro-documento` trae dos hojas traslapadas, pero no es el escenario de desambiguación dedicado) |
 | — | Madera SIN documento (extra) | ✅ `madera-vacia` |
@@ -36,13 +36,12 @@ llega el visual, esa toma no se puede registrar; hay que repetirla.
 | — | Superficie oscura, caso ordinario que sí funciona (extra) | ✅ `oscuro-libreta` |
 | — | Granito con tapete, quinta superficie del caso abierto (extra) | ✅ `granito-tapete` |
 
-**Van 15 de 20** (12 reales del dispositivo + 2 de referencia + 1 sintético).
+**Van 16 de 20** (13 reales del dispositivo + 2 de referencia + 1 sintético).
 
 ### Lo que falta, por orden de valor
 
-1. **Poca luz** (#8) — el otro escenario donde la máscara puede debilitarse.
-2. **Documento cortado por el borde** (#7) — hoy nada en el banco lo cubre.
-3. **Dos hojas encimadas** (#10) — el único caso de desambiguación dedicado
+1. **Documento cortado por el borde** (#7) — hoy nada en el banco lo cubre.
+2. **Dos hojas encimadas** (#10) — el único caso de desambiguación dedicado
    (`oscuro-documento` ayuda pero traslapa poco; falta una toma donde de
    verdad estén una encima de la otra).
 

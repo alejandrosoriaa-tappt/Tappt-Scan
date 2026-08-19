@@ -793,6 +793,39 @@ franja desaparece y que el campo visual sigue sintiéndose abierto. Si
 0.6x no alcanza a evitar la frontera de fusión, subir un poco más, pero
 medido con una toma nueva — no a ojo.
 
+**Primera señal, sin confirmar todavía:** la siguiente toma real que llegó
+después del cambio (`poca-luz`, ver abajo) no muestra la franja. Una sola
+toma no prueba nada —la escena también cambió (otro cuarto, otra luz)— pero
+es consistente con que el ajuste esté funcionando.
+
+### `poca-luz` (2026-08-19) — cierra el escenario 8, y de paso blanco sobre blanco
+
+Documento sobre la tapa de un excusado, baño con luz muy baja (brillo medio
+~53/255). Doble dificultad: poca luz Y blanco sobre blanco —el borde entre
+papel y tapa casi no tiene contraste—, la combinación más dura del banco
+hasta ahora.
+
+```
+poca-luz   IoU=0.953  confiable=false  acuerdo=0.450
+   docquad: chosenSource=MASK (esquinas descartadas con penalty ~2000000)
+   opencv:  area=0.434 vs. 0.207 de DocQuad — discrepancia fuerte
+   mask:    areaGt05=468  meanProb=0.113
+```
+
+Ground truth anotado a mano con realce gamma (0.4) sobre la imagen original
+—a simple vista el borde es invisible— y verificado dibujándolo encima: el
+quad crudo de DocQuad tenía el borde superior ~2% más arriba de donde
+realmente está el papel (el margen en blanco sobre el título se leyó como
+parte de la tapa). El resto de los bordes sí coincidía. Por esa
+incertidumbre extra en la propia anotación, este fixture usa `minIoU: 0.75`
+en vez del 0.85 del resto del banco.
+
+**El rechazo a confiable es correcto.** DocQuad descarta sus propias
+esquinas (penalty extremo) y cae a la máscara; OpenCV da un área más del
+doble que DocQuad. Ninguno de los dos tiene evidencia sólida en esta
+escena, y el compuesto responde bien: no inventa confianza que no existe.
+Corrido en el banco: cero regresión (8/16 OK).
+
 ### Comparación con CamScanner (2026-08-18) — la brecha es LATENCIA, no puntería
 
 Se revisaron capturas de CamScanner en vivo sobre la misma libreta. Primera
@@ -986,7 +1019,7 @@ el handoff anterior. El orden acordado sigue siendo:
 0    Captura full-res + overlay             en validación web / nativo pendiente
 1    PNG → JPEG                             avanzado/resuelto en web actual
 1.5  Spike DocQuad (3 runtimes)            Node avanzado; web/native pendientes
-1.6  scanner-fixtures (20 + ground truth)  banco y metrica IoU listos; van 15/20 fotos
+1.6  scanner-fixtures (20 + ground truth)  banco y metrica IoU listos; van 16/20 fotos
 2    DocQuad Node / WhatsApp                integración en curso
 3    DocQuad Web + Native                   pendiente
 4    AutoCapture + Quality                  pendiente
@@ -1023,14 +1056,15 @@ Otros pendientes de producto:
   1 documento = 1 foto = 1 PDF; lote implica varias páginas por PDF, un
   temporal que sobrevive entre captura y subida, y decidir qué pasa si se
   cierra la app a medias.
-- **Fotos del banco de fixtures: van 15 de 20** (una sintética). Doce tomas
+- **Fotos del banco de fixtures: van 16 de 20** (una sintética). Trece tomas
   reales del dispositivo: `granito-centrado`, `granito-de-lado`,
   `granito-vacio`, `escritorio-cuaderno`, `escritorio-lejos`,
   `escritorio-angulo`, `madera-libreta`, `madera-vacia`, `oscuro-vacio`,
-  `oscuro-documento`, `oscuro-libreta` y `granito-tapete` (ver arriba).
-  Escenario 9 (superficie oscura) ya cerrado, vacía y con documento, con
-  los tres estados del compuesto cubiertos en la misma superficie. El caso
-  abierto de superficie clara (DocQuad acierta, OpenCV falla) ya tiene
-  CINCO superficies midiéndolo. Falta: poca luz (#8), documento cortado
-  por el borde (#7) y dos hojas de verdad encimadas (#10) — ver
-  `scanner/fixtures/fotos/README.md` para el checklist completo.
+  `oscuro-documento`, `oscuro-libreta`, `granito-tapete` y `poca-luz` (ver
+  arriba). Escenario 9 (superficie oscura) ya cerrado, vacía y con
+  documento, con los tres estados del compuesto cubiertos en la misma
+  superficie. Escenario 8 (poca luz) también cerrado. El caso abierto de
+  superficie clara (DocQuad acierta, OpenCV falla) ya tiene CINCO
+  superficies midiéndolo. Falta: documento cortado por el borde (#7) y dos
+  hojas de verdad encimadas (#10) — ver `scanner/fixtures/fotos/README.md`
+  para el checklist completo.
