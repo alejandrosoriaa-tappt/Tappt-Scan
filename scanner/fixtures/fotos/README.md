@@ -34,8 +34,9 @@ llega el visual, esa toma no se puede registrar; hay que repetirla.
 | — | Madera SIN documento (extra) | ✅ `madera-vacia` |
 | — | Escritorio, caso ordinario que sí funciona (extra) | ✅ `escritorio-cuaderno` |
 | — | Superficie oscura, caso ordinario que sí funciona (extra) | ✅ `oscuro-libreta` |
+| — | Granito con tapete, quinta superficie del caso abierto (extra) | ✅ `granito-tapete` |
 
-**Van 14 de 20** (11 reales del dispositivo + 2 de referencia + 1 sintético).
+**Van 15 de 20** (12 reales del dispositivo + 2 de referencia + 1 sintético).
 
 ### Lo que falta, por orden de valor
 
@@ -48,9 +49,10 @@ llega el visual, esa toma no se puede registrar; hay que repetirla.
 Las #1 a #6 y la #9 ya están cubiertas y varias resultaron ser el mismo caso
 abierto (DocQuad acierta, OpenCV falla, el desacuerdo lo degrada a parcial).
 `oscuro-documento` es la CUARTA superficie con ese mismo patrón, después de
-granito centrado, granito de lado y madera. `oscuro-libreta`, en cambio, es
-el caso ordinario donde los dos detectores concuerdan (acuerdo 0.982) y
-todo funciona — la misma superficie, sin desacuerdo.
+granito centrado, granito de lado y madera; `granito-tapete` es la QUINTA.
+`oscuro-libreta`, en cambio, es el caso ordinario donde los dos detectores
+concuerdan (acuerdo 0.982) y todo funciona — la misma superficie, sin
+desacuerdo.
 
 ## Qué pasa después
 

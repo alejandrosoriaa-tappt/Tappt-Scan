@@ -386,6 +386,36 @@ const FIXTURES = [
     ],
     minIoU: 0.85,
   },
+  {
+    id: 'granito-tapete',
+    tipo: 'escena',
+    local: true,
+    archivo: 'granito-tapete.jpg',
+    descripcion:
+      'Documento de una página completa (trámite gob.mx) sobre un tapete ' +
+      'gris, encima de otra encimera de granito claro con vetas. Toma ' +
+      'real de iPhone/Safari, 2026-08-19. Escena nueva de granito, ' +
+      'distinta de `granito-centrado`/`granito-de-lado` (esas sin tapete ' +
+      'debajo). El quad de DocQuad calza casi perfecto con el documento.',
+    groundTruth: [
+      { x: 0.190, y: 0.141 },
+      { x: 0.695, y: 0.150 },
+      { x: 0.683, y: 0.779 },
+      { x: 0.115, y: 0.772 },
+    ],
+    minIoU: 0.85,
+    // ABIERTO: QUINTA superficie con el mismo patrón (después de granito
+    // centrado, granito de lado, madera y oscuro-documento). OpenCV se
+    // traga tapete + encimera (area=0.704, casi el doble de DocQuad) y el
+    // desacuerdo (acuerdo=0.440) degrada a parcial una detección de
+    // DocQuad que visualmente es casi perfecta. Máscara sana
+    // (areaGt05=1020, meanProb=0.249), consistente con el resto del banco.
+    abierto: true,
+    notaAbierto:
+      'Quinta superficie con el mismo patrón: DocQuad acierta, OpenCV se ' +
+      'traga tapete+encimera (area 0.704) y el desacuerdo (0.440) degrada ' +
+      'a parcial.',
+  },
 ];
 
 module.exports = { FIXTURES };
