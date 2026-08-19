@@ -763,6 +763,36 @@ evidencia para revisar la regla del compuesto (confiar en DocQuad cuando su
 — pero, como con el 5σ, no se toca sin medir primero contra el banco
 completo. Cero regresión en el resto del banco (`npm run scanner:fixtures`).
 
+### Franja borrosa en un borde del frame (2026-08-19) — fusión de sensores en 0.5x, no el lente
+
+En dos fixtures reales (`granito-tapete` y su par sin registrar de la misma
+sesión) apareció una franja borrosa vertical pegada al borde izquierdo,
+corriendo todo el alto del frame, idéntica en posición en ambas tomas. El
+usuario descartó el lente físico (probó con otra app y no aparece). Revisado
+el código de captura (`CamaraDoc.web.js`), `capturar()` solo hace un
+`drawImage` directo del frame de video a un canvas — no hay recorte ni
+composición ahí que pudiera meter una franja así. El problema viene del
+stream de cámara, antes de que la app lo toque.
+
+Hipótesis: `abrirStreamMasAbierto()` forzaba el zoom al **mínimo físico
+exacto** del track (`caps.zoom.min`, 0.5x en iPhone) vía `applyConstraints`.
+Ese 0.5x exacto es la frontera donde iOS funde el sensor ultra angular con
+el principal ("seamless zoom"); el sensor ultra angular está desplazado
+físicamente del principal, así que un error de paralaje en esa fusión cae
+consistentemente hacia un borde — no al azar, y no del lado que cambiaría
+si fuera un dedo tapando el lente. Que no aparezca en otra app cuadra: si
+esa app no fuerza el 0.5x físico exacto, nunca entra a esa frontera, o usa
+la corrección propietaria de Apple que Safari/WebRTC no expone igual.
+
+**Cambio (sin validar en dispositivo todavía):** `ZOOM_PREFERIDO = 0.6` en
+`abrirStreamMasAbierto()` — pide un zoom un poco arriba del mínimo físico
+(clampado entre `caps.zoom.min` y `caps.zoom.max`) en vez del mínimo exacto.
+De paso acerca el encuadre al de CamScanner, que hoy se ve más cerrado
+(más zoom) que el nuestro. **Falta la prueba real**: confirmar que la
+franja desaparece y que el campo visual sigue sintiéndose abierto. Si
+0.6x no alcanza a evitar la frontera de fusión, subir un poco más, pero
+medido con una toma nueva — no a ojo.
+
 ### Comparación con CamScanner (2026-08-18) — la brecha es LATENCIA, no puntería
 
 Se revisaron capturas de CamScanner en vivo sobre la misma libreta. Primera

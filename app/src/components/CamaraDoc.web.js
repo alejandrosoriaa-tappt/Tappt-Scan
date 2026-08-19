@@ -60,14 +60,28 @@ async function abrirStreamMasAbierto() {
     }
   } catch {}
 
-  // Si el track ofrece zoom continuo, usar siempre su mínimo físico. Esto no
-  // inventa zoom digital hacia afuera: sólo evita que el navegador arranque
-  // accidentalmente acercado.
+  // Si el track ofrece zoom continuo, acercarse un poco al mínimo físico
+  // pero sin tocarlo. En el mínimo exacto (0.5x en iPhone) iOS funde el
+  // sensor ultra angular con el principal para el "seamless zoom", y esa
+  // fusión deja una franja borrosa en un borde del frame por el paralaje
+  // entre los dos sensores (confirmado en fixtures reales 2026-08-19,
+  // consistente del mismo lado en tomas distintas — no es el lente sucio
+  // ni un dedo, ver CLAUDE.md). Un pelín arriba de ese límite evita la
+  // frontera de fusión y de paso acerca el encuadre al de CamScanner, que
+  // hoy se ve más cerrado que el nuestro.
+  //
+  // SIN VALIDAR EN DISPOSITIVO todavía: falta confirmar que la franja
+  // desaparece y que el campo visual sigue sintiéndose abierto. No subir
+  // ZOOM_PREFERIDO más sin medir — ver la sección de fixtures del scanner
+  // sobre no ajustar parámetros de captura a ojo.
+  const ZOOM_PREFERIDO = 0.6;
   try {
     const track = elegido.getVideoTracks()[0];
     const caps = track.getCapabilities?.();
     if (caps?.zoom && Number.isFinite(caps.zoom.min)) {
-      await track.applyConstraints({ advanced: [{ zoom: caps.zoom.min }] });
+      const max = Number.isFinite(caps.zoom.max) ? caps.zoom.max : Infinity;
+      const objetivo = Math.min(max, Math.max(caps.zoom.min, ZOOM_PREFERIDO));
+      await track.applyConstraints({ advanced: [{ zoom: objetivo }] });
     }
   } catch {}
   return elegido;
