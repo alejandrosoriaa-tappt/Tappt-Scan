@@ -205,14 +205,19 @@ export default function RecorteScreen({ route, navigation }) {
       .detectarBordes(fotoBase64)
       .then((resultado) => {
         if (cancelado) return;
-        // Si el detector no confía en lo que encontró, NO se usa esa región
-        // como recorte inicial — puede ser una zona chica y equivocada (una
-        // luz de fondo, un reflejo), y aplicarla igual encoge la foto real
-        // a esa región chica, dejando el documento borroso al guardar
-        // (probado: 335×410px en vez de los ~1300×1900px que captura la
-        // cámara). Sin confianza, se arranca del cuadro completo — el
-        // usuario dibuja su propio recorte si quiere uno.
-        setEsquinas(resultado.confiable ? resultado.esquinas : MARCO_COMPLETO);
+        // Antes: sin confianza se tiraba CUALQUIER quad y se arrancaba del
+        // cuadro completo — protegía contra un caso real (zona chica y
+        // equivocada, ~335×410px sobre una foto de ~1300×1900px, que dejaba
+        // el documento borroso si el usuario guardaba sin ajustar). Pero el
+        // banco de fixtures mostró que "no confiable" no es "mal candidato":
+        // granito-tapete, oscuro-documento, madera-libreta y granito-de-lado
+        // marcan parcial con IoU 0.89-0.999 — casi perfectos, tirados igual.
+        // Ahora se usa el quad que haya (confiable o no) como punto de
+        // partida ARRASTRABLE, nunca un recorte aplicado solo. La red de
+        // seguridad contra el caso chico/equivocado ya no es "no mostrar
+        // nada": es el aviso de abajo más el botón "Toda la foto", que
+        // resetea a MARCO_COMPLETO en un toque si el candidato está mal.
+        setEsquinas(resultado.esquinas || MARCO_COMPLETO);
         if (!resultado.confiable) {
           setAviso(t('ajustaAMano'));
         }

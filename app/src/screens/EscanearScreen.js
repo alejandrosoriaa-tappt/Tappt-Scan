@@ -173,10 +173,16 @@ export default function EscanearScreen({ navigation }) {
         // el lienzo y queda corrido cuando hay bandas vacías.
         fotoAncho: foto.ancho,
         fotoAlto: foto.alto,
-        // Temporal hasta DocQuad: si el detector live venía con confianza
-        // alta, se usa como sugerencia inicial. La arquitectura final volverá
-        // a detectar siempre sobre la captura full-res antes del recorte.
-        esquinasIniciales: deteccion.estado === 'listo' ? deteccion.esquinas : null,
+        // Se pasa el mejor quad disponible —confiable o parcial— como punto
+        // de partida, nunca null salvo que el detector no haya visto nada
+        // ('buscando'). Recorte SIEMPRE vuelve a detectar sobre la captura
+        // full-res antes de aceptar nada (ver ese useEffect), así que esto
+        // es solo la sugerencia mientras responde esa redetección — no un
+        // recorte aplicado. Antes se tiraba cualquier quad no confiable
+        // (madera-libreta, granito-tapete, etc. con IoU 0.9+ terminaban
+        // igual que si el detector no hubiera visto nada); ahora el usuario
+        // ajusta en vez de dibujar las 4 esquinas desde cero.
+        esquinasIniciales: deteccion.estado !== 'buscando' ? deteccion.esquinas : null,
       });
     } catch (err) {
       alertar(t('noSePudo'), err.message);

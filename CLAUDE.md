@@ -881,6 +881,41 @@ Lo correcto es **separar las dos decisiones**:
 La puerta de máscara es lo que hace seguro el "siempre dibujar": sobre mesa
 vacía ya no inventa nada.
 
+### ✅ RESUELTO (2026-08-19) — el quad parcial ya no se tira
+
+Implementado en dos puntos, no solo uno — `EscanearScreen` pasaba `null` si
+no era `'listo'`, pero **`RecorteScreen` también tiraba el quad por su
+cuenta** al terminar su propia redetección full-res si no salía confiable
+(`resultado.confiable ? resultado.esquinas : MARCO_COMPLETO`), así que
+arreglar solo el primero no habría bastado.
+
+```js
+// EscanearScreen.js — antes: null salvo 'listo'
+esquinasIniciales: deteccion.estado !== 'buscando' ? deteccion.esquinas : null,
+// RecorteScreen.js — antes: MARCO_COMPLETO si !confiable
+setEsquinas(resultado.esquinas || MARCO_COMPLETO);
+```
+
+La razón original de tirar el quad no confiable en `RecorteScreen` estaba
+documentada y era real: un caso donde una región chica y equivocada
+(~335×410px sobre una foto de ~1300×1900px) dejaba el documento borroso si
+el usuario guardaba sin ajustar. Pero esa protección ya no depende de
+esconder el quad — depende del aviso (`ajustaAMano`) más el botón **"Toda
+la foto"**, que resetea a `MARCO_COMPLETO` en un toque. Con eso, mostrar el
+mejor candidato disponible es estrictamente mejor: en los cuatro casos
+abiertos con IoU 0.89-0.999 (`granito-tapete`, `oscuro-documento`,
+`madera-libreta`, `granito-de-lado`) el usuario ahora ajusta un quad casi
+perfecto en vez de dibujar las 4 esquinas desde cero.
+
+Motivado por un research addendum externo (`TapptScan_Research_Addendum_
+Claude_20260819.pdf`, compartido por el usuario) que revisó FairScan,
+MakeACopy y otros scanners open source y llegó a la misma conclusión de
+forma independiente: *"if detection is imperfect in camera mode, the best
+quad is preserved into RecorteScreen rather than discarded"* — coincide con
+lo que ya estaba escrito arriba, y confirma que no hace falta reemplazar el
+detector, solo terminar de conectar lo que ya existe. WhatsApp no se tocó:
+`confiable` sigue estricto ahí, porque actúa sin que nadie mire.
+
 ### Scanners open source revisados (2026-08-18)
 
 | Proyecto | Licencia | Detección | Qué aporta |
