@@ -798,6 +798,83 @@ después del cambio (`poca-luz`, ver abajo) no muestra la franja. Una sola
 toma no prueba nada —la escena también cambió (otro cuarto, otra luz)— pero
 es consistente con que el ajuste esté funcionando.
 
+### 🔴 ABIERTO (2026-08-20) — la hipótesis del zoom probablemente era la equivocada
+
+**El problema NO está resuelto y el diagnóstico de arriba está en duda.** El
+usuario siguió reportando imagen suave/borrosa después del cambio a 0.6x, en
+tomas nuevas (`152511175Z`, `153619182Z`) y contra una comparativa de
+CamScanner sobre la MISMA libreta donde CamScanner conserva claramente más
+microdetalle en el texto a lápiz.
+
+**Dos errores de método de esta sesión, anotados para no repetirlos:**
+
+1. **Se midió nitidez sobre el frame de 640px del detector.** Ese frame está
+   reducido a propósito (`ANCHO_DETECCION = 640`) — es la entrada del
+   detector, no la foto que se guarda. Medir nitidez ahí no dice nada sobre
+   la calidad real de captura. Hay que separar **tres** cosas y medirlas por
+   separado: (a) preview, (b) fixture 640 del detector, (c) **captura final
+   full-res**, que es la única que no puede salir borrosa.
+2. **Se aceptó "no veo la franja" como evidencia de arreglo.** Varianza de
+   Laplaciano por franjas sobre un frame downscaled no separa el caso; las
+   tres tomas "sin franja" no prueban nada.
+
+**Sospechoso mucho más fuerte (análisis externo, ChatGPT, 2026-08-20):** la
+regresión no es el zoom sino **la selección de cámara ultra angular** que se
+introdujo el 2026-08-12 al pasar de `expo-camera` a `getUserMedia`.
+`puntuarAngular()` en `CamaraDoc.web.js` da **+100** a cualquier device cuyo
+label diga `ultra-wide`/`0.5`/`wide angle`, y `abrirStreamMasAbierto()`
+**sustituye el stream inicial por ese sin verificar nada**:
+
+```js
+const segundo = await navigator.mediaDevices.getUserMedia(c);
+inicial.getTracks().forEach((t) => t.stop());
+elegido = segundo;   // ← no se comprueba qué resolución entregó de verdad
+```
+
+Dos agujeros ahí:
+
+- **La ultra-wide del iPhone es un sensor peor** (más chico, óptica más
+  suave), sobre todo con luz de interior. Estamos cambiando calidad por
+  campo visual y asumiendo que "más angular = mejor".
+- **`BASE_VIDEO` pide 4032×3024 como `ideal`, no `exact`.** `ideal` significa
+  "lo más parecido que puedas": el navegador puede negociar bastante menos y
+  nosotros lo aceptamos igual. No hay quality/resolution gate.
+
+CamScanner probablemente NO usa la ultra-wide física continuamente para su
+encuadre abierto — es un supuesto nuestro, nunca verificado.
+
+**Probabilidades del análisis externo** (de mayor a menor): selección de
+ultra-wide sacrificando calidad · resolución negociada por debajo de lo
+pedido sin gate · autofocus/exposure sin estabilizar al capturar · JPEG 0.92
+(poco probable por sí solo) · DocQuad/OpenCV (**descartado**: el frame ya
+llega degradado al detector).
+
+**Lo que falta y por qué se paró aquí:** el fixture JSON de hoy trae
+diagnóstico del DETECTOR, no de la CÁMARA, así que no se puede confirmar
+nada. `CamaraDoc.web.js` ya expone `diagnostico()` con `track.getSettings()`,
+`getCapabilities()`, `label`, `videoWidth/videoHeight` — pero eso **no se
+está guardando en el fixture**, que es exactamente el dato que haría falta.
+
+**Siguiente paso acordado — prueba A/B, sin tocar DocQuad/OpenCV:**
+
+- **A** — cámara actual: selección automática ultra-wide + zoom forzado.
+- **B** — cámara principal: `facingMode: environment`, sin selección
+  explícita de angular y **sin tocar zoom**.
+
+Mismo teléfono, misma libreta, misma distancia y luz. Registrar en ambas:
+`label | videoWidth×videoHeight | track settings width×height | zoom |
+fixture JPEG | captura final JPEG`, y comparar **fixture y captura full-res
+por separado**. Si B recupera la nitidez, la regresión es la selección de
+ultra-wide.
+
+Después, la política correcta no es renunciar al encuadre abierto sino
+**priorizar la cámara principal y usar la ultra angular solo cuando de
+verdad entrega resolución/calidad suficiente** — con un gate antes de
+sustituir el stream inicial, nunca por lo que diga el label.
+
+Decisión de producto del usuario: **prefiere perder algo de zoom-out antes
+que escanear borroso.**
+
 ### `poca-luz` (2026-08-19) — cierra el escenario 8, y de paso blanco sobre blanco
 
 Documento sobre la tapa de un excusado, baño con luz muy baja (brillo medio
@@ -989,9 +1066,28 @@ granito — cada detector falla en el escenario donde el otro acierta, y por
 eso el acuerdo entre ambos sigue siendo mejor evidencia que cualquiera por
 separado.
 
-### 🔴 SIGUIENTE PASO — bloqueado esperando datos
+### 🔴 SIGUIENTE PASO (2026-08-20) — la regresión de NITIDEZ va primero
 
-**Las 9 tomas que faltan del banco de fixtures.** Es lo único que falta para poder
+Antes que cualquier fixture o ajuste del detector: **la prueba A/B de cámara
+en `CamaraDoc.web.js`** descrita arriba ("la hipótesis del zoom probablemente
+era la equivocada"). Un scanner que entrega imagen suave no se arregla
+midiendo IoU — el frame ya llega degradado al detector.
+
+Orden concreto para quien retome:
+
+1. Guardar el diagnóstico de CÁMARA en el fixture (`diagnostico()` ya existe
+   en `CamaraDoc.web.js`, pero no se está escribiendo al JSON). Sin eso no
+   se puede confirmar nada.
+2. A/B ultra-wide vs. cámara principal, comparando **captura full-res**, no
+   el frame de 640 del detector.
+3. Según el resultado: quality/resolution gate antes de sustituir el stream
+   inicial, en vez de confiar en el label del device.
+
+No tocar DocQuad/OpenCV ni sus umbrales mientras tanto.
+
+### Fixtures pendientes (en pausa hasta cerrar lo de arriba)
+
+**Las tomas que faltan del banco de fixtures.** Es lo que falta para poder
 avanzar en el caso del granito y para revisar si el 5σ ya se puede mover.
 Instrucciones y lista de escenarios en `scanner/fixtures/fotos/README.md`.
 
