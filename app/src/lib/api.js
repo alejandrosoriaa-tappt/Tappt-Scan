@@ -8,10 +8,21 @@ export const BASE =
   process.env.EXPO_PUBLIC_API_URL ||
   (typeof window !== 'undefined' && window.location ? window.location.origin : '');
 
+// El query param `?scannerDebug=1` es frágil: la barra de direcciones de
+// Safari lo recorta al mostrar la URL, y la navegación interna de la app
+// (Home -> Escanear) puede no conservarlo. Una vez visto una sola vez, se
+// guarda en localStorage para que la bandera sobreviva a cualquier
+// navegación o recarga sin tener que volver a escribirlo cada vez.
+const SCANNER_DEBUG_KEY = 'tapptscan_scanner_debug';
+
 function scannerDebugActivo() {
   if (typeof window === 'undefined') return false;
   try {
-    return new URLSearchParams(window.location.search).get('scannerDebug') === '1';
+    if (new URLSearchParams(window.location.search).get('scannerDebug') === '1') {
+      window.localStorage?.setItem(SCANNER_DEBUG_KEY, '1');
+      return true;
+    }
+    return window.localStorage?.getItem(SCANNER_DEBUG_KEY) === '1';
   } catch {
     return false;
   }
