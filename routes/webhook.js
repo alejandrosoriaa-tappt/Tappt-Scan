@@ -9,6 +9,7 @@ const planes = require('../services/planes');
 const stripe = require('../services/stripe');
 const consultas = require('../services/consultas');
 const supabase = require('../services/supabase');
+const whatsappEvento = require('../services/whatsappEvento');
 const { t, detectarIdioma } = require('../services/i18n');
 
 // Verificación del webhook (Meta llama a esto al configurar la app).
@@ -71,6 +72,16 @@ router.post('/', async (req, res) => {
     const value = change?.value;
     msg = value?.messages?.[0];
     if (!msg) return;
+
+    // Una app/WABA de Meta puede entregar al mismo webhook eventos de varios
+    // números. Nunca procesamos ni contestamos mensajes dirigidos a Tappt
+    // Agenda (u otro servicio): este backend solo representa a TapptScan.
+    // La comparación ocurre antes de marcar como leído para no usar nuestro
+    // Phone Number ID con el message_id de otro número.
+    if (!whatsappEvento.perteneceAlNumero(value, process.env.WHATSAPP_PHONE_NUMBER_ID)) {
+      console.warn('[webhook] mensaje ignorado: phone_number_id ajeno o ausente');
+      return;
+    }
 
     from = msg.from;
 
