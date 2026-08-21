@@ -4,6 +4,7 @@ const router = express.Router();
 
 const whatsapp = require('../services/whatsapp');
 const procesarDocumento = require('../services/procesarDocumento');
+const googleOAuth = require('../services/googleOAuth');
 const sesiones = require('../services/sesiones');
 const planes = require('../services/planes');
 const stripe = require('../services/stripe');
@@ -121,10 +122,7 @@ router.post('/', async (req, res) => {
 
     if (from) {
       try {
-        await whatsapp.sendText(
-          from,
-          'Algo falló al procesar tu archivo 😕 Ya quedó registrado, ¿puedes intentar mandarlo de nuevo?'
-        );
+        await whatsapp.sendText(from, 'No pude procesar tu archivo 😕 Inténtalo nuevamente en un momento.');
       } catch (_) {
         // si ni el aviso de error se pudo mandar, no hay más que hacer aquí
       }
@@ -173,12 +171,34 @@ async function recibirArchivo(from, medio, mimePorDefecto) {
   const mediaUrl = await whatsapp.getMediaUrl(medio.id);
   const buffer = await whatsapp.downloadMedia(mediaUrl);
 
-  const { documento, nombreArchivo, ruta, paginas } = await procesarDocumento.procesarArchivo(
-    user,
-    buffer,
-    medio.mime_type || mimePorDefecto,
-    medio.filename || null
-  );
+  let procesado;
+  try {
+    procesado = await procesarDocumento.procesarArchivo(
+      user,
+      buffer,
+      medio.mime_type || mimePorDefecto,
+      medio.filename || null
+    );
+  } catch (err) {
+    if (!googleOAuth.esTokenInvalido(err)) throw err;
+
+    // Un refresh token revocado sigue existiendo en la fila del usuario y
+    // hacía que la app dijera "Drive conectado" aunque Google ya lo negara.
+    // Limpiarlo obliga a mostrar Onboarding y permite autorizar de nuevo.
+    const { error: errorLimpieza } = await supabase
+      .from('scan_users')
+      .update({ drive_tokens: null, drive_raiz_id: null })
+      .eq('id', user.id);
+    if (errorLimpieza) console.error('[webhook] no se pudo limpiar token de Drive', errorLimpieza);
+
+    await whatsapp.sendText(
+      from,
+      t(idioma, 'driveExpirado', { appUrl: appUrlPublica() || 'https://scan.tappt.lat' })
+    );
+    return;
+  }
+
+  const { documento, nombreArchivo, ruta, paginas } = procesado;
 
   const appUrl = appUrlPublica();
 
