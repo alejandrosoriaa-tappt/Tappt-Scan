@@ -207,12 +207,6 @@ export default function EscanearScreen({ navigation }) {
       ? deteccion.esquinas.map((e) => aPantalla(e))
       : null;
 
-  const colorPorEstado = {
-    buscando: 'rgba(255,255,255,0.5)',
-    parcial: 'rgba(255,255,255,0.85)',
-    listo: colores.primario,
-  };
-
   const textoPorEstado = {
     buscando: t('alineaDocumento'),
     parcial: t('sigueAjustando'),
@@ -236,7 +230,12 @@ export default function EscanearScreen({ navigation }) {
       />
 
       {puntos ? (
-        <ContornoQuad puntos={puntos} color={colorPorEstado[deteccion.estado]} grosor={2} />
+        <ContornoQuad
+          puntos={puntos}
+          color={colores.primario}
+          relleno="rgba(24,184,117,0.18)"
+          grosor={2}
+        />
       ) : null}
 
       <SafeAreaView style={estilos.capa} edges={['top', 'bottom']} pointerEvents="box-none">
