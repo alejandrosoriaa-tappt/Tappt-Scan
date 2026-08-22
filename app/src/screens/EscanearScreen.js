@@ -112,7 +112,12 @@ export default function EscanearScreen({ navigation }) {
       // salto incompatible no reemplaza al documento que ya seguíamos.
       setDeteccion((anterior) =>
         actualizarEstabilizador(anterior, {
-          esquinas: esquinas && area(esquinas) <= 0.97 ? esquinas : null,
+          // Un candidato parcial puede ser una sola página de una libreta,
+          // el teclado o una sombra. Estabilizarlo solo lo vuelve un error
+          // quieto y convincente. El verde se reserva para detecciones que
+          // pasaron los guardrails del motor; si no, capturamos igualmente
+          // y Recorte conserva toda la foto.
+          esquinas: confiable && esquinas && area(esquinas) <= 0.97 ? esquinas : null,
           confiable,
         })
       );
