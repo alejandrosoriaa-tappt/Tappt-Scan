@@ -10,10 +10,11 @@ import Icono from '../components/Icono';
 import ContornoQuad from '../components/ContornoQuad';
 import { colores, espacio } from '../theme';
 import { AJUSTE_PREVIEW, proyectarEsquina } from '../lib/preview';
+const { actualizarEstabilizador, estadoInicial } = require('../lib/estabilizadorQuad');
 
 const esWeb = Platform.OS === 'web';
 
-const INTERVALO_DETECCION_MS = 1400;
+const INTERVALO_DETECCION_MS = 800;
 
 // Los frames de detección van chicos a propósito: el detector no necesita
 // resolución, y entre más chico más rápido el ciclo. La captura FINAL va
@@ -42,13 +43,13 @@ export default function EscanearScreen({ navigation }) {
   const camara = useRef(null);
 
   // Detección en vivo: mientras el usuario encuadra, se manda una foto de
-  // baja calidad al mismo detector que ya usa Recorte, cada ~1.4s, y el
-  // overlay refleja el resultado. Tres estados, de menos a más confianza:
+  // baja calidad al mismo detector que ya usa Recorte, cada ~0.8s. La capa
+  // temporal exige consenso antes de reflejar el resultado. Tres estados:
   // 'buscando' (nada aún o detección de baja confianza), 'parcial'
   // (esquinas detectadas pero el propio detector las marca poco fiables)
   // y 'listo' (4 esquinas con confianza alta — igual que usaría Recorte
   // para no pedir ajuste manual).
-  const [deteccion, setDeteccion] = useState({ estado: 'buscando', esquinas: null });
+  const [deteccion, setDeteccion] = useState(estadoInicial);
   const analizandoRef = useRef(false);
   const listaRef = useRef(false); // la cámara ya montó su primer frame
   const [errorCamara, setErrorCamara] = useState(false);
@@ -104,10 +105,15 @@ export default function EscanearScreen({ navigation }) {
         httpMs: Date.now() - inicioHttp,
       });
 
-      setDeteccion({
-        esquinas,
-        estado: !esquinas || area(esquinas) > 0.97 ? 'buscando' : confiable ? 'listo' : 'parcial',
-      });
+      // Cada respuesta aislada puede señalar otra página, el teclado o un
+      // reflejo. No se dibuja hasta verla repetida y, una vez bloqueada, un
+      // salto incompatible no reemplaza al documento que ya seguíamos.
+      setDeteccion((anterior) =>
+        actualizarEstabilizador(anterior, {
+          esquinas: esquinas && area(esquinas) <= 0.97 ? esquinas : null,
+          confiable,
+        })
+      );
     } catch {
       // Un fallo de un solo frame no debe tumbar el overlay — se queda en
       // el último estado conocido y se reintenta en el próximo ciclo.
@@ -322,7 +328,8 @@ export default function EscanearScreen({ navigation }) {
                       : '—'
                   } ${ultimaDeteccion.razonOpenCv || 'ok'}${
                     ultimaDeteccion.marcoCompleto ? ' · marcoCompleto' : ''
-                  }`
+                  }\n` +
+                  `tracking: ${deteccion.fase} · coincidencias=${deteccion.coincidencias} · fallos=${deteccion.fallos}`
                 : 'aún no responde'}
             </Text>
             <Text style={estilos.diagLineaTenue}>{diag.navegador}</Text>
