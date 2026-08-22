@@ -16,6 +16,7 @@ import { useIdioma } from '../i18n';
 import HojaLimite from '../components/HojaLimite';
 import Icono from '../components/Icono';
 import { colores, espacio } from '../theme';
+import { useBorradorEscaneo } from '../context/BorradorEscaneoContext';
 
 // El guardado es UN solo request que en el servidor sube a Drive, endereza
 // la perspectiva y clasifica con Claude, en ese orden — pero desde la app
@@ -167,8 +168,17 @@ function Tirador({ indice, esquina, rectImagen, onMover }) {
 }
 
 export default function RecorteScreen({ route, navigation }) {
-  const { fotoBase64, fotoAncho, fotoAlto, esquinasIniciales } = route.params;
+  const {
+    fotoBase64,
+    fotoAncho,
+    fotoAlto,
+    esquinasIniciales,
+    modoLote = false,
+    paginaId = null,
+    filtroInicial = 'mejorar',
+  } = route.params;
   const { refrescarCuenta } = useSesion();
+  const borrador = useBorradorEscaneo();
   const { t } = useIdioma();
 
   const [esquinas, setEsquinas] = useState(esquinasIniciales || MARCO_COMPLETO);
@@ -184,7 +194,7 @@ export default function RecorteScreen({ route, navigation }) {
   const [limite, setLimite] = useState(false);
   // "Mejorar" es el acabado de documento: papel mas blanco y texto con
   // contraste. Original sigue disponible para quien prefiera la foto fiel.
-  const [filtro, setFiltro] = useState('mejorar');
+  const [filtro, setFiltro] = useState(filtroInicial);
   const [miniaturas, setMiniaturas] = useState({});
   const [vistaEnderezada, setVistaEnderezada] = useState(null);
   const [previsualizando, setPrevisualizando] = useState(false);
@@ -203,6 +213,13 @@ export default function RecorteScreen({ route, navigation }) {
   // Siempre re-detectamos sobre la captura full-res; `esquinasIniciales`
   // sólo pueden servir como guía provisional mientras responde DocQuad.
   useEffect(() => {
+    // Al volver a editar una página del lote respetamos exactamente el
+    // recorte que el usuario ya confirmó. Redetectar aquí movería las
+    // esquinas otra vez y haría que "Editar" pareciera deshacer su trabajo.
+    if (paginaId) {
+      setDetectando(false);
+      return undefined;
+    }
     let cancelado = false;
 
     api
@@ -232,7 +249,7 @@ export default function RecorteScreen({ route, navigation }) {
     return () => {
       cancelado = true;
     };
-  }, [fotoBase64, esquinasIniciales]);
+  }, [fotoBase64, esquinasIniciales, paginaId]);
 
   // Las 4 miniaturas se piden una sola vez por foto — son solo vista
   // previa (chico, rápido), no bloquean el recorte ni el guardado.
@@ -270,6 +287,22 @@ export default function RecorteScreen({ route, navigation }) {
   };
 
   const confirmar = async () => {
+    if (modoLote) {
+      const pagina = {
+        imagen: fotoBase64,
+        ancho: fotoAncho,
+        alto: fotoAlto,
+        esquinas,
+        filtro,
+        formato: 'auto',
+        vista: vistaEnderezada,
+      };
+      if (paginaId) borrador.actualizarPagina(paginaId, pagina);
+      else borrador.agregarPagina(pagina);
+      navigation.goBack();
+      return;
+    }
+
     setGuardando(true);
     try {
       const documento = await api.escanear(fotoBase64, 'image/jpeg', esquinas, filtro, 'auto');
@@ -429,7 +462,9 @@ export default function RecorteScreen({ route, navigation }) {
           disabled={guardando || detectando || previsualizando}
         >
           <Text style={estilos.botonPrimarioTexto}>
-            {vistaEnderezada ? t('guardarPdf') : t('enderezarGuardar')}
+            {vistaEnderezada
+              ? (modoLote ? (paginaId ? t('guardarCambios') : t('agregarAlLote')) : t('guardarPdf'))
+              : t('enderezarGuardar')}
           </Text>
         </TouchableOpacity>
       </View>

@@ -146,6 +146,49 @@ router.post('/escanear', requireAuth, async (req, res) => {
   }
 });
 
+// Captura en lote estilo scanner: el cliente conserva las páginas como un
+// borrador editable y las manda en su orden definitivo. Se corrige cada
+// toma por separado y solo entonces se genera/sube un único PDF.
+router.post('/escanear-lote', requireAuth, async (req, res) => {
+  try {
+    if (!req.usuario.drive_tokens) return res.status(409).json({ error: 'drive_sin_conectar' });
+    const cupo = await planes.puedeEscanear(req.usuario);
+    if (!cupo.permitido) return res.status(402).json({ error: 'limite_alcanzado', ...cupo });
+
+    const paginas = req.body?.paginas;
+    if (!Array.isArray(paginas) || !paginas.length) {
+      return res.status(400).json({ error: 'faltan_paginas' });
+    }
+    if (paginas.length > 30) return res.status(413).json({ error: 'demasiadas_paginas' });
+
+    const corregidas = [];
+    for (const pagina of paginas) {
+      if (!pagina.imagen || pagina.esquinas?.length !== 4) {
+        return res.status(400).json({ error: 'pagina_invalida' });
+      }
+      let buffer = Buffer.from(pagina.imagen.replace(/^data:[^;]+;base64,/, ''), 'base64');
+      buffer = await imagenServicio.corregirPerspectiva(buffer, pagina.esquinas, pagina.formato);
+      if (pagina.filtro && pagina.filtro !== 'color') {
+        buffer = await imagenServicio.aplicarFiltro(buffer, pagina.filtro);
+      }
+      corregidas.push(buffer);
+    }
+
+    const archivo = await pdf.desdeImagenes(corregidas);
+    const { documento } = await procesarDocumento.procesarArchivo(
+      req.usuario,
+      archivo,
+      'application/pdf',
+      null
+    );
+    res.json(documento);
+  } catch (err) {
+    console.error('[documentos] error escaneando lote', err);
+    const cliente = ['recorte_demasiado_chico'].includes(err.message);
+    res.status(cliente ? 422 : 500).json({ error: cliente ? err.message : 'error_escaneo_lote' });
+  }
+});
+
 // Importar un archivo ya existente del teléfono o la computadora
 // (galería, Archivos, iCloud, Drive…). Acepta PDF e imágenes.
 router.post('/importar', requireAuth, async (req, res) => {
@@ -344,6 +387,45 @@ router.post('/:id/paginas/eliminar', requireAuth, async (req, res) => {
   } catch (err) {
     console.error('[documentos] error eliminando páginas', err);
     res.status(500).json({ error: 'error_eliminar_paginas' });
+  }
+});
+
+router.post('/:id/paginas/reordenar', requireAuth, async (req, res) => {
+  try {
+    const documento = await traerDocumento(req);
+    if (!documento) return res.status(404).json({ error: 'documento_no_encontrado' });
+    const original = await drive.downloadFile(req.usuario.drive_tokens, documento.drive_file_id);
+    if (!pdf.esPdf(original)) return res.status(400).json({ error: 'no_es_pdf' });
+
+    const { paginas: total } = await pdf.info(original);
+    const orden = req.body.orden || [];
+    const esperado = Array.from({ length: total }, (_, i) => i).sort((a, b) => a - b);
+    const recibido = [...orden].sort((a, b) => a - b);
+    if (orden.length !== total || recibido.some((valor, i) => valor !== esperado[i])) {
+      return res.status(400).json({ error: 'orden_invalido' });
+    }
+
+    const pdfFinal = await pdf.copiarPaginas(original, orden);
+    const carpetaId = documento.carpeta_id || (await drive.ensureRuta(req.usuario.drive_tokens, []));
+    const nombre = (documento.nombre_archivo || 'documento').replace(/\.\w+$/, '') + '_reordenado.pdf';
+    const subido = await drive.uploadFile(req.usuario.drive_tokens, {
+      folderId: carpetaId,
+      name: nombre,
+      mimeType: 'application/pdf',
+      buffer: pdfFinal,
+    });
+    const { error } = await supabase.from('scan_versiones').insert({
+      documento_id: documento.id,
+      user_id: req.usuario.id,
+      nombre_archivo: nombre,
+      drive_file_id: subido.id,
+      drive_link: subido.webViewLink,
+    });
+    if (error) console.error('[documentos] no se pudo registrar la versión reordenada', error);
+    res.json({ nombre, driveLink: subido.webViewLink, paginas: total });
+  } catch (err) {
+    console.error('[documentos] error reordenando páginas', err);
+    res.status(500).json({ error: 'error_reordenar_paginas' });
   }
 });
 

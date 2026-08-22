@@ -166,6 +166,11 @@ export const api = {
       method: 'POST',
       body: JSON.stringify({ imagen, esquinas, filtro, formato }),
     }),
+  escanearLote: (paginas) =>
+    request('/api/documentos/escanear-lote', {
+      method: 'POST',
+      body: JSON.stringify({ paginas }),
+    }),
   vistaFiltro: (imagen, filtro) =>
     request('/api/documentos/vista-filtro', {
       method: 'POST',
@@ -205,6 +210,11 @@ export const api = {
     request(`/api/documentos/${id}/paginas/eliminar`, {
       method: 'POST',
       body: JSON.stringify({ paginas }),
+    }),
+  reordenarPaginas: (id, orden) =>
+    request(`/api/documentos/${id}/paginas/reordenar`, {
+      method: 'POST',
+      body: JSON.stringify({ orden }),
     }),
   compartirPaginas: (id, paginas) =>
     request(`/api/documentos/${id}/paginas/compartir`, {
