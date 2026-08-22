@@ -79,7 +79,7 @@ export const TEXTOS = {
     mejorar: 'Mejorar',
     ajustaAMano: 'No distinguí bien el documento — ajusta las esquinas a mano.',
     todaLaFoto: 'Toda la foto',
-    enderezarGuardar: 'Enderezar y guardar',
+    enderezarGuardar: 'Enderezar y revisar',
 
     // Documento y editor
     datosExtraidos: 'Datos extraídos',
@@ -365,7 +365,7 @@ export const TEXTOS = {
     mejorar: 'Enhance',
     ajustaAMano: "I couldn't make out the document — adjust the corners by hand.",
     todaLaFoto: 'Whole photo',
-    enderezarGuardar: 'Straighten and save',
+    enderezarGuardar: 'Straighten and review',
 
     datosExtraidos: 'Extracted details',
     tipo: 'Type',

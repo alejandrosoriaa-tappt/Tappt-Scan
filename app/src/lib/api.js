@@ -156,10 +156,15 @@ export const api = {
     request('/api/cuenta/upgrade', { method: 'POST', body: JSON.stringify({ plan }) }),
 
   documentos: (tipo) => request(`/api/documentos${tipo ? `?tipo=${tipo}` : ''}`),
-  escanear: (imagen, mimeType = 'image/jpeg', esquinas = null, filtro = null) =>
+  escanear: (imagen, mimeType = 'image/jpeg', esquinas = null, filtro = null, formato = null) =>
     request('/api/documentos/escanear', {
       method: 'POST',
-      body: JSON.stringify({ imagen, mimeType, esquinas, filtro }),
+      body: JSON.stringify({ imagen, mimeType, esquinas, filtro, formato }),
+    }),
+  vistaRecorte: (imagen, esquinas, filtro, formato) =>
+    request('/api/documentos/vista-recorte', {
+      method: 'POST',
+      body: JSON.stringify({ imagen, esquinas, filtro, formato }),
     }),
   vistaFiltro: (imagen, filtro) =>
     request('/api/documentos/vista-filtro', {

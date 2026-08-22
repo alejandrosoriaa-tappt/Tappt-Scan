@@ -52,6 +52,30 @@ router.post('/vista-filtro', requireAuth, async (req, res) => {
   }
 });
 
+// Vista previa REAL del resultado: aplica la misma perspectiva, proporcion
+// de papel y filtro que /escanear, pero no consume cupo ni sube nada a
+// Drive. El usuario debe poder ver la hoja derecha antes de guardarla.
+router.post('/vista-recorte', requireAuth, async (req, res) => {
+  try {
+    const { imagen, esquinas, filtro, formato } = req.body;
+    if (!imagen || esquinas?.length !== 4) {
+      return res.status(400).json({ error: 'falta_imagen_o_esquinas' });
+    }
+
+    let salida = Buffer.from(imagen.replace(/^data:[^;]+;base64,/, ''), 'base64');
+    salida = await imagenServicio.corregirPerspectiva(salida, esquinas, formato);
+    if (filtro && filtro !== 'color') {
+      salida = await imagenServicio.aplicarFiltro(salida, filtro, 1400);
+    }
+
+    res.json({ imagen: `data:image/jpeg;base64,${salida.toString('base64')}` });
+  } catch (err) {
+    console.error('[documentos] error generando vista de recorte', err);
+    const estado = err.message === 'recorte_demasiado_chico' ? 422 : 500;
+    res.status(estado).json({ error: err.message || 'error_vista_recorte' });
+  }
+});
+
 // De una foto de una firma en papel (cualquier fondo) devuelve solo el
 // trazo, recortado a su contorno, transparente y teñido del color elegido
 // — para poder pegarla sobre cualquier documento igual que si se hubiera
@@ -81,7 +105,7 @@ async function recibirDesdeApp(req, res, mimePorDefecto) {
   const cupo = await planes.puedeEscanear(req.usuario);
   if (!cupo.permitido) return res.status(402).json({ error: 'limite_alcanzado', ...cupo });
 
-  const { archivo, imagen, mimeType, nombre, esquinas, filtro } = req.body;
+  const { archivo, imagen, mimeType, nombre, esquinas, filtro, formato } = req.body;
   const contenido = archivo || imagen;
   if (!contenido) return res.status(400).json({ error: 'falta_archivo' });
 
@@ -91,7 +115,7 @@ async function recibirDesdeApp(req, res, mimePorDefecto) {
   // Recorte y enderezado: solo aplica a fotos, y solo si la app mandó las
   // cuatro esquinas (confirmadas o ajustadas por el usuario).
   if (esquinas?.length === 4 && !pdf.esPdf(buffer)) {
-    buffer = await imagenServicio.corregirPerspectiva(buffer, esquinas);
+    buffer = await imagenServicio.corregirPerspectiva(buffer, esquinas, formato);
     mime = 'image/jpeg';
   }
 

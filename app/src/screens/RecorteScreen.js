@@ -182,8 +182,12 @@ export default function RecorteScreen({ route, navigation }) {
   const [aviso, setAviso] = useState(null);
   const [guardando, setGuardando] = useState(false);
   const [limite, setLimite] = useState(false);
-  const [filtro, setFiltro] = useState('color');
+  // "Mejorar" es el acabado de documento: papel mas blanco y texto con
+  // contraste. Original sigue disponible para quien prefiera la foto fiel.
+  const [filtro, setFiltro] = useState('mejorar');
   const [miniaturas, setMiniaturas] = useState({});
+  const [vistaEnderezada, setVistaEnderezada] = useState(null);
+  const [previsualizando, setPrevisualizando] = useState(false);
   const pasoProcesando = useProcesando(guardando);
   const textosProcesando = useMemo(
     () => [t('procesandoSubiendo'), t('procesandoEnderezando'), t('procesandoClasificando')],
@@ -248,13 +252,27 @@ export default function RecorteScreen({ route, navigation }) {
     };
   }, [fotoBase64]);
 
-  const moverEsquina = (indice, posicion) =>
+  const moverEsquina = (indice, posicion) => {
+    setVistaEnderezada(null);
     setEsquinas((previas) => previas.map((e, i) => (i === indice ? posicion : e)));
+  };
+
+  const previsualizar = async () => {
+    setPrevisualizando(true);
+    try {
+      const resultado = await api.vistaRecorte(fotoBase64, esquinas, filtro, 'auto');
+      setVistaEnderezada(resultado.imagen);
+    } catch (err) {
+      alertar(t('noSePudo'), err.message);
+    } finally {
+      setPrevisualizando(false);
+    }
+  };
 
   const confirmar = async () => {
     setGuardando(true);
     try {
-      const documento = await api.escanear(fotoBase64, 'image/jpeg', esquinas, filtro);
+      const documento = await api.escanear(fotoBase64, 'image/jpeg', esquinas, filtro, 'auto');
       refrescarCuenta();
       navigation.replace('Documento', { documento });
     } catch (err) {
@@ -300,7 +318,7 @@ export default function RecorteScreen({ route, navigation }) {
         }
       >
         <Image
-          source={{ uri: `data:image/jpeg;base64,${fotoBase64}` }}
+          source={{ uri: vistaEnderezada || `data:image/jpeg;base64,${fotoBase64}` }}
           style={StyleSheet.absoluteFill}
           resizeMode="contain"
           // `fotoAncho/fotoAlto` vienen de la cámara y evitan esperar este
@@ -314,7 +332,7 @@ export default function RecorteScreen({ route, navigation }) {
           }}
         />
 
-        {lados.map((lado) => (
+        {!vistaEnderezada && lados.map((lado) => (
           <View
             key={lado.key}
             style={[
@@ -329,7 +347,7 @@ export default function RecorteScreen({ route, navigation }) {
           />
         ))}
 
-        {esquinas.map((esquina, indice) => (
+        {!vistaEnderezada && esquinas.map((esquina, indice) => (
           <Tirador
             key={indice}
             indice={indice}
@@ -339,10 +357,12 @@ export default function RecorteScreen({ route, navigation }) {
           />
         ))}
 
-        {detectando ? (
+        {detectando || previsualizando ? (
           <View style={estilos.capaCargando}>
             <ActivityIndicator color="#FFFFFF" />
-            <Text style={estilos.cargandoTexto}>{t('buscandoDocumento')}</Text>
+            <Text style={estilos.cargandoTexto}>
+              {previsualizando ? t('procesandoEnderezando') : t('buscandoDocumento')}
+            </Text>
           </View>
         ) : null}
 
@@ -366,7 +386,10 @@ export default function RecorteScreen({ route, navigation }) {
           <TouchableOpacity
             key={id}
             style={estilos.filtroCelda}
-            onPress={() => setFiltro(id)}
+            onPress={() => {
+              setFiltro(id);
+              setVistaEnderezada(null);
+            }}
             activeOpacity={0.8}
           >
             <View style={[estilos.filtroMarco, filtro === id && estilos.filtroMarcoActivo]}>
@@ -386,16 +409,28 @@ export default function RecorteScreen({ route, navigation }) {
       <View style={estilos.acciones}>
         <TouchableOpacity
           style={estilos.botonSecundario}
-          onPress={() => setEsquinas(MARCO_COMPLETO)}
+          onPress={() => {
+            if (vistaEnderezada) {
+              setVistaEnderezada(null);
+              setTamanoImagen(
+                fotoAncho && fotoAlto ? { ancho: fotoAncho, alto: fotoAlto } : null
+              );
+            }
+            else setEsquinas(MARCO_COMPLETO);
+          }}
         >
-          <Text style={estilos.botonSecundarioTexto}>{t('todaLaFoto')}</Text>
+          <Text style={estilos.botonSecundarioTexto}>
+            {vistaEnderezada ? t('ajustarRecorte') : t('todaLaFoto')}
+          </Text>
         </TouchableOpacity>
         <TouchableOpacity
           style={estilos.botonPrimario}
-          onPress={confirmar}
-          disabled={guardando || detectando}
+          onPress={vistaEnderezada ? confirmar : previsualizar}
+          disabled={guardando || detectando || previsualizando}
         >
-          <Text style={estilos.botonPrimarioTexto}>{t('enderezarGuardar')}</Text>
+          <Text style={estilos.botonPrimarioTexto}>
+            {vistaEnderezada ? t('guardarPdf') : t('enderezarGuardar')}
+          </Text>
         </TouchableOpacity>
       </View>
 
