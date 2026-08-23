@@ -67,6 +67,16 @@ Se usa en dos lugares: clasificar el documento (`CLAUDE_VISION_MODEL`) y
 responder preguntas de gasto (`CLAUDE_CONSULTAS_MODEL`). Ambos se pueden
 bajar a un modelo más chico para reducir costo por escaneo.
 
+### Corroboración óptica opcional con OpenAI
+
+El fallback visual posterior a la captura queda apagado de forma segura. Para
+probarlo en backend/Railway agrega `OPENAI_API_KEY`, configura
+`OPENAI_ALIGNMENT_MODEL=gpt-5.6-luna` y finalmente activa
+`OPENAI_ALIGNMENT_ENABLED=true`. La llave vive únicamente en Railway; nunca
+se incluye en Expo ni en el navegador. La IA no controla el recuadro en vivo:
+solo corrobora un quad parcial si coincide geométricamente con el detector
+local.
+
 ---
 
 ## 3 · Railway — el backend
@@ -197,7 +207,7 @@ Para repartirla, ver `docs/DISTRIBUCION.md`.
 
 ## Resumen de variables
 
-**Railway (backend) — 18 variables** (`PORT` la pone Railway):
+**Railway (backend) — 18 variables base y 3 opcionales** (`PORT` la pone Railway):
 
 ```
 WHATSAPP_TOKEN                    WHATSAPP_PHONE_NUMBER_ID
@@ -211,6 +221,10 @@ GOOGLE_REDIRECT_URI
 STRIPE_SECRET_KEY                 STRIPE_WEBHOOK_SECRET
 STRIPE_MONEDA                     STRIPE_SUCCESS_URL
 STRIPE_CANCEL_URL
+
+# Opcionales: fallback óptico posterior a captura
+OPENAI_ALIGNMENT_ENABLED          OPENAI_API_KEY
+OPENAI_ALIGNMENT_MODEL
 ```
 
 **App — 1 variable:** `EXPO_PUBLIC_API_URL`. Nada más: el acceso es por
