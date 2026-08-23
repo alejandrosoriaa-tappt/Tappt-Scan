@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, useMemo } from 'react';
+        setEsquinas(resultado.confiable && resultado.esquinas?.length === 4 ? resultado.esquinas : MARCO_COMPLETO);
 import {
   View,
   Text,
