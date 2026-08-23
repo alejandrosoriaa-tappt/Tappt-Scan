@@ -13,6 +13,7 @@
     "variables:revisar": "node scripts/variables.js --revisar",
     "docquad:model": "node scripts/docquad-model.js",
     "docquad:spike": "node scripts/docquad-spike.js",
+    "docaligner:fixtures": "node scripts/docaligner-fixtures.js",
     "scanner:fixtures": "node scripts/scanner-fixtures.js"
   },
   "license": "UNLICENSED",

@@ -1,7 +1,5 @@
 'use strict';
 
-const { createCanvas, loadImage } = require('@napi-rs/canvas');
-
 const INPUT_W = 256;
 const INPUT_H = 256;
 const LETTERBOX_GRAY = 128;
@@ -40,6 +38,8 @@ function inversaLetterbox(x, y, lb) {
  * - RGB float32 0..1 en layout NCHW [1,3,256,256]
  */
 async function prepararEntrada(buffer) {
+  // Lazy para poder probar geometría/postproceso sin cargar el decoder.
+  const { createCanvas, loadImage } = require('@napi-rs/canvas');
   const imagen = await loadImage(buffer);
   const srcW = imagen.width;
   const srcH = imagen.height;
