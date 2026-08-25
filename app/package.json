@@ -18,6 +18,7 @@
     "@react-navigation/native-stack": "^6.11.0",
     "expo": "~51.0.28",
     "expo-camera": "~15.0.16",
+    "expo-dev-client": "~4.0.29",
     "expo-document-picker": "~12.0.2",
     "expo-file-system": "~17.0.1",
     "expo-image-manipulator": "~12.0.5",
@@ -33,7 +34,8 @@
     "react-native-screens": "3.31.1",
     "react-native-svg": "15.2.0",
     "react-native-web": "~0.19.10",
-    "react-native-webview": "13.8.6"
+    "react-native-webview": "13.8.6",
+    "tappt-document-scanner": "file:modules/tappt-document-scanner"
   },
   "devDependencies": {
     "@babel/core": "^7.24.0"

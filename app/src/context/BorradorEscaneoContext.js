@@ -17,6 +17,11 @@ export function BorradorEscaneoProvider({ children }) {
       setPaginas((actuales) => [...actuales, { ...pagina, id }]);
       return id;
     },
+    agregarPaginas: (nuevas) => {
+      const paginasConId = nuevas.map((pagina) => ({ ...pagina, id: idPagina() }));
+      setPaginas((actuales) => [...actuales, ...paginasConId]);
+      return paginasConId.map((pagina) => pagina.id);
+    },
     actualizarPagina: (id, cambios) =>
       setPaginas((actuales) => actuales.map((pagina) =>
         pagina.id === id ? { ...pagina, ...cambios } : pagina
