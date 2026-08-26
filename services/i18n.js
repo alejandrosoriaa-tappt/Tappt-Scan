@@ -45,6 +45,12 @@ const MENSAJES = {
     gastosEsNegocio:
       'Esa pregunta la contesto con el plan Negocio: llevo tus gastos en una hoja dentro de tu Drive y te respondo aquí mismo. Escríbeme "quiero negocio" y te mando el link.',
     otraCosa: 'Ok, dime qué tipo de documento es o mándame otra foto.',
+    reclasificado: '✅ Listo, lo moví a {ruta}\n\n📄 {nombre}',
+    reclasificadoPorRevisar:
+      'Con eso no me alcanza para ubicarlo, así que lo dejé en "99 · Por revisar" para que lo muevas tú desde Drive.',
+    reclasificarSinDocumento:
+      'No encuentro un documento reciente que corregir. Mándame la foto otra vez.',
+    reclasificarFallo: 'No pude moverlo. Inténtalo desde Drive o mándamelo de nuevo.',
     botonGuardar: 'Guardar',
     botonApp: 'Editar en la app',
     botonOtra: 'Es otra cosa',
@@ -81,6 +87,12 @@ const MENSAJES = {
     gastosEsNegocio:
       'That one comes with the Business plan: I keep your expenses in a sheet inside your Drive and answer right here. Reply "I want business" and I\'ll send you the link.',
     otraCosa: "Okay — tell me what kind of document it is, or send me another photo.",
+    reclasificado: '✅ Done, I moved it to {ruta}\n\n📄 {nombre}',
+    reclasificadoPorRevisar:
+      'That\'s not enough for me to place it, so I left it in "99 · Por revisar" for you to move from Drive.',
+    reclasificarSinDocumento:
+      "I can't find a recent document to correct. Send me the photo again.",
+    reclasificarFallo: "I couldn't move it. Try from Drive or send it to me again.",
     botonGuardar: 'Save',
     botonApp: 'Edit in app',
     botonOtra: "It's something else",

@@ -9,6 +9,10 @@ const planes = require('../services/planes');
 const stripe = require('../services/stripe');
 const consultas = require('../services/consultas');
 const supabase = require('../services/supabase');
+const vision = require('../services/vision');
+const naming = require('../services/naming');
+const drive = require('../services/drive');
+const taxonomia = require('../services/taxonomia');
 const { t, detectarIdioma } = require('../services/i18n');
 
 // Verificación del webhook (Meta llama a esto al configurar la app).
@@ -209,6 +213,29 @@ async function handleDocument(from, documento) {
   await recibirArchivo(from, documento, 'application/pdf');
 }
 
+// Quién tocó "Es otra cosa" y sigue pendiente de decirnos qué era. Estado
+// efímero multi-turno → Map en memoria, como el resto del proyecto: si el
+// server reinicia se pierde y el usuario simplemente vuelve a mandar la foto.
+// Sin esto, su respuesta caía hasta el `bienvenida` del final y el bot
+// contestaba el saludo genérico como si nunca hubiera preguntado nada.
+const reclasificacionPendiente = new Map();
+
+// Media hora es de sobra para contestar "es la colegiatura de mi hijo", y
+// evita que un texto suelto de mañana se interprete como corrección de un
+// documento que el usuario ya ni recuerda.
+const VENTANA_RECLASIFICAR_MS = 30 * 60 * 1000;
+
+function marcarPendiente(from) {
+  reclasificacionPendiente.set(from, Date.now());
+}
+
+function tomarPendiente(from) {
+  const desde = reclasificacionPendiente.get(from);
+  if (!desde) return false;
+  reclasificacionPendiente.delete(from);
+  return Date.now() - desde < VENTANA_RECLASIFICAR_MS;
+}
+
 // Intención de compra, en español o inglés.
 const QUIERE_PLAN = /(quiero|dame|activar|i want|upgrade to|get)\s+(el\s+)?(plan\s+)?(personal|negocio|business)/i;
 
@@ -216,10 +243,117 @@ const QUIERE_PLAN = /(quiero|dame|activar|i want|upgrade to|get)\s+(el\s+)?(plan
 const QUIERE_SUSCRIPCION =
   /\b(cancelar|cancelaci[óo]n|mi suscripci[óo]n|dar de baja|cambiar (mi )?tarjeta|facturaci[óo]n|cancel|my subscription|unsubscribe|billing)\b/i;
 
+/**
+ * El usuario acaba de decirnos qué era el documento después de "Es otra
+ * cosa". Se reclasifica con esa pista y se MUEVE el archivo en Drive — no se
+ * vuelve a subir, así que conserva su id y cualquier link ya compartido.
+ */
+async function reclasificarUltimo(from, user, idioma, pista) {
+  const { data: documento } = await supabase
+    .from('scan_documents')
+    .select('*')
+    .eq('user_id', user.id)
+    .order('created_at', { ascending: false })
+    .limit(1)
+    .maybeSingle();
+
+  if (!documento?.drive_file_id) {
+    await whatsapp.sendText(from, t(idioma, 'reclasificarSinDocumento'));
+    return;
+  }
+
+  const corregido = await vision.reclasificarConPista(
+    {
+      tipo: documento.tipo,
+      seccion: documento.seccion,
+      subcarpeta: documento.subcarpeta,
+      emisor: documento.emisor,
+      fecha: documento.fecha,
+      monto: documento.monto,
+      moneda: documento.moneda,
+      concepto: documento.concepto,
+      categoria_gasto: documento.categoria_gasto,
+    },
+    pista
+  );
+
+  if (!corregido) {
+    await whatsapp.sendText(from, t(idioma, 'reclasificarFallo'));
+    return;
+  }
+
+  // El periodo del nombre sale de la fecha que ya se extrajo: la corrección
+  // habla de la carpeta, no cambia cuándo se emitió el documento.
+  const paraNombre = {
+    ...corregido,
+    fecha: documento.fecha,
+    monto: documento.monto,
+    moneda: documento.moneda,
+  };
+
+  const tramos = naming.rutaPara(paraNombre);
+  const nombreArchivo = naming.nombreArchivo(paraNombre, idioma, 'pdf');
+
+  try {
+    const carpetaId = await drive.ensureRuta(user.drive_tokens, tramos);
+    const movido = await drive.moverArchivo(user.drive_tokens, {
+      fileId: documento.drive_file_id,
+      carpetaDestinoId: carpetaId,
+      nuevoNombre: nombreArchivo,
+      carpetaOrigenId: documento.carpeta_id,
+    });
+
+    await supabase
+      .from('scan_documents')
+      .update({
+        seccion: corregido.seccion || null,
+        subcarpeta: corregido.subcarpeta || null,
+        emisor: corregido.emisor || documento.emisor,
+        concepto: corregido.concepto || documento.concepto,
+        categoria_gasto:
+          taxonomia.categoriaGastoValida(corregido.categoria_gasto) || documento.categoria_gasto,
+        nombre_archivo: nombreArchivo,
+        ruta: naming.rutaLegible(tramos),
+        carpeta_id: carpetaId,
+        drive_link: movido.webViewLink || documento.drive_link,
+      })
+      .eq('id', documento.id);
+  } catch (err) {
+    console.error('[webhook] no se pudo reclasificar', err.message);
+    await whatsapp.sendText(from, t(idioma, 'reclasificarFallo'));
+    return;
+  }
+
+  // Se mira la RUTA que salió, no si el modelo devolvió `seccion`: una
+  // sección sin subcarpeta válida también termina en "99 · Por revisar", y
+  // avisar "lo moví a X" en ese caso sería mentir sobre dónde quedó.
+  if (tramos.length === 1 && tramos[0] === taxonomia.POR_REVISAR.carpeta) {
+    await whatsapp.sendText(from, t(idioma, 'reclasificadoPorRevisar'));
+    return;
+  }
+
+  await whatsapp.sendText(
+    from,
+    t(idioma, 'reclasificado', { ruta: naming.rutaLegible(tramos), nombre: nombreArchivo })
+  );
+}
+
 async function handleText(from, text) {
   const limpio = text.trim();
   const user = await traerUsuario(from);
   const idioma = await idiomaDe(user, limpio);
+
+  // Va PRIMERO: si el usuario está contestando "Es otra cosa", su texto es la
+  // corrección, no una intención nueva. Se consume el pendiente aunque no
+  // haya usuario para no dejarlo colgado.
+  if (tomarPendiente(from)) {
+    if (!user) {
+      await whatsapp.sendText(from, t(idioma, 'primeroApp'));
+      return;
+    }
+    await reclasificarUltimo(from, user, idioma, limpio);
+    return;
+  }
 
   // Cancelar o cambiar tarjeta: se manda al portal de Stripe.
   if (QUIERE_SUSCRIPCION.test(limpio)) {
@@ -301,6 +435,9 @@ async function handleButton(from, interactive) {
       t(idioma, 'verApp', { driveLink: reciente?.drive_link || '', appUrl: appUrl || '' })
     );
   } else if (id === 'otra_cosa') {
+    // Se marca ANTES de preguntar: si el usuario contesta rapidísimo, el
+    // pendiente ya está puesto cuando llegue su texto.
+    marcarPendiente(from);
     await whatsapp.sendText(from, t(idioma, 'otraCosa'));
   }
 }
