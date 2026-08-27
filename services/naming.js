@@ -71,7 +71,29 @@ function rutaPara(extraido) {
   if (!confiable) return tramos;
 
   const { anio } = periodoDe(extraido);
-  return [...tramos, limpiarSegmento(extraido.emisor), anio ? String(anio) : null].filter(Boolean);
+
+  // En secciones como Educación el documento es DE alguien, y esa persona va
+  // ARRIBA de la subcarpeta, no debajo: así todo lo de un hijo vive en una
+  // sola carpeta —colegiaturas y boletas juntas— en vez de repartirse por
+  // categoría. Si no se sabe de quién es, el nivel se omite
+  // (`filter(Boolean)`) en vez de inventar un nombre.
+  //
+  //   08 · Educación / Patricio Soria / Colegiaturas y pagos / Colegio / 2026
+  //
+  // `tramos` viene como [sección, subcarpeta], así que la persona se inserta
+  // en medio.
+  const [seccionCarpeta, subCarpeta] = tramos;
+  const persona = taxonomia.usaPersona(extraido.seccion)
+    ? limpiarSegmento(extraido.persona)
+    : null;
+
+  return [
+    seccionCarpeta,
+    persona,
+    subCarpeta,
+    limpiarSegmento(extraido.emisor),
+    anio ? String(anio) : null,
+  ].filter(Boolean);
 }
 
 function montoLegible(monto, moneda) {

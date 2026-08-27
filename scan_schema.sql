@@ -59,6 +59,12 @@ create table if not exists scan_documents (
   concepto text,
   proyecto text,
 
+  -- De QUIÉN es el documento (el alumno de la colegiatura, el paciente del
+  -- estudio). En las secciones marcadas `porPersona` en `taxonomia.js` se
+  -- vuelve un nivel de carpeta: 08 · Educación / Patricio Soria / Colegio /
+  -- 2026. Null cuando el documento no dice de quién es.
+  persona text,
+
   nombre_archivo text,
   nombre_original text,
   ruta text,
@@ -171,6 +177,14 @@ create index if not exists idx_scan_users_stripe_sub on scan_users(stripe_subscr
 
 -- La pestaña de Favoritos filtraba sobre una columna que no existía.
 alter table scan_documents add column if not exists favorito boolean not null default false;
+
+-- ------------------------------------------------------ nivel de persona
+-- De quién es el documento (2026-08-27). En las secciones marcadas
+-- `porPersona` en `taxonomia.js` —hoy Educación— se vuelve un nivel de
+-- carpeta, para que la colegiatura y la boleta del mismo hijo queden juntas
+-- aunque las emitan escuelas distintas. Los documentos ya archivados se
+-- quedan en null: no se re-clasifica nada hacia atrás.
+alter table scan_documents add column if not exists persona text;
 
 -- ------------------------------------------------------- compras in-app
 -- Segundo canal de cobro (2026-08-13): dentro de la app nativa el pago

@@ -113,6 +113,7 @@ async function procesarArchivo(usuario, buffer, mimeType = 'image/jpeg', nombreO
       categoria_gasto: taxonomia.categoriaGastoValida(extraido.categoria_gasto),
       concepto: extraido.concepto || null,
       emisor: extraido.emisor || null,
+      persona: extraido.persona || null,
       fecha: extraido.fecha || null,
       monto: extraido.monto ?? null,
       moneda: extraido.moneda || null,

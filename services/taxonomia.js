@@ -87,11 +87,45 @@ const ESTRUCTURA = [
     ],
   },
   {
+    clave: 'educacion',
+    carpeta: '08 · Educación',
+    sub: [
+      { clave: 'colegiaturas', carpeta: 'Colegiaturas y pagos' },
+      { clave: 'boletas', carpeta: 'Boletas y certificados' },
+      { clave: 'inscripciones', carpeta: 'Inscripciones' },
+      { clave: 'otros', carpeta: 'Otros' },
+    ],
+    // Los documentos escolares casi siempre son DE alguien —un hijo, uno
+    // mismo— y mezclarlos en una sola carpeta es justo lo que el usuario
+    // pidió evitar. Ver `PERSONA` abajo.
+    porPersona: true,
+  },
+  {
     clave: 'por_revisar',
     carpeta: '99 · Por revisar',
     sub: [],
   },
 ];
+
+/**
+ * Secciones donde la ruta lleva un nivel extra con el NOMBRE DE LA PERSONA
+ * de quien es el documento, antes del emisor:
+ *
+ *   08 · Educación / Patricio Soria / Colegio Alemán / 2026
+ *
+ * Es un nivel dinámico igual que el emisor y el año: no se declara aquí
+ * ningún nombre, lo llena el clasificador con lo que diga el documento (o la
+ * corrección del usuario por WhatsApp). Así sirve para cualquier familiar sin
+ * tocar el código, y no queda el nombre de nadie escrito en el repo.
+ *
+ * Si el clasificador no sabe de quién es, el nivel simplemente se omite y el
+ * documento queda directo bajo la subcarpeta — mejor eso que inventar un
+ * nombre.
+ */
+function usaPersona(seccionClave) {
+  const seccion = ESTRUCTURA.find((s) => s.clave === normalizar(seccionClave));
+  return Boolean(seccion?.porPersona);
+}
 
 const POR_REVISAR = ESTRUCTURA.find((s) => s.clave === 'por_revisar');
 
@@ -175,5 +209,6 @@ module.exports = {
   POR_REVISAR,
   rutasDelAndamiaje,
   carpetasDe,
+  usaPersona,
   catalogoParaPrompt,
 };

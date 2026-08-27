@@ -25,7 +25,7 @@ foto de un recibo de luz  →  CFE_Agosto_2026_$1,847.pdf
 ```
 
 Al conectar Drive se crea de golpe **todo el árbol de carpetas**
-(`services/taxonomia.js`, 36 carpetas) para que el usuario lo vea listo
+(`services/taxonomia.js`, 41 carpetas) para que el usuario lo vea listo
 desde el primer momento. Los niveles de emisor y año se crean solos
 conforme llegan documentos. Lo que el clasificador no reconozca con
 confianza cae en **`99 · Por revisar`** — un buzón para que el usuario lo
@@ -178,8 +178,36 @@ warm-up de DocQuad.
   un **eje independiente**: la carpeta dice dónde vive el documento, la
   categoría de gasto dice en qué se fue el dinero (un ticket de gasolina
   vive en Vehículos pero cuenta como `gasolina`).
+### Nivel de persona en la ruta (2026-08-27)
+
+Algunos documentos son **de alguien** —la colegiatura de un hijo, el estudio
+médico de un familiar— y agruparlos por categoría los desparrama: las boletas
+de Patricio por un lado, sus colegiaturas por otro. Por eso las secciones
+marcadas `porPersona: true` en `taxonomia.js` (hoy solo **Educación**) llevan
+un nivel extra con el nombre, **arriba de la subcarpeta**:
+
+```
+08 · Educación / Patricio Soria / Colegiaturas y pagos / Colegio Alemán / 2026
+08 · Educación / Patricio Soria / Boletas y certificados / SEP / 2026
+                └── todo lo del mismo hijo vive junto
+```
+
+Es un nivel **dinámico**, igual que el emisor y el año: no hay ningún nombre
+escrito en el código —ni el de un hijo real en el repo— lo llena el
+clasificador con lo que diga el documento o la corrección del usuario por
+WhatsApp ("es de mi hijo Patricio Soria"). Para sumar otra sección basta
+marcarle `porPersona: true`; Salud es la candidata obvia.
+
+Si no se sabe de quién es, **el nivel se omite** en vez de inventar un
+nombre: `filter(Boolean)` en `naming.rutaPara`. Y `usaPersona()` limita el
+nivel a esas secciones, así que un recibo de CFE con `persona` no la usa.
+
+Columna `scan_documents.persona` (migración al final de `scan_schema.sql`).
+Los documentos ya archivados se quedan en null: no se reclasifica hacia atrás.
+
 - `services/naming.js` — convierte el JSON extraído en la ruta
-  (`sección/subcarpeta/emisor/año`) y el nombre
+  (`sección/subcarpeta/emisor/año`, o `sección/persona/subcarpeta/emisor/año`
+  en las secciones marcadas `porPersona` — ver abajo) y el nombre
   (`CFE_Agosto_2026_$1,847.pdf`). Limpia razones sociales y manda a
   `99 · Por revisar` lo que no case con la taxonomía.
 - `services/drive.js` — OAuth de Google (**solo scope `drive.file`**, ver

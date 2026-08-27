@@ -16,6 +16,7 @@ documento y devuelves SOLO un JSON, sin texto adicional ni bloques de código.
   "categoria_gasto": "clave de categoría de gasto, o null si no es un gasto",
   "concepto": "qué se compró o pagó, en 3-6 palabras (ej. \"comida en restaurante\", \"gasolina Magna 40L\") o null",
   "emisor": "nombre corto y reconocible de quien emite (ej. CFE, Telmex, IMSS) o null",
+  "persona": "nombre de la persona DE QUIEN es el documento (el alumno, el paciente), o null",
   "fecha": "YYYY-MM-DD del documento, o null",
   "periodo_mes": 1-12 del periodo que cubre el documento, o null,
   "periodo_anio": año de cuatro dígitos del periodo, o null,
@@ -38,6 +39,10 @@ Reglas:
   Es preferible eso a archivarlo mal.
 - "emisor" debe ser la marca corta, no la razón social completa:
   "CFE", no "Comisión Federal de Electricidad, S.A. de C.V.".
+- "persona" es de QUIÉN es el documento, no quién lo paga ni quién lo emite:
+  en una colegiatura es el alumno, en un estudio médico el paciente. Nombre
+  completo tal como aparece, sin títulos ("Patricio Soria", no "Sr. Patricio").
+  Si el documento no dice de quién es, null.
 - Un recibo de luz, agua, gas, internet o teléfono del hogar va en
   casa/servicios. Un ticket de compra o gasto suelto va en dinero/recibos.
 - Si el documento cubre un periodo (un mes de consumo), usa ese periodo en
@@ -105,7 +110,8 @@ adicional ni bloques de código.
   "subcarpeta": "clave de subcarpeta de ESA sección, o null",
   "categoria_gasto": "clave de categoría de gasto, o null",
   "concepto": "qué se compró o pagó, en 3-6 palabras, o null",
-  "emisor": "nombre corto de quien emite, o null"
+  "emisor": "nombre corto de quien emite, o null",
+  "persona": "nombre de la persona DE QUIEN es el documento, o null"
 }
 
 Catálogo de carpetas (sección: subcarpetas válidas):
@@ -123,6 +129,10 @@ Reglas:
   "99 · Por revisar". Es preferible a archivarlo mal otra vez.
 - Conserva los datos que el usuario no está corrigiendo: si solo habla de la
   carpeta, devuelve el emisor y el concepto que ya traía.
+- Si el usuario menciona de quién es el documento —"es de mi hijo Patricio
+  Soria", "esto es de Ana"— eso va en "persona", con el nombre tal cual lo
+  dijo. Es un nivel de carpeta aparte, NO lo metas en "subcarpeta": la
+  subcarpeta debe seguir saliendo del catálogo.
 - No inventes datos: lo que no sepas va en null.`;
 
 async function reclasificarConPista(extraido, pista) {

@@ -299,6 +299,7 @@ async function reclasificarUltimo(from, user, idioma, pista) {
       seccion: documento.seccion,
       subcarpeta: documento.subcarpeta,
       emisor: documento.emisor,
+      persona: documento.persona,
       fecha: documento.fecha,
       monto: documento.monto,
       moneda: documento.moneda,
@@ -340,6 +341,7 @@ async function reclasificarUltimo(from, user, idioma, pista) {
         seccion: corregido.seccion || null,
         subcarpeta: corregido.subcarpeta || null,
         emisor: corregido.emisor || documento.emisor,
+        persona: corregido.persona || documento.persona,
         concepto: corregido.concepto || documento.concepto,
         categoria_gasto:
           taxonomia.categoriaGastoValida(corregido.categoria_gasto) || documento.categoria_gasto,
