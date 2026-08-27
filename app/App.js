@@ -6,6 +6,7 @@ import { aplicarEstilosWeb } from './src/lib/estilosWeb';
 import MarcoWeb from './src/components/MarcoWeb';
 import { IdiomaProvider } from './src/i18n';
 import { SesionProvider } from './src/context/SesionContext';
+import { BorradorEscaneoProvider } from './src/context/BorradorEscaneoContext';
 
 import { BASE } from './src/lib/api';
 
@@ -38,10 +39,12 @@ export default function App() {
       <MarcoWeb>
         <IdiomaProvider>
           <SesionProvider>
-            <NavigationContainer>
-              <StatusBar style="light" />
-              <RootNavigator />
-            </NavigationContainer>
+            <BorradorEscaneoProvider>
+              <NavigationContainer>
+                <StatusBar style="light" />
+                <RootNavigator />
+              </NavigationContainer>
+            </BorradorEscaneoProvider>
           </SesionProvider>
         </IdiomaProvider>
       </MarcoWeb>

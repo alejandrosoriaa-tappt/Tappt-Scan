@@ -1,4 +1,5 @@
 const canvasLib = require('@napi-rs/canvas');
+const { dimensionesDestino } = require('./geometriaPerspectiva');
 
 const ANCHO_ANALISIS = 400; // el detector trabaja en chico: más rápido y menos ruido
 
@@ -253,16 +254,14 @@ const CALIDAD_JPEG = 92;
  * pesar 5.2 MB en PNG — insostenible para el Drive del usuario y para subir
  * con datos móviles.
  */
-async function corregirPerspectiva(buffer, esquinasFraccion) {
+async function corregirPerspectiva(buffer, esquinasFraccion, formato = null) {
   const imagen = await cargar(buffer);
   const origen = esquinasFraccion.map((e) => ({
     x: e.x * imagen.width,
     y: e.y * imagen.height,
   }));
 
-  const [supIzq, supDer, infDer, infIzq] = origen;
-  const ancho = Math.round(Math.max(distancia(supIzq, supDer), distancia(infIzq, infDer)));
-  const alto = Math.round(Math.max(distancia(supIzq, infIzq), distancia(supDer, infDer)));
+  const { ancho, alto } = dimensionesDestino(origen, formato);
 
   if (ancho < 8 || alto < 8) throw new Error('recorte_demasiado_chico');
 
@@ -516,4 +515,11 @@ async function aplicarFiltro(buffer, filtro = 'color', anchoMax = null) {
   return canvas.toBuffer('image/jpeg', CALIDAD_JPEG);
 }
 
-module.exports = { detectarDocumento, corregirPerspectiva, extraerFirma, aplicarFiltro, FILTROS };
+module.exports = {
+  detectarDocumento,
+  corregirPerspectiva,
+  dimensionesDestino,
+  extraerFirma,
+  aplicarFiltro,
+  FILTROS,
+};

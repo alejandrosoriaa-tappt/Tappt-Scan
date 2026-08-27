@@ -8,8 +8,6 @@ import { AJUSTE_PREVIEW } from '../lib/preview';
 //
 // 4:3 y no 16:9: el sensor de un teléfono es 4:3, así que pedir 16:9 hace
 // que el propio navegador recorte arriba y abajo antes de entregarnos nada.
-// Ese recorte es campo visual perdido que ya nunca se recupera — se ve como
-// zoom-in aunque estemos en la cámara más angular.
 const BASE_VIDEO = {
   facingMode: { ideal: 'environment' },
   width: { ideal: 4032 },
@@ -17,80 +15,153 @@ const BASE_VIDEO = {
   aspectRatio: { ideal: 4 / 3 },
 };
 
+const MIN_ANCHO_UTIL = 1280;
+const MIN_RATIO_PIXELES_ANGULAR = 0.72;
+const ZOOM_ANGULAR_PREFERIDO = 0.6;
+
+function modoCamara() {
+  if (typeof window === 'undefined') return 'auto';
+  const modo = new URLSearchParams(window.location.search).get('cameraMode');
+  return ['primary', 'wide', 'auto'].includes(modo) ? modo : 'auto';
+}
+
 function esTrasera(device) {
   const s = `${device?.label || ''}`.toLowerCase();
   return /back|rear|environment|trasera|arrière|rück|后置|背面/.test(s);
 }
 
-function puntuarAngular(device) {
+function esAngular(device) {
   const s = `${device?.label || ''}`.toLowerCase();
+  return /ultra[ -]?wide|ultrawide|0\.5|wide angle|grand.?angle/.test(s);
+}
+
+function esTele(device) {
+  const s = `${device?.label || ''}`.toLowerCase();
+  return /tele|2x|3x|5x/.test(s);
+}
+
+function puntuarAngular(device) {
   let score = 0;
   if (esTrasera(device)) score += 20;
-  if (/ultra[ -]?wide|ultrawide|0\.5|wide angle|grand.?angle/.test(s)) score += 100;
-  if (/tele|zoom|2x|3x|5x/.test(s)) score -= 100;
+  if (esAngular(device)) score += 100;
+  if (esTele(device)) score -= 100;
   return score;
 }
 
-async function constraintsMasAbiertas() {
-  // Después de conceder permiso, iOS/Chrome puede exponer labels útiles.
-  // Si aparece una ultra-wide, la pedimos explícitamente. Si el navegador
-  // oculta labels/dispositivos, caemos al environment estándar.
+function settingsStream(stream) {
+  const track = stream?.getVideoTracks?.()[0];
+  const s = track?.getSettings?.() || {};
+  const width = Number(s.width) || 0;
+  const height = Number(s.height) || 0;
+  return {
+    label: track?.label || '—',
+    width,
+    height,
+    pixels: width * height,
+    frameRate: Number(s.frameRate) || 0,
+    zoom: Number.isFinite(Number(s.zoom)) ? Number(s.zoom) : null,
+    deviceId: s.deviceId || null,
+    facingMode: s.facingMode || null,
+  };
+}
+
+async function aplicarZoomAngular(stream) {
+  try {
+    const track = stream.getVideoTracks()[0];
+    const caps = track.getCapabilities?.();
+    if (!caps?.zoom || !Number.isFinite(caps.zoom.min)) return;
+    const max = Number.isFinite(caps.zoom.max) ? caps.zoom.max : Infinity;
+    const objetivo = Math.min(max, Math.max(caps.zoom.min, ZOOM_ANGULAR_PREFERIDO));
+    await track.applyConstraints({ advanced: [{ zoom: objetivo }] });
+  } catch {}
+}
+
+async function buscarAngular() {
   try {
     const devices = (await navigator.mediaDevices.enumerateDevices()).filter((d) => d.kind === 'videoinput');
     const candidatas = devices.slice().sort((a, b) => puntuarAngular(b) - puntuarAngular(a));
-    const mejor = candidatas.find((d) => puntuarAngular(d) > 20);
-    if (mejor?.deviceId) {
-      return { audio: false, video: { ...BASE_VIDEO, deviceId: { exact: mejor.deviceId } } };
-    }
-  } catch {}
-  return { audio: false, video: BASE_VIDEO };
+    return candidatas.find((d) => esTrasera(d) && esAngular(d) && !esTele(d)) || null;
+  } catch {
+    return null;
+  }
 }
 
-async function abrirStreamMasAbierto() {
-  // Primer permiso con environment. Luego, ya con labels disponibles,
-  // intentamos reabrir con la cámara físicamente más angular.
-  const inicial = await navigator.mediaDevices.getUserMedia({ audio: false, video: BASE_VIDEO });
-  let elegido = inicial;
-  try {
-    const c = await constraintsMasAbiertas();
-    if (c.video.deviceId) {
-      const segundo = await navigator.mediaDevices.getUserMedia(c);
-      inicial.getTracks().forEach((t) => t.stop());
-      elegido = segundo;
-    }
-  } catch {}
+async function abrirPrincipal() {
+  return navigator.mediaDevices.getUserMedia({ audio: false, video: BASE_VIDEO });
+}
 
-  // Si el track ofrece zoom continuo, acercarse un poco al mínimo físico
-  // pero sin tocarlo. En el mínimo exacto (0.5x en iPhone) iOS funde el
-  // sensor ultra angular con el principal para el "seamless zoom", y esa
-  // fusión deja una franja borrosa en un borde del frame por el paralaje
-  // entre los dos sensores (confirmado en fixtures reales 2026-08-19,
-  // consistente del mismo lado en tomas distintas — no es el lente sucio
-  // ni un dedo, ver CLAUDE.md). Un pelín arriba de ese límite evita la
-  // frontera de fusión y de paso acerca el encuadre al de CamScanner, que
-  // hoy se ve más cerrado que el nuestro.
-  //
-  // SIN VALIDAR EN DISPOSITIVO todavía: falta confirmar que la franja
-  // desaparece y que el campo visual sigue sintiéndose abierto. No subir
-  // ZOOM_PREFERIDO más sin medir — ver la sección de fixtures del scanner
-  // sobre no ajustar parámetros de captura a ojo.
-  const ZOOM_PREFERIDO = 0.6;
+async function abrirAngular(device) {
+  if (!device?.deviceId) return null;
+  return navigator.mediaDevices.getUserMedia({
+    audio: false,
+    video: { ...BASE_VIDEO, deviceId: { exact: device.deviceId } },
+  });
+}
+
+function angularPasaGate(principal, angular) {
+  const p = settingsStream(principal);
+  const a = settingsStream(angular);
+  if (!a.width || !a.height) return { ok: false, razon: 'ANGULAR_SIN_RESOLUCION' };
+  if (a.width < MIN_ANCHO_UTIL) return { ok: false, razon: 'ANGULAR_ANCHO_INSUFICIENTE' };
+  if (p.pixels && a.pixels < p.pixels * MIN_RATIO_PIXELES_ANGULAR) {
+    return { ok: false, razon: 'ANGULAR_PIERDE_DEMASIADA_RESOLUCION' };
+  }
+  return { ok: true, razon: 'ANGULAR_APROBADA' };
+}
+
+async function abrirStreamCalidadPrimero() {
+  const modo = modoCamara();
+  const principal = await abrirPrincipal();
+  const diag = {
+    modo,
+    principal: settingsStream(principal),
+    angular: null,
+    elegido: 'primary',
+    razon: modo === 'primary' ? 'FORZADO_PRIMARY' : 'PRIMARY_BASELINE',
+  };
+
+  if (modo === 'primary') return { stream: principal, seleccion: diag };
+
+  const deviceAngular = await buscarAngular();
+  if (!deviceAngular) {
+    diag.razon = 'SIN_ANGULAR_EXPLICITA';
+    return { stream: principal, seleccion: diag };
+  }
+
+  let angular = null;
   try {
-    const track = elegido.getVideoTracks()[0];
-    const caps = track.getCapabilities?.();
-    if (caps?.zoom && Number.isFinite(caps.zoom.min)) {
-      const max = Number.isFinite(caps.zoom.max) ? caps.zoom.max : Infinity;
-      const objetivo = Math.min(max, Math.max(caps.zoom.min, ZOOM_PREFERIDO));
-      await track.applyConstraints({ advanced: [{ zoom: objetivo }] });
-    }
-  } catch {}
-  return elegido;
+    angular = await abrirAngular(deviceAngular);
+    await aplicarZoomAngular(angular);
+    diag.angular = settingsStream(angular);
+  } catch {
+    diag.razon = 'ANGULAR_NO_ABRIO';
+    return { stream: principal, seleccion: diag };
+  }
+
+  if (modo === 'wide') {
+    principal.getTracks().forEach((t) => t.stop());
+    diag.elegido = 'wide';
+    diag.razon = 'FORZADO_WIDE';
+    return { stream: angular, seleccion: diag };
+  }
+
+  const gate = angularPasaGate(principal, angular);
+  diag.razon = gate.razon;
+  if (gate.ok) {
+    principal.getTracks().forEach((t) => t.stop());
+    diag.elegido = 'wide';
+    return { stream: angular, seleccion: diag };
+  }
+
+  angular.getTracks().forEach((t) => t.stop());
+  return { stream: principal, seleccion: diag };
 }
 
 function CamaraDocWeb({ style, onLista, onError }, ref) {
   const contenedor = useRef(null);
   const video = useRef(null);
   const stream = useRef(null);
+  const seleccion = useRef(null);
 
   useEffect(() => {
     const nodo = contenedor.current;
@@ -99,22 +170,21 @@ function CamaraDocWeb({ style, onLista, onError }, ref) {
     const el = document.createElement('video');
     el.autoplay = true; el.muted = true; el.playsInline = true;
     el.setAttribute('playsinline', 'true'); el.setAttribute('muted', 'true');
-    // `objectFit` sale de lib/preview.js, que es también quien proyecta el
-    // polígono. Con 'cover' el navegador recortaba el cuadro para tapar la
-    // pantalla: en vertical eso se come los costados del sensor y el visor
-    // se siente cerrado por más ultra-wide que se haya conseguido.
     el.style.width = '100%'; el.style.height = '100%'; el.style.objectFit = AJUSTE_PREVIEW; el.style.display = 'block';
     nodo.appendChild(el); video.current = el;
 
-    abrirStreamMasAbierto().then((s) => {
+    abrirStreamCalidadPrimero().then(({ stream: s, seleccion: sel }) => {
       if (cancelado) { s.getTracks().forEach((t) => t.stop()); return; }
-      stream.current = s; el.srcObject = s;
-      el.onloadedmetadata = () => { el.play().catch(() => {}); onLista?.({ ancho: el.videoWidth, alto: el.videoHeight }); };
+      stream.current = s; seleccion.current = sel; el.srcObject = s;
+      el.onloadedmetadata = () => {
+        el.play().catch(() => {});
+        onLista?.({ ancho: el.videoWidth, alto: el.videoHeight, camara: sel });
+      };
     }).catch((err) => !cancelado && onError?.(err));
 
     return () => {
       cancelado = true; stream.current?.getTracks().forEach((t) => t.stop());
-      el.srcObject = null; el.remove(); video.current = null; stream.current = null;
+      el.srcObject = null; el.remove(); video.current = null; stream.current = null; seleccion.current = null;
     };
   }, []);
 
@@ -127,7 +197,11 @@ function CamaraDocWeb({ style, onLista, onError }, ref) {
       const lienzo = document.createElement('canvas'); lienzo.width = ancho; lienzo.height = alto;
       lienzo.getContext('2d', { alpha: false }).drawImage(el, 0, 0, ancho, alto);
       const url = lienzo.toDataURL('image/jpeg', calidad); const base64 = url.slice(url.indexOf(',') + 1);
-      return { base64, ancho, alto, bytes: Math.round((base64.length * 3) / 4), ms: Date.now() - inicio };
+      return {
+        base64, ancho, alto,
+        bytes: Math.round((base64.length * 3) / 4), ms: Date.now() - inicio,
+        camara: seleccion.current,
+      };
     },
     diagnostico() {
       const el = video.current; const track = stream.current?.getVideoTracks?.()[0];
@@ -136,14 +210,14 @@ function CamaraDocWeb({ style, onLista, onError }, ref) {
         track: track?.getSettings?.() || null,
         capabilities: track?.getCapabilities?.() || null,
         label: track?.label || '—',
-        videoWidth: el?.videoWidth || 0, videoHeight: el?.videoHeight || 0,
+        videoWidth: el?.videoWidth || 0,
+        videoHeight: el?.videoHeight || 0,
         ajuste: AJUSTE_PREVIEW,
+        seleccionCamara: seleccion.current,
       };
     },
   }));
 
-  // Fondo negro: con `contain` quedan bandas donde el video no llega, y sin
-  // esto se verían del color de la pantalla de atrás.
   return <View ref={contenedor} style={[style, { backgroundColor: '#000' }]} />;
 }
 export default forwardRef(CamaraDocWeb);

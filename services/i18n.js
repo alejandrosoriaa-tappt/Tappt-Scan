@@ -15,6 +15,8 @@ const MENSAJES = {
       'Hola, soy TapptScan. Mándame la foto de un documento —o reenvíame un PDF— y lo guardo directo en tu Google Drive.',
     sinDrive:
       'Todavía no tienes tu Google Drive conectado. Baja la app de TapptScan para conectarlo y guardar tus documentos automáticamente.',
+    driveExpirado:
+      'Tu conexión con Google Drive venció o fue revocada. Vuelve a conectarla aquí y después mándame la foto otra vez:\n{appUrl}',
     limite:
       'Ya usaste tus {limite} escaneos gratis de este mes. Pásate al plan Personal y escanea sin límite — escríbeme "quiero personal" y te mando el link.',
     guardado: 'Listo 📄\n\n*{archivo}*{paginas}\n📁 {ruta}{drive}{editar}\n\n¿Todo bien?',
@@ -61,6 +63,8 @@ const MENSAJES = {
       "Hi, I'm TapptScan. Send me a photo of a document — or forward me a PDF — and I'll save it straight to your Google Drive.",
     sinDrive:
       "You haven't connected your Google Drive yet. Download the TapptScan app to connect it and save your documents automatically.",
+    driveExpirado:
+      'Your Google Drive connection expired or was revoked. Reconnect it here, then send me the photo again:\n{appUrl}',
     limite:
       'You\'ve used your {limite} free scans this month. Upgrade to Personal for unlimited scans — reply "I want personal" and I\'ll send you the link.',
     guardado: 'Done 📄\n\n*{archivo}*{paginas}\n📁 {ruta}{drive}{editar}\n\nAll good?',

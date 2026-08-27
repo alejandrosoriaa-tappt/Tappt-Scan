@@ -1,5 +1,5 @@
 import React, { useRef, useState, useEffect, useCallback } from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, Platform, ActivityIndicator } from 'react-native';
+import { View, Text, Image, TouchableOpacity, StyleSheet, Platform, ActivityIndicator } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useCameraPermissions } from 'expo-camera';
 import CamaraDoc from '../components/CamaraDoc';
@@ -10,10 +10,12 @@ import Icono from '../components/Icono';
 import ContornoQuad from '../components/ContornoQuad';
 import { colores, espacio } from '../theme';
 import { AJUSTE_PREVIEW, proyectarEsquina } from '../lib/preview';
+import { useBorradorEscaneo } from '../context/BorradorEscaneoContext';
+const { actualizarEstabilizador, estadoInicial } = require('../lib/estabilizadorQuad');
 
 const esWeb = Platform.OS === 'web';
 
-const INTERVALO_DETECCION_MS = 1400;
+const INTERVALO_DETECCION_MS = 800;
 
 // Los frames de detección van chicos a propósito: el detector no necesita
 // resolución, y entre más chico más rápido el ciclo. La captura FINAL va
@@ -38,17 +40,18 @@ function area(esquinas) {
 export default function EscanearScreen({ navigation }) {
   const [permiso, pedirPermiso] = useCameraPermissions();
   const { t } = useIdioma();
+  const borrador = useBorradorEscaneo();
   const [capturando, setCapturando] = useState(false);
   const camara = useRef(null);
 
   // Detección en vivo: mientras el usuario encuadra, se manda una foto de
-  // baja calidad al mismo detector que ya usa Recorte, cada ~1.4s, y el
-  // overlay refleja el resultado. Tres estados, de menos a más confianza:
+  // baja calidad al mismo detector que ya usa Recorte, cada ~0.8s. La capa
+  // temporal exige consenso antes de reflejar el resultado. Tres estados:
   // 'buscando' (nada aún o detección de baja confianza), 'parcial'
   // (esquinas detectadas pero el propio detector las marca poco fiables)
   // y 'listo' (4 esquinas con confianza alta — igual que usaría Recorte
   // para no pedir ajuste manual).
-  const [deteccion, setDeteccion] = useState({ estado: 'buscando', esquinas: null });
+  const [deteccion, setDeteccion] = useState(estadoInicial);
   const analizandoRef = useRef(false);
   const listaRef = useRef(false); // la cámara ya montó su primer frame
   const [errorCamara, setErrorCamara] = useState(false);
@@ -104,10 +107,20 @@ export default function EscanearScreen({ navigation }) {
         httpMs: Date.now() - inicioHttp,
       });
 
-      setDeteccion({
-        esquinas,
-        estado: !esquinas || area(esquinas) > 0.97 ? 'buscando' : confiable ? 'listo' : 'parcial',
-      });
+      // Cada respuesta aislada puede señalar otra página, el teclado o un
+      // reflejo. No se dibuja hasta verla repetida y, una vez bloqueada, un
+      // salto incompatible no reemplaza al documento que ya seguíamos.
+      setDeteccion((anterior) =>
+        actualizarEstabilizador(anterior, {
+          // Un candidato parcial puede ser una sola página de una libreta,
+          // el teclado o una sombra. Estabilizarlo solo lo vuelve un error
+          // quieto y convincente. El verde se reserva para detecciones que
+          // pasaron los guardrails del motor; si no, capturamos igualmente
+          // y Recorte conserva toda la foto.
+          esquinas: confiable && esquinas && area(esquinas) <= 0.97 ? esquinas : null,
+          confiable,
+        })
+      );
     } catch {
       // Un fallo de un solo frame no debe tumbar el overlay — se queda en
       // el último estado conocido y se reintenta en el próximo ciclo.
@@ -183,6 +196,7 @@ export default function EscanearScreen({ navigation }) {
         // igual que si el detector no hubiera visto nada); ahora el usuario
         // ajusta en vez de dibujar las 4 esquinas desde cero.
         esquinasIniciales: deteccion.estado !== 'buscando' ? deteccion.esquinas : null,
+        modoLote: true,
       });
     } catch (err) {
       alertar(t('noSePudo'), err.message);
@@ -207,12 +221,6 @@ export default function EscanearScreen({ navigation }) {
       ? deteccion.esquinas.map((e) => aPantalla(e))
       : null;
 
-  const colorPorEstado = {
-    buscando: 'rgba(255,255,255,0.5)',
-    parcial: 'rgba(255,255,255,0.85)',
-    listo: colores.primario,
-  };
-
   const textoPorEstado = {
     buscando: t('alineaDocumento'),
     parcial: t('sigueAjustando'),
@@ -236,7 +244,12 @@ export default function EscanearScreen({ navigation }) {
       />
 
       {puntos ? (
-        <ContornoQuad puntos={puntos} color={colorPorEstado[deteccion.estado]} grosor={2} />
+        <ContornoQuad
+          puntos={puntos}
+          color={colores.primario}
+          relleno="rgba(24,184,117,0.18)"
+          grosor={2}
+        />
       ) : null}
 
       <SafeAreaView style={estilos.capa} edges={['top', 'bottom']} pointerEvents="box-none">
@@ -323,7 +336,8 @@ export default function EscanearScreen({ navigation }) {
                       : '—'
                   } ${ultimaDeteccion.razonOpenCv || 'ok'}${
                     ultimaDeteccion.marcoCompleto ? ' · marcoCompleto' : ''
-                  }`
+                  }\n` +
+                  `tracking: ${deteccion.fase} · coincidencias=${deteccion.coincidencias} · fallos=${deteccion.fallos}`
                 : 'aún no responde'}
             </Text>
             <Text style={estilos.diagLineaTenue}>{diag.navegador}</Text>
@@ -347,6 +361,22 @@ export default function EscanearScreen({ navigation }) {
 
         <View style={estilos.controles}>
           <TouchableOpacity
+            style={estilos.loteLateral}
+            onPress={() => borrador.paginas.length && navigation.navigate('BorradorEscaneo')}
+            disabled={!borrador.paginas.length}
+          >
+            {borrador.paginas.length ? (
+              <View>
+                <Image source={{ uri: borrador.paginas[borrador.paginas.length - 1].vista }} style={estilos.loteMiniatura} />
+                <View style={estilos.loteContador}>
+                  <Text style={estilos.loteContadorTexto}>{borrador.paginas.length}</Text>
+                </View>
+              </View>
+            ) : (
+              <Icono nombre="mosaico" tamano={24} color="rgba(255,255,255,0.45)" />
+            )}
+          </TouchableOpacity>
+          <TouchableOpacity
             style={estilos.obturador}
             activeOpacity={0.8}
             onPress={capturar}
@@ -354,10 +384,17 @@ export default function EscanearScreen({ navigation }) {
           >
             <View style={[estilos.obturadorInterior, capturando && estilos.obturadorActivo]} />
           </TouchableOpacity>
-          <Text style={estilos.ayuda}>
-            {capturando ? t('tomandoFoto') : t('tambienWhatsapp')}
-          </Text>
+          <TouchableOpacity
+            style={[estilos.hecho, !borrador.paginas.length && estilos.hechoInactivo]}
+            onPress={() => navigation.navigate('BorradorEscaneo')}
+            disabled={!borrador.paginas.length}
+          >
+            <Text style={estilos.hechoTexto}>{t('hecho')}</Text>
+          </TouchableOpacity>
         </View>
+        <Text style={estilos.ayuda}>
+          {capturando ? t('tomandoFoto') : t('modoLoteAyuda')}
+        </Text>
       </SafeAreaView>
     </View>
   );
@@ -439,7 +476,14 @@ const estilos = StyleSheet.create({
     borderRadius: 20,
     paddingVertical: espacio.xs + 2,
   },
-  controles: { alignItems: 'center', paddingBottom: espacio.lg, paddingHorizontal: espacio.lg },
+  controles: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: espacio.xl },
+  loteLateral: { width: 72, height: 72, alignItems: 'center', justifyContent: 'center' },
+  loteMiniatura: { width: 48, height: 58, borderRadius: 6, borderWidth: 2, borderColor: colores.primario },
+  loteContador: { position: 'absolute', right: -8, top: -8, minWidth: 22, height: 22, paddingHorizontal: 5, borderRadius: 11, backgroundColor: colores.primario, alignItems: 'center', justifyContent: 'center' },
+  loteContadorTexto: { color: '#FFFFFF', fontWeight: '800', fontSize: 11 },
+  hecho: { width: 72, height: 42, borderRadius: 8, backgroundColor: colores.primario, alignItems: 'center', justifyContent: 'center' },
+  hechoInactivo: { opacity: 0.25 },
+  hechoTexto: { color: '#FFFFFF', fontWeight: '800', fontSize: 14 },
   obturador: {
     width: 72,
     height: 72,
@@ -455,6 +499,8 @@ const estilos = StyleSheet.create({
     color: 'rgba(255,255,255,0.6)',
     fontSize: 12,
     textAlign: 'center',
-    marginTop: espacio.md,
+    marginTop: espacio.sm,
+    marginBottom: espacio.md,
+    paddingHorizontal: espacio.lg,
   },
 });

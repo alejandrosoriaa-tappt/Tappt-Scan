@@ -4,6 +4,7 @@ const router = express.Router();
 
 const whatsapp = require('../services/whatsapp');
 const procesarDocumento = require('../services/procesarDocumento');
+const googleOAuth = require('../services/googleOAuth');
 const sesiones = require('../services/sesiones');
 const planes = require('../services/planes');
 const stripe = require('../services/stripe');
@@ -13,6 +14,7 @@ const vision = require('../services/vision');
 const naming = require('../services/naming');
 const drive = require('../services/drive');
 const taxonomia = require('../services/taxonomia');
+const whatsappEvento = require('../services/whatsappEvento');
 const { t, detectarIdioma } = require('../services/i18n');
 
 // Verificación del webhook (Meta llama a esto al configurar la app).
@@ -76,6 +78,16 @@ router.post('/', async (req, res) => {
     msg = value?.messages?.[0];
     if (!msg) return;
 
+    // Una app/WABA de Meta puede entregar al mismo webhook eventos de varios
+    // números. Nunca procesamos ni contestamos mensajes dirigidos a Tappt
+    // Agenda (u otro servicio): este backend solo representa a TapptScan.
+    // La comparación ocurre antes de marcar como leído para no usar nuestro
+    // Phone Number ID con el message_id de otro número.
+    if (!whatsappEvento.perteneceAlNumero(value, process.env.WHATSAPP_PHONE_NUMBER_ID)) {
+      console.warn('[webhook] mensaje ignorado: phone_number_id ajeno o ausente');
+      return;
+    }
+
     from = msg.from;
 
     // Palomita azul + "escribiendo..." mientras procesamos. Esto es
@@ -114,10 +126,7 @@ router.post('/', async (req, res) => {
 
     if (from) {
       try {
-        await whatsapp.sendText(
-          from,
-          'Algo falló al procesar tu archivo 😕 Ya quedó registrado, ¿puedes intentar mandarlo de nuevo?'
-        );
+        await whatsapp.sendText(from, 'No pude procesar tu archivo 😕 Inténtalo nuevamente en un momento.');
       } catch (_) {
         // si ni el aviso de error se pudo mandar, no hay más que hacer aquí
       }
@@ -166,12 +175,34 @@ async function recibirArchivo(from, medio, mimePorDefecto) {
   const mediaUrl = await whatsapp.getMediaUrl(medio.id);
   const buffer = await whatsapp.downloadMedia(mediaUrl);
 
-  const { documento, nombreArchivo, ruta, paginas } = await procesarDocumento.procesarArchivo(
-    user,
-    buffer,
-    medio.mime_type || mimePorDefecto,
-    medio.filename || null
-  );
+  let procesado;
+  try {
+    procesado = await procesarDocumento.procesarArchivo(
+      user,
+      buffer,
+      medio.mime_type || mimePorDefecto,
+      medio.filename || null
+    );
+  } catch (err) {
+    if (!googleOAuth.esTokenInvalido(err)) throw err;
+
+    // Un refresh token revocado sigue existiendo en la fila del usuario y
+    // hacía que la app dijera "Drive conectado" aunque Google ya lo negara.
+    // Limpiarlo obliga a mostrar Onboarding y permite autorizar de nuevo.
+    const { error: errorLimpieza } = await supabase
+      .from('scan_users')
+      .update({ drive_tokens: null, drive_raiz_id: null })
+      .eq('id', user.id);
+    if (errorLimpieza) console.error('[webhook] no se pudo limpiar token de Drive', errorLimpieza);
+
+    await whatsapp.sendText(
+      from,
+      t(idioma, 'driveExpirado', { appUrl: appUrlPublica() || 'https://scan.tappt.lat' })
+    );
+    return;
+  }
+
+  const { documento, nombreArchivo, ruta, paginas } = procesado;
 
   const appUrl = appUrlPublica();
 
