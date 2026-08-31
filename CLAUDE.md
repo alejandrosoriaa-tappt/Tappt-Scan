@@ -259,10 +259,16 @@ fuera del móvil: `FirmaPad.web.js` (canvas directo en vez de WebView) e
 `importar.web.js` (`FileReader` en vez de `expo-file-system`). Al agregar
 código que use APIs nativas, revisar si necesita su variante web.
 
-**Probar y repartir la app:** todo lo que usa está en Expo Go, así que
-`cd app && npm start` y escanear el QR basta para probarla sin compilar.
+**Probar y repartir la app:** casi todo lo que usa está en Expo Go, así que
+`cd app && npm start` y escanear el QR basta para probarla sin compilar. La
+excepción es **`react-native-iap`** (módulo nativo, no existe en Expo Go):
+la compra de planes solo se puede probar en un *development build*.
 Para beta con usuarios reales, ver `docs/DISTRIBUCION.md` (web app, EAS
-Build, TestFlight y Play Internal Testing).
+Build, TestFlight y Play Internal Testing); para iOS nativo paso a paso,
+**`docs/BUILD-NATIVO-IOS.md`** — ahí está lo que falta en el repo (projectId
+de EAS, `expo-dev-client`, `env` en `eas.json`, productos en App Store
+Connect, `APPLE_SHARED_SECRET`) y el bloqueador duro de revisión: **la app
+no deja borrar la cuenta** (guía 5.1.1(v) de Apple).
 
 ## Modelo de negocio (referencia)
 

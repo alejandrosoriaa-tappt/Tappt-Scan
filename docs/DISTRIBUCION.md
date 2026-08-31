@@ -1,6 +1,9 @@
 # Cómo probar y repartir la app antes de las tiendas
 
-_Última actualización: 2026-08-09_
+_Última actualización: 2026-08-31_
+
+> **iOS nativo tiene su propia guía:** `docs/BUILD-NATIVO-IOS.md` — qué falta
+> en el repo, IAP, y los bloqueadores de revisión de Apple.
 
 Cuatro caminos, de menos a más ceremonia. Los dos primeros se pueden hacer
 hoy sin pagar nada ni abrir cuentas de tienda.
@@ -48,11 +51,16 @@ foto. En la web el camino natural es importar un archivo, no fotografiar.
 
 ## Nivel 1 · Expo Go — hoy, gratis, sin cuentas
 
-Todo lo que usa la app son paquetes del SDK de Expo (`expo-camera`,
+Casi todo lo que usa la app son paquetes del SDK de Expo (`expo-camera`,
 `expo-document-picker`, `expo-image-picker`, `expo-file-system`,
 `expo-localization`, `expo-web-browser`) más `react-native-webview`,
-`async-storage`, `safe-area-context` y `screens`. **Todos vienen dentro de
-Expo Go**, así que no hace falta compilar nada.
+`async-storage`, `safe-area-context` y `screens`. Esos **sí vienen dentro de
+Expo Go**, así que no hace falta compilar nada para probarlos.
+
+> ⚠️ **La excepción es `react-native-iap`**, que se agregó después de
+> escribir esto: es un módulo nativo y **no existe en Expo Go**. La compra de
+> planes (`AjustesScreen` → `compras.native.js`) falla ahí. Para probar el
+> cobro hace falta un *development build* — ver `docs/BUILD-NATIVO-IOS.md`.
 
 ```bash
 cd app && npm install && npm start
@@ -66,8 +74,9 @@ Sirve para probar el flujo completo: login, onboarding, cámara, recorte,
 editor, firmas, importación y cambio de idioma.
 
 **Lo que NO se puede validar aquí:** el ícono y el nombre reales en la
-pantalla de inicio, el rendimiento de una build optimizada, y el
-comportamiento de la app cerrada. Para eso, nivel 2.
+pantalla de inicio, el rendimiento de una build optimizada, el
+comportamiento de la app cerrada y **la compra dentro de la app**. Para eso,
+nivel 2.
 
 ## Nivel 2 · EAS Build con distribución interna
 
