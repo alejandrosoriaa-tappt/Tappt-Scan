@@ -62,12 +62,44 @@ sudo xcode-select -s /Applications/Xcode.app/Contents/Developer
 ## ⚠️ El riesgo que queda sin confirmar
 
 **Xcode 16.2 contra iOS 26.6.** Xcode reconoció el teléfono, pero *reconocer*
-no es *poder instalar*: Xcode necesita los device support files de la versión
-de iOS del dispositivo, y 16.2 es de una generación muy anterior a iOS 26.6.
-Lo normal en ese escenario es que el build compile y falle al instalar.
+no es *poder instalar*: necesita los **device support files** de la versión de
+iOS del dispositivo, y 16.2 es anterior a iOS 26. El síntoma típico es que
+compila y falla al instalar con `Failed to start remote service`.
 
-Si pasa: la salida es **actualizar macOS y usar Xcode 26.x**, que era la
-alternativa que ya se había considerado al elegir la versión.
+**Ojo con el tamaño real del salto.** iOS 18 → 26 parece ocho versiones, pero
+Apple renombró a esquema por año (saltó del 19 al 26): es **una sola
+generación**. Eso lo vuelve un caso con posibilidades —existe el truco de
+copiar DeviceSupport de un Xcode más nuevo— pero frágil.
 
-Nada de lo hecho hasta ahora se pierde si eso ocurre — los pods y el
-workspace quedan; solo cambia el Xcode que los abre.
+### El atajo que puede evitar actualizar macOS
+
+Se asumió que la alternativa a 16.2 era "actualizar macOS". **No
+necesariamente:**
+
+| Versión | macOS mínimo |
+|---|---|
+| Xcode 16.2 | Sonoma 14.5 |
+| **Xcode 26 (base)** | **Sequoia 15.6** |
+| Xcode 26.4 | Tahoe 26.2 |
+
+Si el Mac mini ya corre **Sequoia 15.6 o superior**, se puede instalar
+**Xcode 26 directo, sin tocar el sistema**. Verificar con:
+
+```bash
+sw_vers -productVersion
+```
+
+### Árbol de decisión
+
+```
+sw_vers -productVersion
+│
+├─ ≥ 15.6  →  Instalar Xcode 26.x directo. Camino limpio.
+│             Recomendado antes de pelear con 16.2.
+│
+└─ < 15.6  →  Intentar 16.2 (ya está todo listo).
+              Si falla al instalar: subir a Sequoia 15.6 → Xcode 26.
+```
+
+**Nada de lo hecho se pierde en ninguna rama:** los 89 pods y el
+`.xcworkspace` quedan igual. Solo cambia qué Xcode los abre.
