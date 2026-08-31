@@ -338,10 +338,17 @@ sesión de Claude, leer inmediatamente:
 
 ## Rama de trabajo
 
-Rama activa: **`claude/tappt-scan-memory-review-u0oook`**. Desarrollar,
-commitear y pushear ahí. No abrir PR salvo que se pida explícitamente.
-(La rama anterior, `claude/new-session-9mhtdk`, quedó atrás — su historia
-ya está fusionada aquí.)
+👉 **Para retomar, empieza por `docs/HANDOFF-2026-08-31.md`** — trae el
+estado, el pendiente que bloquea producción y los 8 frentes abiertos.
+
+**`main` es la rama de referencia** (fusionada el 2026-08-31). Todo el
+trabajo de las sesiones de agosto —scanner multipágina, reclasificación por
+WhatsApp, sección Educación, memoria de mercado— vive ahí.
+
+Ramas anteriores ya fusionadas y que NO hay que seguir usando:
+`claude/tappt-scan-memory-review-u0oook`, `claude/new-session-9mhtdk`.
+
+Para trabajo nuevo: partir de `main` con rama propia.
 
 ⚠️ **Hay más de una sesión de Claude trabajando en esta rama.** El
 2026-08-27 aparecieron 8 commits ajenos al pushear (scanner multipágina,
@@ -1238,7 +1245,7 @@ Otros pendientes de producto:
 
 ---
 
-# 📌 Sesión 2026-08-27 — mercado, precio y producto empaquetado
+# 📌 Sesiones 2026-08-26 al 31 — mercado, precio y producto empaquetado
 
 Esta sesión fue mitad código y mitad estrategia. Lo de estrategia cambia
 decisiones de producto, así que queda aquí y no en un doc aparte.
