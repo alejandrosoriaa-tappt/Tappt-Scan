@@ -169,17 +169,37 @@ router.post('/iap/verificar', requireAuth, async (req, res) => {
       .update({ plan: resultado.plan, plan_vence: resultado.expiraEn, [campoIdentidad]: valorIdentidad })
       .eq('id', req.usuario.id);
 
-    await supabase.from('scan_payments').insert({
-      user_id: req.usuario.id,
-      plan: resultado.plan,
-      monto: 0, // el monto real lo cobra la tienda directo; aquí solo se registra el evento
-      moneda: req.usuario.moneda || 'mxn',
-      estado: 'pagado',
-      payment_id: valorIdentidad,
-      fuente: plataforma,
-    });
+    // Idempotente a propósito: este mismo endpoint atiende la compra Y el
+    // "restaurar compras", que el usuario puede tocar las veces que quiera.
+    // Sin esto, cada restauración dejaría una fila de pago repetida y las
+    // cuentas de ingresos saldrían infladas.
+    const { data: yaRegistrado } = await supabase
+      .from('scan_payments')
+      .select('id')
+      .eq('user_id', req.usuario.id)
+      .eq('payment_id', valorIdentidad)
+      .eq('fuente', plataforma)
+      .maybeSingle();
 
-    res.json({ plan: resultado.plan, planVence: resultado.expiraEn });
+    if (!yaRegistrado) {
+      await supabase.from('scan_payments').insert({
+        user_id: req.usuario.id,
+        plan: resultado.plan,
+        monto: 0, // el monto real lo cobra la tienda directo; aquí solo se registra el evento
+        moneda: req.usuario.moneda || 'mxn',
+        estado: 'pagado',
+        payment_id: valorIdentidad,
+        fuente: plataforma,
+      });
+    }
+
+    // Una compra restaurada puede estar VENCIDA: el recibo de Apple trae el
+    // historial completo, no solo lo vigente. `planVigente` ya lo trata como
+    // gratis, pero la app necesita saberlo para no decir "listo, restaurado"
+    // cuando en realidad no quedó nada activo.
+    const vigente = new Date(resultado.expiraEn) > new Date();
+
+    res.json({ plan: resultado.plan, planVence: resultado.expiraEn, vigente });
   } catch (err) {
     console.error('[pagos] error verificando compra IAP', err);
     res.status(400).json({ error: err.message });

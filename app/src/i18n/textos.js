@@ -40,6 +40,14 @@ export const TEXTOS = {
     conectarDrive: 'Conectar Drive',
     cerrarSesion: 'Cerrar sesión',
 
+    // Restaurar compras (requisito de la App Store, guía 3.1.1)
+    restaurarCompras: 'Restaurar compras',
+    restaurarListo: 'Listo',
+    restaurarListoDetalle: 'Tu suscripción quedó activa otra vez.',
+    restaurarNada: 'Nada que restaurar',
+    restaurarNadaDetalle:
+      'No encontramos una suscripción activa en esta cuenta de la tienda. Revisa que estés con el mismo Apple ID o cuenta de Google con la que compraste.',
+
     // Borrado de cuenta (requisito de la App Store)
     eliminarCuenta: 'Eliminar mi cuenta',
     eliminarCuentaTitulo: '¿Eliminar tu cuenta?',
@@ -339,6 +347,13 @@ export const TEXTOS = {
       "That's where your documents go. We only keep their details so you can search them.",
     conectarDrive: 'Connect Drive',
     cerrarSesion: 'Sign out',
+
+    restaurarCompras: 'Restore purchases',
+    restaurarListo: 'Done',
+    restaurarListoDetalle: 'Your subscription is active again.',
+    restaurarNada: 'Nothing to restore',
+    restaurarNadaDetalle:
+      "We couldn't find an active subscription on this store account. Check that you're signed in with the same Apple ID or Google account you bought it with.",
 
     eliminarCuenta: 'Delete my account',
     eliminarCuentaTitulo: 'Delete your account?',

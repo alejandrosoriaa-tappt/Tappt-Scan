@@ -159,6 +159,31 @@ Cómo se resolvió, porque las decisiones importan más que el código:
   `scan_payments`, `scan_firmas`) tienen `on delete cascade` sobre
   `user_id`, así que se van solas. **No hizo falta migración.**
 
+### ✅ Restaurar compras — guía 3.1.1
+
+Toda app con suscripciones tiene que ofrecer **restaurar**. Ya está:
+`comprasIAP.restaurarCompras()` + el botón en Ajustes.
+
+Resuelve un problema real, no solo el trámite: si el usuario reinstala o
+cambia de teléfono, ya pagó y sin esto la app lo deja en gratis sin salida.
+`getAvailablePurchases()` le pregunta a la tienda qué compró esta cuenta
+(no cobra nada) y cada compra se revalida contra el mismo
+`POST /api/pagos/iap/verificar` — el backend sigue siendo quien decide el
+plan, el cliente nunca lo dice.
+
+Dos cosas que hubo que arreglar en el backend para que restaurar no
+ensuciara nada:
+
+- **El endpoint ahora es idempotente**: antes insertaba una fila en
+  `scan_payments` en cada llamada, y restaurar se puede tocar cuantas veces
+  uno quiera — las cuentas de ingresos habrían salido infladas.
+- **Devuelve `vigente`**: el recibo de Apple trae el historial completo, así
+  que una compra restaurada puede venir **vencida**. Sin ese dato la app
+  diría "listo, restaurado" sin haber activado nada.
+
+El botón se muestra siempre que haya IAP, no solo en plan gratis: el caso
+que resuelve es justo el del usuario que ya pagó y la app no lo sabe.
+
 ### 🟡 Guía 3.1.1 — no mandar a comprar afuera
 
 Ya está atendido a propósito: `AjustesScreen` solo muestra los botones de
@@ -222,9 +247,10 @@ Eso es el paso 3 del plan (DocQuad en el dispositivo), documentado en
 3. **Development build** y probar el flujo entero en un iPhone real.
 4. Alta de la app y de los dos productos en **App Store Connect**;
    `APPLE_SHARED_SECRET` en Railway.
-5. Probar la compra en sandbox contra `POST /api/pagos/iap/verificar` —
-   confirmar que el plan **sí** queda activado antes de que
-   `finishTransaction` cierre la compra.
+5. Probar en sandbox la **compra** y el **restaurar**, contra
+   `POST /api/pagos/iap/verificar`: confirmar que el plan queda activado
+   antes de que `finishTransaction` cierre la compra, y que restaurar en un
+   dispositivo limpio devuelve el plan.
 6. Publicar la pantalla de consentimiento de **Google Cloud a producción**
    antes de meter testers (si no, el Drive se les desconecta cada 7 días —
    ver `docs/GOOGLE-DRIVE.md`).
@@ -247,5 +273,12 @@ sirve igual para probar IAP. Dos avisos:
   managed a propósito y `app.json` sigue siendo la fuente de verdad. Si
   editas algo dentro de `ios/`, el siguiente prebuild se lo lleva.
 - Con **Apple Developer gratuito** la app caduca a los 7 días y **no hay
-  IAP**: los productos de la tienda requieren cuenta de pago. Para probar
-  el cobro no hay atajo, hay que pagar los 99 USD.
+  IAP**: los productos viven en App Store Connect, que requiere la
+  membresía activa. O sea que con cuenta gratuita se puede probar todo
+  —cámara, recorte, editor, firmas, Drive, borrado de cuenta— **menos
+  comprar y restaurar**. Para eso no hay atajo.
+- Si la cuenta va como **organización**, el alta se atora en el **D-U-N-S**
+  (Apple lo pide para verificar la empresa y tarda días). Como **individuo**
+  es inmediato, pero conviene aguantar: para Google Play una cuenta personal
+  nueva exige 12 testers durante 14 días antes de poder publicar, y la de
+  organización no.

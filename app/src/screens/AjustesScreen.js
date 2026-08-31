@@ -30,6 +30,7 @@ export default function AjustesScreen() {
   const { t, idioma, setIdioma, idiomas } = useIdioma();
   const [comprando, setComprando] = useState(null); // 'personal' | 'negocio' | null
   const [eliminando, setEliminando] = useState(false);
+  const [restaurando, setRestaurando] = useState(false);
 
   /**
    * Dos canales de cobro (docs/DIRECCION-DISENO.md, decisión 2026-08-12):
@@ -55,6 +56,32 @@ export default function AjustesScreen() {
       if (err.message !== 'E_USER_CANCELLED') alertar(t('noSePudo'), err.message);
     } finally {
       setComprando(null);
+    }
+  };
+
+  /**
+   * Restaurar compras — Apple lo exige (guía 3.1.1) en toda app con
+   * suscripciones. No cobra nada: le pregunta a la tienda qué compró ya
+   * esta cuenta y revalida contra el backend.
+   *
+   * Se muestra SIEMPRE que haya IAP, no solo en plan gratis: el caso que
+   * resuelve es justo el del usuario que ya pagó y la app no lo sabe
+   * (reinstaló, cambió de teléfono, o entró con otra sesión).
+   */
+  const restaurarCompras = async () => {
+    setRestaurando(true);
+    try {
+      const resultado = await comprasIAP.restaurarCompras();
+      if (resultado) {
+        await refrescarCuenta();
+        alertar(t('restaurarListo'), t('restaurarListoDetalle'));
+      } else {
+        alertar(t('restaurarNada'), t('restaurarNadaDetalle'));
+      }
+    } catch (err) {
+      alertar(t('noSePudo'), err.message);
+    } finally {
+      setRestaurando(false);
     }
   };
 
@@ -189,6 +216,21 @@ export default function AjustesScreen() {
           </TouchableOpacity>
         )}
 
+        {iapDisponible ? (
+          <TouchableOpacity
+            style={estilos.botonRestaurar}
+            onPress={restaurarCompras}
+            disabled={restaurando}
+            activeOpacity={0.85}
+          >
+            {restaurando ? (
+              <ActivityIndicator color={colores.textoSuave} />
+            ) : (
+              <Text style={estilos.botonRestaurarTexto}>{t('restaurarCompras')}</Text>
+            )}
+          </TouchableOpacity>
+        ) : null}
+
         <TouchableOpacity onPress={cerrarSesion}>
           <Text style={estilos.salir}>{t('cerrarSesion')}</Text>
         </TouchableOpacity>
@@ -271,6 +313,16 @@ const estilos = StyleSheet.create({
     alignItems: 'center',
   },
   botonPlanIAPTexto: { color: '#FFFFFF', fontSize: 15, fontWeight: '600' },
+  botonRestaurar: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: colores.divisor,
+    paddingVertical: espacio.md,
+    marginTop: espacio.sm,
+  },
+  botonRestaurarTexto: { color: colores.textoSuave, fontSize: 14, fontWeight: '600' },
   salir: { color: colores.peligro, fontSize: 14, textAlign: 'center', marginTop: espacio.lg },
   // Deliberadamente discreto y separado de "cerrar sesión": tiene que ser
   // fácil de encontrar (Apple lo revisa) y difícil de tocar por accidente.

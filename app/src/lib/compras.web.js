@@ -10,4 +10,13 @@ async function comprarPlan() {
   throw new Error('iap_no_disponible_en_web');
 }
 
-export const comprasIAP = { iniciar: async () => {}, detener: () => {}, comprarPlan };
+export async function restaurarCompras() {
+  throw new Error('iap_no_disponible_en_web');
+}
+
+export const comprasIAP = {
+  iniciar: async () => {},
+  detener: () => {},
+  comprarPlan,
+  restaurarCompras,
+};
