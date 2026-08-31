@@ -265,10 +265,16 @@ excepción es **`react-native-iap`** (módulo nativo, no existe en Expo Go):
 la compra de planes solo se puede probar en un *development build*.
 Para beta con usuarios reales, ver `docs/DISTRIBUCION.md` (web app, EAS
 Build, TestFlight y Play Internal Testing); para iOS nativo paso a paso,
-**`docs/BUILD-NATIVO-IOS.md`** — ahí está lo que falta en el repo (projectId
-de EAS, `expo-dev-client`, `env` en `eas.json`, productos en App Store
-Connect, `APPLE_SHARED_SECRET`) y el bloqueador duro de revisión: **la app
-no deja borrar la cuenta** (guía 5.1.1(v) de Apple).
+**`docs/BUILD-NATIVO-IOS.md`** — ahí está lo que falta en el repo (el
+`projectId` de EAS, los productos en App Store Connect y
+`APPLE_SHARED_SECRET` en Railway) y los bloqueadores de revisión de Apple.
+
+**Borrado de cuenta** (`DELETE /api/cuenta` + botón en Ajustes): lo exige la
+guía 5.1.1(v) de la App Store. Borra nuestra metadata, revoca el token de
+Drive y cancela Stripe — pero **NO borra los documentos**, que viven en el
+Drive del usuario y son suyos. Una suscripción de IAP no se puede cancelar
+desde el servidor; el diálogo avisa que la cancele en los ajustes del
+sistema.
 
 ## Modelo de negocio (referencia)
 

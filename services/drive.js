@@ -169,6 +169,29 @@ async function downloadFile(tokens, fileId) {
   return Buffer.from(data);
 }
 
+/**
+ * Revoca el acceso a Drive que el usuario nos dio.
+ *
+ * Se usa al borrar la cuenta: dejar de guardar los tokens no basta, porque
+ * el permiso sigue vivo del lado de Google y el usuario lo ve listado en su
+ * cuenta. Revocar de este lado lo quita de verdad.
+ *
+ * No lanza: es cortesía, no puede impedir que la cuenta se borre. Si el
+ * token ya expiró o ya estaba revocado, Google responde 400 y da igual.
+ */
+async function revocarAcceso(tokens) {
+  const token = tokens?.refresh_token || tokens?.access_token;
+  if (!token) return false;
+
+  try {
+    await oauthClient().revokeToken(token);
+    return true;
+  } catch (err) {
+    console.warn('[drive] no se pudo revocar el acceso:', err.message);
+    return false;
+  }
+}
+
 module.exports = {
   authUrl,
   exchangeCode,
@@ -179,5 +202,6 @@ module.exports = {
   usoDeAlmacenamiento,
   uploadFile,
   downloadFile,
+  revocarAcceso,
   ROOT_FOLDER_NAME,
 };

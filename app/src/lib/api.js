@@ -144,6 +144,14 @@ export const api = {
   upgrade: (plan) =>
     request('/api/cuenta/upgrade', { method: 'POST', body: JSON.stringify({ plan }) }),
 
+  // Borrado de cuenta (requisito 5.1.1(v) de la App Store). La palabra va
+  // explícita porque el backend la exige: esto no tiene deshacer.
+  eliminarCuenta: () =>
+    request('/api/cuenta', {
+      method: 'DELETE',
+      body: JSON.stringify({ confirmacion: 'ELIMINAR' }),
+    }),
+
   documentos: (tipo) => request(`/api/documentos${tipo ? `?tipo=${tipo}` : ''}`),
   escanear: (imagen, mimeType = 'image/jpeg', esquinas = null, filtro = null) =>
     request('/api/documentos/escanear', {

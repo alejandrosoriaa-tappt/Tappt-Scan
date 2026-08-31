@@ -4,6 +4,7 @@ const router = express.Router();
 const { requireAuth } = require('../services/auth');
 const planes = require('../services/planes');
 const stripe = require('../services/stripe');
+const drive = require('../services/drive');
 const whatsapp = require('../services/whatsapp');
 const supabase = require('../services/supabase');
 const { t, IDIOMAS } = require('../services/i18n');
@@ -85,6 +86,61 @@ router.post('/upgrade', requireAuth, async (req, res) => {
   } catch (err) {
     console.error('[cuenta] error generando pago', err);
     res.status(500).json({ error: 'error_pago' });
+  }
+});
+
+/**
+ * Borrado de cuenta — requisito de la App Store (guía 5.1.1(v)): una app que
+ * deja crear una cuenta tiene que dejar borrarla DESDE ADENTRO. Aquí la
+ * cuenta nace sola con el primer mensaje de WhatsApp (`services/sesiones.js`),
+ * así que aplica igual.
+ *
+ * Qué borra y qué no, a propósito:
+ *
+ * - **Sus documentos NO se borran de Drive.** Viven en el Drive del propio
+ *   usuario y son suyos; borrarlos sería destruir sus archivos, no los
+ *   nuestros. Lo que se borra es nuestra metadata y nuestro acceso.
+ * - Se revoca el permiso de Drive, porque olvidar el token no lo revoca del
+ *   lado de Google: el usuario seguiría viendo el permiso concedido.
+ * - Se cancela la suscripción de Stripe si la hay, o se le seguiría cobrando
+ *   a alguien que ya no tiene cuenta.
+ * - Una suscripción de **IAP no se puede cancelar desde aquí**: Apple y
+ *   Google solo dejan cancelarla desde los ajustes del sistema. Por eso la
+ *   respuesta avisa, y la app lo muestra antes de confirmar.
+ *
+ * Las tablas hijas (`scan_documents`, `scan_versiones`, `scan_sesiones`,
+ * `scan_payments`, `scan_firmas`) tienen `on delete cascade` sobre
+ * `user_id`, así que se van con la fila del usuario.
+ */
+router.delete('/', requireAuth, async (req, res) => {
+  try {
+    // Salvaguarda contra un DELETE por accidente: la app manda la palabra
+    // explícita que el usuario tecleó. Es barato y esto no tiene deshacer.
+    if (req.body?.confirmacion !== 'ELIMINAR') {
+      return res.status(400).json({ error: 'confirmacion_requerida' });
+    }
+
+    const usuario = req.usuario;
+
+    // Ninguna de las dos puede impedir el borrado: son limpieza de afuera,
+    // y las dos tragan sus errores.
+    if (usuario.drive_tokens) await drive.revocarAcceso(usuario.drive_tokens);
+    if (usuario.stripe_subscription_id) {
+      await stripe.cancelarSuscripcion(usuario.stripe_subscription_id);
+    }
+
+    const { error } = await supabase.from('scan_users').delete().eq('id', usuario.id);
+    if (error) throw error;
+
+    const suscripcionDeTienda = Boolean(
+      usuario.apple_original_transaction_id || usuario.google_purchase_token
+    );
+
+    console.log(`[cuenta] cuenta borrada: ${usuario.id}`);
+    res.json({ ok: true, suscripcionDeTienda });
+  } catch (err) {
+    console.error('[cuenta] error borrando la cuenta', err);
+    res.status(500).json({ error: 'error_borrando_cuenta' });
   }
 });
 

@@ -31,28 +31,30 @@ nativo lo genera `expo prebuild` dentro de EAS en cada build. No versionar
 
 Verificado contra el repo en esta rama. Nada de esto está hecho:
 
-1. **No hay `extra.eas.projectId` en `app.json`.** Lo crea
-   `eas build:configure` la primera vez (requiere `npx expo login`).
-2. **No existe `expo-dev-client` en las dependencias**, así que el perfil
-   `development` de `eas.json` no produce todavía una app con recarga en
-   vivo. Se instala con `npx expo install expo-dev-client`.
-3. **El perfil `production` de `eas.json` no tiene bloque `ios`** — solo
-   Android (`app-bundle`). Para iOS basta con que exista el perfil, pero
-   conviene dejarlo explícito.
-4. **`submit.production` está vacío.** Para `eas submit` hacen falta
-   `appleId`, `ascAppId` y `appleTeamId` (o pasarlos interactivo).
-5. **Los productos de IAP no están dados de alta** en App Store Connect.
+1. ⬜ **No hay `extra.eas.projectId` en `app.json`.** Lo crea
+   `eas build:configure` la primera vez (requiere `npx expo login`). Es lo
+   único de esta lista que no se puede dejar listo desde el repo: necesita
+   la sesión de Expo.
+2. ✅ **`expo-dev-client` ya está** en las dependencias (`~4.0.29`), así que
+   el perfil `development` sí produce una app con recarga en vivo.
+3. ✅ **`eas.json` ya trae `EXPO_PUBLIC_API_URL` en los tres perfiles** y
+   bloque `ios` en `production`.
+4. ⬜ **`submit.production` tiene los campos, con valores de relleno.** Hay
+   que sustituir `appleId`, `ascAppId` y `appleTeamId` por los reales
+   cuando exista la cuenta de Apple.
+5. ⬜ **Los productos de IAP no están dados de alta** en App Store Connect.
    Los IDs ya están fijados en el código y tienen que coincidir EXACTO en
    los tres lados:
    - `app/src/lib/compras.native.js` → `PRODUCTOS_IAP`
    - `services/iap.js` → `PRODUCTOS`
    - App Store Connect → `lat.tappt.scan.personal.anual`,
      `lat.tappt.scan.negocio.anual`
-6. **`APPLE_SHARED_SECRET` no está configurada en Railway.**
+6. ⬜ **`APPLE_SHARED_SECRET` no está configurada en Railway.**
    `services/iap.js` lanza `falta_apple_shared_secret` sin ella, así que la
    compra cobra y **no activa el plan**. Se saca en App Store Connect →
    App Information → App-Specific Shared Secret.
-7. **Falta borrado de cuenta en la app** (ver "Bloqueadores de revisión").
+7. ✅ **Borrado de cuenta implementado** — `DELETE /api/cuenta` y el botón
+   en Ajustes. Era el bloqueador duro; ver abajo qué borra y qué no.
 
 ## Prerrequisitos
 
@@ -129,15 +131,33 @@ responde.
 
 Ordenados por probabilidad de rechazo, con el estado en este repo.
 
-### 🔴 Borrado de cuenta — guía 5.1.1(v)
+### ✅ Borrado de cuenta — guía 5.1.1(v)
 
-Una app que **crea cuentas** debe dejar **borrarlas desde adentro**. Aquí se
-crea una cuenta en el primer mensaje de WhatsApp (`services/sesiones.js`),
-y hoy no existe ni endpoint ni pantalla: `routes/cuenta.js` solo tiene
-`GET /`, `PUT /preferencias` y `POST /upgrade`. **Es rechazo seguro.**
-Falta `DELETE /api/cuenta` (borrar `scan_users` + sus `scan_documents` y
-`scan_sesiones`; los archivos viven en el Drive del usuario y son suyos) y
-su botón en `AjustesScreen`.
+Una app que **crea cuentas** debe dejar **borrarlas desde adentro**. Aquí la
+cuenta nace sola con el primer mensaje de WhatsApp
+(`services/sesiones.js`), así que aplica igual. **Ya está implementado**:
+`DELETE /api/cuenta` (`routes/cuenta.js`) y el botón en `AjustesScreen`.
+
+Cómo se resolvió, porque las decisiones importan más que el código:
+
+- **Los documentos NO se borran de Drive.** Viven en el Drive del propio
+  usuario y son suyos; borrarlos sería destruir sus archivos. Se borra
+  nuestra metadata y nuestro acceso. La app se lo dice antes de confirmar.
+- **Se revoca el token de Google** (`drive.revocarAcceso`): olvidar el token
+  no revoca el permiso — el usuario lo seguiría viendo concedido en su
+  cuenta de Google.
+- **Se cancela la suscripción de Stripe** si la hay
+  (`stripe.cancelarSuscripcion`), o se le seguiría cobrando a alguien sin
+  cuenta. Las dos limpiezas **tragan sus errores**: que Stripe o Google
+  fallen no puede impedir que el usuario se borre.
+- **Una suscripción de IAP no se puede cancelar desde el servidor** — Apple
+  y Google solo dejan hacerlo desde los ajustes del sistema. Por eso el
+  diálogo lo avisa cuando el plan no es gratis.
+- El backend exige `{ "confirmacion": "ELIMINAR" }` en el cuerpo: es barato
+  y esto no tiene deshacer.
+- Las tablas hijas (`scan_documents`, `scan_versiones`, `scan_sesiones`,
+  `scan_payments`, `scan_firmas`) tienen `on delete cascade` sobre
+  `user_id`, así que se van solas. **No hizo falta migración.**
 
 ### 🟡 Guía 3.1.1 — no mandar a comprar afuera
 
@@ -195,9 +215,10 @@ Eso es el paso 3 del plan (DocQuad en el dispositivo), documentado en
 
 ## Orden recomendado
 
-1. Cerrar el **borrado de cuenta** (backend + pantalla). Es el único
-   bloqueador duro y no depende de Apple.
-2. `eas build:configure` + `expo-dev-client` + `env` en `eas.json`.
+1. ~~Cerrar el **borrado de cuenta**~~ ✅ hecho.
+2. ~~`expo-dev-client` + `env` en `eas.json`~~ ✅ hecho. Falta
+   `eas build:configure` (necesita `npx expo login`, no se puede dejar
+   listo desde el repo).
 3. **Development build** y probar el flujo entero en un iPhone real.
 4. Alta de la app y de los dos productos en **App Store Connect**;
    `APPLE_SHARED_SECRET` en Railway.
@@ -208,3 +229,23 @@ Eso es el paso 3 del plan (DocQuad en el dispositivo), documentado en
    antes de meter testers (si no, el Drive se les desconecta cada 7 días —
    ver `docs/GOOGLE-DRIVE.md`).
 7. Build de producción → `eas submit` → **TestFlight**.
+
+## Atajo si tienes Mac con Xcode
+
+Con una Mac, Xcode y el iPhone conectado por cable, se puede saltar la cola
+de EAS y compilar en local:
+
+```bash
+cd app
+npx expo run:ios --device      # prebuild + compila + instala en el iPhone
+```
+
+Es más rápido para iterar (segundos contra minutos de cola en la nube) y
+sirve igual para probar IAP. Dos avisos:
+
+- Genera la carpeta `ios/` en el disco. **No la commitees** — el repo es
+  managed a propósito y `app.json` sigue siendo la fuente de verdad. Si
+  editas algo dentro de `ios/`, el siguiente prebuild se lo lleva.
+- Con **Apple Developer gratuito** la app caduca a los 7 días y **no hay
+  IAP**: los productos de la tienda requieren cuenta de pago. Para probar
+  el cobro no hay atajo, hay que pagar los 99 USD.

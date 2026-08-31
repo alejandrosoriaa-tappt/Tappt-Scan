@@ -6,12 +6,18 @@
   "build": {
     "development": {
       "developmentClient": true,
-      "distribution": "internal"
+      "distribution": "internal",
+      "env": {
+        "EXPO_PUBLIC_API_URL": "https://scan.tappt.lat"
+      }
     },
 
     "preview": {
       "distribution": "internal",
       "channel": "preview",
+      "env": {
+        "EXPO_PUBLIC_API_URL": "https://scan.tappt.lat"
+      },
       "android": {
         "buildType": "apk"
       },
@@ -23,12 +29,24 @@
     "production": {
       "channel": "production",
       "autoIncrement": true,
+      "env": {
+        "EXPO_PUBLIC_API_URL": "https://scan.tappt.lat"
+      },
       "android": {
         "buildType": "app-bundle"
+      },
+      "ios": {
+        "resourceClass": "m-medium"
       }
     }
   },
   "submit": {
-    "production": {}
+    "production": {
+      "ios": {
+        "appleId": "APPLE_ID_DE_LA_CUENTA",
+        "ascAppId": "ID_NUMERICO_DE_APP_STORE_CONNECT",
+        "appleTeamId": "TEAM_ID"
+      }
+    }
   }
 }

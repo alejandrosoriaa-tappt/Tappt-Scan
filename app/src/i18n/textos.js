@@ -40,6 +40,17 @@ export const TEXTOS = {
     conectarDrive: 'Conectar Drive',
     cerrarSesion: 'Cerrar sesión',
 
+    // Borrado de cuenta (requisito de la App Store)
+    eliminarCuenta: 'Eliminar mi cuenta',
+    eliminarCuentaTitulo: '¿Eliminar tu cuenta?',
+    eliminarCuentaDetalle:
+      'Se borra tu cuenta y todo lo que guardamos de ti. Tus documentos NO se borran: viven en tu Google Drive y siguen siendo tuyos. Esto no se puede deshacer.',
+    eliminarCuentaTienda:
+      'Tu suscripción se contrató en la tienda: cancélala desde los ajustes de tu dispositivo o te la seguirán cobrando.',
+    eliminarCuentaConfirmar: 'Sí, eliminar',
+    eliminarCuentaCancelar: 'Cancelar',
+    eliminarCuentaLista: 'Tu cuenta fue eliminada.',
+
     // Dashboard
     hola: 'Hola',
     subSaludo: 'Tus documentos, en tu propio Drive.',
@@ -328,6 +339,16 @@ export const TEXTOS = {
       "That's where your documents go. We only keep their details so you can search them.",
     conectarDrive: 'Connect Drive',
     cerrarSesion: 'Sign out',
+
+    eliminarCuenta: 'Delete my account',
+    eliminarCuentaTitulo: 'Delete your account?',
+    eliminarCuentaDetalle:
+      'This deletes your account and everything we store about you. Your documents are NOT deleted: they live in your Google Drive and stay yours. This cannot be undone.',
+    eliminarCuentaTienda:
+      'Your subscription was purchased through the store: cancel it in your device settings or you will keep being charged.',
+    eliminarCuentaConfirmar: 'Yes, delete',
+    eliminarCuentaCancelar: 'Cancel',
+    eliminarCuentaLista: 'Your account has been deleted.',
 
     hola: 'Hi',
     subSaludo: 'Your documents, in your own Drive.',

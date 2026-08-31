@@ -4,8 +4,9 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Linking } from 'react-native';
 import Icono from '../components/Icono';
 import { useSesion } from '../context/SesionContext';
+import { api } from '../lib/api';
 import { useIdioma } from '../i18n';
-import { alertar } from '../lib/alerta';
+import { alertar, alertarConBotones } from '../lib/alerta';
 import { TEXTOS } from '../i18n/textos';
 import { colores, espacio } from '../theme';
 import { iapDisponible, comprasIAP } from '../lib/compras';
@@ -28,6 +29,7 @@ export default function AjustesScreen() {
   const { cuenta, cerrarSesion, refrescarCuenta } = useSesion();
   const { t, idioma, setIdioma, idiomas } = useIdioma();
   const [comprando, setComprando] = useState(null); // 'personal' | 'negocio' | null
+  const [eliminando, setEliminando] = useState(false);
 
   /**
    * Dos canales de cobro (docs/DIRECCION-DISENO.md, decisión 2026-08-12):
@@ -54,6 +56,44 @@ export default function AjustesScreen() {
     } finally {
       setComprando(null);
     }
+  };
+
+  /**
+   * Borrado de cuenta — la App Store lo exige (guía 5.1.1(v)) para
+   * cualquier app que deje crear una cuenta, y aquí la cuenta nace sola con
+   * el primer mensaje de WhatsApp.
+   *
+   * Se avisa que los documentos NO se borran (viven en su Drive, son suyos)
+   * y, si la suscripción vino de la tienda, que esa la tiene que cancelar
+   * él desde los ajustes del sistema: ni Apple ni Google dejan cancelarla
+   * desde el servidor.
+   */
+  const eliminarCuenta = () => {
+    const deTienda = iapDisponible && cuenta.plan !== 'gratis';
+    const detalle = deTienda
+      ? `${t('eliminarCuentaDetalle')}\n\n${t('eliminarCuentaTienda')}`
+      : t('eliminarCuentaDetalle');
+
+    alertarConBotones(t('eliminarCuentaTitulo'), detalle, [
+      {
+        text: t('eliminarCuentaConfirmar'),
+        style: 'destructive',
+        onPress: async () => {
+          setEliminando(true);
+          try {
+            await api.eliminarCuenta();
+            alertar(t('eliminarCuentaLista'));
+            // Sin cuenta no hay a dónde volver: cerrar sesión deja la app
+            // en Login, que es el único estado válido a partir de aquí.
+            await cerrarSesion();
+          } catch (err) {
+            alertar(t('noSePudo'), err.message);
+            setEliminando(false);
+          }
+        },
+      },
+      { text: t('eliminarCuentaCancelar'), style: 'cancel' },
+    ]);
   };
 
   if (!cuenta) return <SafeAreaView style={estilos.pantalla} />;
@@ -153,6 +193,14 @@ export default function AjustesScreen() {
           <Text style={estilos.salir}>{t('cerrarSesion')}</Text>
         </TouchableOpacity>
 
+        <TouchableOpacity onPress={eliminarCuenta} disabled={eliminando}>
+          {eliminando ? (
+            <ActivityIndicator style={estilos.eliminar} color={colores.peligro} />
+          ) : (
+            <Text style={[estilos.salir, estilos.eliminar]}>{t('eliminarCuenta')}</Text>
+          )}
+        </TouchableOpacity>
+
         <Text style={estilos.nota}>{t('promesa')}</Text>
         <Text style={estilos.creditos}>{t('desarrolladoPor')}</Text>
       </ScrollView>
@@ -224,6 +272,9 @@ const estilos = StyleSheet.create({
   },
   botonPlanIAPTexto: { color: '#FFFFFF', fontSize: 15, fontWeight: '600' },
   salir: { color: colores.peligro, fontSize: 14, textAlign: 'center', marginTop: espacio.lg },
+  // Deliberadamente discreto y separado de "cerrar sesión": tiene que ser
+  // fácil de encontrar (Apple lo revisa) y difícil de tocar por accidente.
+  eliminar: { fontSize: 13, marginTop: espacio.md, opacity: 0.7 },
   nota: {
     fontSize: 12,
     color: colores.textoSuave,

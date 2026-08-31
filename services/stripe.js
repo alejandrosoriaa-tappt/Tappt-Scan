@@ -99,4 +99,26 @@ async function traerSuscripcion(id) {
   return cliente().subscriptions.retrieve(id);
 }
 
-module.exports = { crearLinkDePago, verificarEvento, portalDeCliente, traerSuscripcion };
+/**
+ * Cancela la suscripción de inmediato.
+ *
+ * Va con el borrado de cuenta: si solo se borra la fila, Stripe sigue
+ * cobrando cada año a alguien que ya no tiene cuenta. Se cancela YA (no al
+ * final del periodo) porque el usuario pidió irse.
+ *
+ * No lanza, por la misma razón que `revocarAcceso`: que Stripe falle no
+ * puede dejar al usuario sin poder borrarse.
+ */
+async function cancelarSuscripcion(id) {
+  if (!id) return false;
+
+  try {
+    await cliente().subscriptions.cancel(id);
+    return true;
+  } catch (err) {
+    console.warn('[stripe] no se pudo cancelar la suscripción:', err.message);
+    return false;
+  }
+}
+
+module.exports = { crearLinkDePago, verificarEvento, portalDeCliente, traerSuscripcion, cancelarSuscripcion };
