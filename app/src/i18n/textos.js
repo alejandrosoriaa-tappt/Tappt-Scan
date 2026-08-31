@@ -67,6 +67,11 @@ export const TEXTOS = {
     sigueAjustando: 'Casi... ajusta un poco más',
     listoParaCapturar: 'Listo para capturar',
     tomandoFoto: 'Tomando la foto…',
+    abriendoEscaner: 'Abriendo escáner…',
+    escanerNoDisponible: 'No se pudo abrir el escáner',
+    escanerNativoDetalle:
+      'Detecta bordes, endereza y permite capturar varias páginas antes de regresar a TapptScan.',
+    intentarDeNuevo: 'Intentar de nuevo',
     tambienWhatsapp: 'También puedes mandarnos la foto por WhatsApp y la guardamos igual.',
     buscandoDocumento: 'Buscando el documento…',
     arrastraEsquinas: 'Arrastra las esquinas para ajustar el recorte.',
@@ -366,6 +371,11 @@ export const TEXTOS = {
     sigueAjustando: 'Almost there... adjust a bit more',
     listoParaCapturar: 'Ready to capture',
     tomandoFoto: 'Taking the photo…',
+    abriendoEscaner: 'Opening scanner…',
+    escanerNoDisponible: 'Could not open the scanner',
+    escanerNativoDetalle:
+      'It detects edges, straightens pages, and captures multiple pages before returning to TapptScan.',
+    intentarDeNuevo: 'Try again',
     tambienWhatsapp: "You can also send us the photo on WhatsApp and we'll save it the same.",
     buscandoDocumento: 'Finding the document…',
     arrastraEsquinas: 'Drag the corners to adjust the crop.',
