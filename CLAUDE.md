@@ -268,6 +268,16 @@ Build, TestFlight y Play Internal Testing); para iOS nativo paso a paso,
 **`docs/BUILD-NATIVO-IOS.md`** — ahí está lo que falta en el repo (el
 `projectId` de EAS, los productos en App Store Connect y
 `APPLE_SHARED_SECRET` en Railway) y los bloqueadores de revisión de Apple.
+Su hermana **`docs/BUILD-NATIVO-ANDROID.md`** cubre Play, y trae el
+bloqueador duro de esa plataforma: **el repo está en Expo SDK 51 (API 34) y
+Play ya no acepta apps nuevas tan abajo** — hay que subir el SDK antes de
+poder publicar. iOS no tiene ese corte.
+
+**Restaurar compras** (`comprasIAP.restaurarCompras()` + botón en Ajustes):
+lo exige la guía 3.1.1 y resuelve el caso del usuario que reinstala o cambia
+de teléfono. Por eso `POST /api/pagos/iap/verificar` es **idempotente** y
+devuelve `vigente`: se puede llamar cuantas veces se quiera sin duplicar
+filas en `scan_payments`, y una compra restaurada puede venir vencida.
 
 **Borrado de cuenta** (`DELETE /api/cuenta` + botón en Ajustes): lo exige la
 guía 5.1.1(v) de la App Store. Borra nuestra metadata, revoca el token de

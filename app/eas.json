@@ -11,7 +11,6 @@
         "EXPO_PUBLIC_API_URL": "https://scan.tappt.lat"
       }
     },
-
     "preview": {
       "distribution": "internal",
       "channel": "preview",
@@ -25,7 +24,6 @@
         "simulator": false
       }
     },
-
     "production": {
       "channel": "production",
       "autoIncrement": true,
@@ -46,6 +44,10 @@
         "appleId": "APPLE_ID_DE_LA_CUENTA",
         "ascAppId": "ID_NUMERICO_DE_APP_STORE_CONNECT",
         "appleTeamId": "TEAM_ID"
+      },
+      "android": {
+        "serviceAccountKeyPath": "./credenciales-play.json",
+        "track": "internal"
       }
     }
   }
