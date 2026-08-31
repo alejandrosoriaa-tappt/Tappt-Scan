@@ -350,11 +350,30 @@ Ramas anteriores ya fusionadas y que NO hay que seguir usando:
 
 Para trabajo nuevo: partir de `main` con rama propia.
 
-⚠️ **Hay más de una sesión de Claude trabajando en esta rama.** El
-2026-08-27 aparecieron 8 commits ajenos al pushear (scanner multipágina,
-estabilizador de quad, A/B de cámara). Antes de empezar: `git fetch` y
-`git log HEAD..origin/<rama>` para ver qué llegó. Fusionar con merge, nunca
-rebase ni force-push sobre trabajo de otra sesión.
+## ⚠️ Quién trabaja en este repo
+
+Son **tres**, y conviene saber quién hizo qué antes de tocar nada:
+
+| Quién | Cómo commitea | Dónde deja su rastro |
+|---|---|---|
+| **Alejandro** | `Alejandro Soria` | — |
+| **Claude** (Claude Code) | autor `Claude` | `CLAUDE.md` + `docs/HANDOFF-<fecha>.md` |
+| **ChatGPT / Codex** | bajo la identidad de Alejandro (`alejandrosoriaa-tappt`) | ramas `codex/*` + `docs/HANDOFF-CHATGPT-<fecha>-*.md` |
+
+**Ojo con la atribución por autor de git: no sirve para distinguir a Codex
+de Alejandro** — Codex commitea con la cuenta de él. Lo que sí distingue es
+el **prefijo de rama** (`codex/`) y sus **archivos de handoff**.
+
+Casi todo el trabajo del scanner de agosto (multipágina, estabilizador de
+quad, A/B de cámara `18aaa71`, fix de Drive revocado) es de **ChatGPT/Codex**,
+no de otra sesión de Claude. Una versión anterior de esta memoria lo
+atribuía mal.
+
+**Convención que propuso Codex y conviene adoptar todos:** al cerrar,
+documentar siempre **rama, SHA base, PR, estado de validación y siguiente
+paso**. Antes de empezar: `git fetch --all` y revisar ramas `codex/*` además
+de `main`. Fusionar con merge, nunca rebase ni force-push sobre trabajo
+ajeno.
 
 ## 👉 Retomando la sesión (actualizado 2026-08-13 CDMX)
 
