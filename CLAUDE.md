@@ -338,8 +338,16 @@ sesión de Claude, leer inmediatamente:
 
 ## Rama de trabajo
 
-Rama activa: **`claude/new-session-9mhtdk`**. Desarrollar, commitear y
-pushear ahí. No abrir PR salvo que se pida explícitamente.
+Rama activa: **`claude/tappt-scan-memory-review-u0oook`**. Desarrollar,
+commitear y pushear ahí. No abrir PR salvo que se pida explícitamente.
+(La rama anterior, `claude/new-session-9mhtdk`, quedó atrás — su historia
+ya está fusionada aquí.)
+
+⚠️ **Hay más de una sesión de Claude trabajando en esta rama.** El
+2026-08-27 aparecieron 8 commits ajenos al pushear (scanner multipágina,
+estabilizador de quad, A/B de cámara). Antes de empezar: `git fetch` y
+`git log HEAD..origin/<rama>` para ver qué llegó. Fusionar con merge, nunca
+rebase ni force-push sobre trabajo de otra sesión.
 
 ## 👉 Retomando la sesión (actualizado 2026-08-13 CDMX)
 
@@ -1227,3 +1235,176 @@ Otros pendientes de producto:
   superficies midiéndolo. Falta: documento cortado por el borde (#7) y dos
   hojas de verdad encimadas (#10) — ver `scanner/fixtures/fotos/README.md`
   para el checklist completo.
+
+---
+
+# 📌 Sesión 2026-08-27 — mercado, precio y producto empaquetado
+
+Esta sesión fue mitad código y mitad estrategia. Lo de estrategia cambia
+decisiones de producto, así que queda aquí y no en un doc aparte.
+
+## Lo que se construyó (ya pusheado)
+
+| Commit | Qué |
+|---|---|
+| `957d060` | "Es otra cosa" ahora reclasifica de verdad (Map de estado pendiente + `vision.reclasificarConPista` + `drive.moverArchivo`) |
+| `6de8577` | Sección `08 · Educación` + nivel de persona en la ruta |
+
+⚠️ **PENDIENTE OPERATIVO:** correr el `ALTER TABLE scan_documents add column
+if not exists persona text;` en Supabase. Sin eso, la reclasificación con
+persona falla en producción. Está al final de `scan_schema.sql`.
+
+## 🇲🇽 El hallazgo del día: México es EL mercado, no un mercado
+
+Datos de Appfigures sobre **Scan Hero** (competidor, iOS, jul 2026):
+
+```
+Descargas mundiales/mes     <5,000        ↓ en declive
+Ingreso mundial/mes         $410K USD     ↓ en declive (después de comisiones)
+Rating                      4.62 (1.1M reseñas), 29M usuarios, 10 años
+
+Most Downloaded:
+  🇲🇽 México      59%   ← el dato
+     Angola        3%
+     Lituania      3%
+     Tailandia     2%
+```
+
+**México es el 59% de las descargas de un scanner global.** La estimación
+previa de esta sesión usaba el 2.1% que México pesa en el mercado global de
+apps — **estaba mal por un factor de ~28x** para esta categoría. México corre
+sobre trámites (INE, comprobante de domicilio, CFDI, actas), y eso hace que
+la demanda de escaneo aquí no se parezca al promedio mundial.
+
+Estimación del negocio de Scan Hero en México: **$1.2–1.7M USD/año**
+(~$22–31M MXN), o sea **25,000–30,000 suscriptores mexicanos**.
+
+Y con 59% de <5,000 descargas, **Scan Hero capta hoy solo ~3,000 descargas
+mensuales en México, a la baja**. No se compite contra un gigante en
+crecimiento: contra un producto genérico de 10 años que dejó de moverse.
+
+## 🔴 El problema de precio (bloquea todo lo demás)
+
+|  | Scan Hero | TapptScan |
+|---|---|---|
+| Anual | ~$1,399 MXN | **$299 MXN** |
+| Semanal | ~$99 MXN | — |
+| Capa gratis | **3 páginas/día** (~90/mes) | **5 escaneos/mes** |
+
+*(Precios de Scan Hero: EE.UU. verificado — semanal $4.99, mensual $14.99,
+anual $69.99. El equivalente mexicano es estimado por escalón de Apple, sin
+verificar en tienda.)*
+
+**Es la peor combinación posible:** la capa gratis corta al usuario **antes**
+de que llegue al momento en que se enamora (ver su archivo aparecer solo en
+Drive), y el plan de pago vale **una quinta parte** de lo que el mercado ya
+paga. Traer más tráfico a ese embudo solo agranda la fuga.
+
+**Dirección acordada con el usuario:** cobrar más y dar mucho más.
+Rango que él propone: **$79–89 MXN/semana** ($4,108–4,628/año), justo debajo
+de Scan Hero.
+
+Dos advertencias que quedan anotadas junto a la idea:
+
+1. **El churn semanal es brutal.** Pocos pasan de 8–12 semanas, así que el
+   ingreso real por usuario es una fracción del anualizado (~$630–1,070 MXN
+   si duran 8–12 semanas). Aun así es 2–3.5x el $299 actual.
+2. **Apple y PROFECO vigilan los semanales con prueba gratis.** La mecánica
+   hay que diseñarla con cuidado: prueba honesta, cancelación clara, sin
+   patrones oscuros. Un rechazo de App Review por esto cuesta semanas.
+
+**Primer paso, independiente del precio final:** subir la capa gratis a algo
+cercano a **un escaneo diario**. Hoy es el cuello de botella de adopción.
+
+## 💡 La idea grande: el paquete WhatsApp
+
+Del usuario, y vale la pena tomarla en serio:
+
+> **WhatsApp es el gran diferenciador.** Al usuario de TapptScan le
+> regalamos Tappt Agenda. Agenda + calendario + Google Drive + scanner.
+
+Por qué encaja: los dos productos ya existen, los dos son nativos de
+WhatsApp, y juntos cubren el día de una persona que trabaja por su cuenta —
+su agenda y sus papeles, en el mismo chat, sin instalar nada. Eso **sí**
+justifica $79–89/semana; $299/año no lo justificaba ni para un scanner solo.
+
+Ninguno de los competidores puede responder: CamScanner y Scan Hero no
+tienen agenda, y ningún calendario tiene scanner con clasificación por IA.
+
+⚠️ **Ojo con la regla permanente de verticales.** Empaquetar es una decisión
+**comercial**, no una fusión de código. `tappt-backend` (agenda) y
+`tappt-scan` siguen siendo repos, deploys y números de WhatsApp separados.
+Lo que se comparte es la oferta y, en su caso, la identidad del usuario —
+no las tablas. Definir cómo se vincula una cuenta entre los dos es trabajo
+de diseño pendiente, no un detalle.
+
+## Plan de fichas de App Store (listo)
+
+**8 Custom Product Pages** para la App Store mexicana, con copy, keywords y
+las 3 capturas de cada una:
+**https://claude.ai/code/artifact/66b7bbf7-7e6b-426e-a039-0b5eb90d7411**
+
+Ordenadas en tres olas: (1) Facturas y CFDI, Trámites, Colegiaturas —
+(2) Gasolina y viáticos, Control de gastos, Firmar sin imprimir —
+(3) Obra y campo, Salud familiar.
+
+Datos operativos que hay que recordar:
+
+- Apple permite **70 fichas** por app (subió de 35 en oct 2025). **Gratis**,
+  incluidas en los $99 USD/año. Scan Hero usa 29.
+- Por ficha **sí** cambian: capturas, video, texto promocional (170 car.) y
+  **keywords asignadas**.
+- Por ficha **no** cambian: nombre de la app, subtítulo, descripción larga.
+- **Desde julio 2025 las fichas con keywords salen en búsqueda orgánica**,
+  no solo en campañas pagadas. O sea: funcionan sin presupuesto de ads.
+- Cada ficha pasa por revisión de Apple — mandarlas juntas.
+
+## Cuentas de desarrollador — estado
+
+Nada iniciado todavía. El camino, por orden de qué tarda más:
+
+1. **D-U-N-S Number** (si Tappt se inscribe como empresa) — **gratis**, pero
+   hasta **30 días hábiles**. Buscar primero en
+   `developer.apple.com/enroll/duns-lookup/`: **es probable que Tappt ya
+   tenga uno** sin saberlo, y eso ahorra el cuello de botella entero.
+2. **Apple Developer Program**, 99 USD/año. Se tramita desde la app
+   **Apple Developer** (iPhone), con identificación oficial. Individual:
+   24–48 h. Organización: 1–2 semanas (y hay reportes de 3+). Decisión
+   tomada: **organización**, para que la App Store diga "Tappt" y no un
+   nombre personal — y porque Apple no convierte individual → organización
+   después.
+3. **Google Play**, 25 USD una sola vez. **Abrirla como organización**: una
+   cuenta personal nueva exige 12 testers durante 14 días antes de publicar.
+4. **En paralelo:** publicar la pantalla de consentimiento de Google Cloud a
+   producción. En modo *Testing* los refresh tokens caducan a los 7 días y a
+   los testers se les desconectaría el Drive cada semana (parecería bug
+   nuestro). Ver `docs/GOOGLE-DRIVE.md`.
+
+No se necesita Xcode ni Android Studio: EAS compila en la nube.
+
+## 🔜 Frentes abiertos para mañana
+
+**Técnicos (bloquean producto):**
+
+1. **Regresión de nitidez de cámara** — sigue abierta. Ver la sección
+   "🔴 ABIERTO (2026-08-20)". Otra sesión pusheó `18aaa71 fix(camara): A/B
+   primary vs ultra-wide con gate de resolución` — **revisar qué hizo antes
+   de duplicar trabajo.**
+2. **Correr el ALTER TABLE de `persona`** en Supabase.
+3. **Fixtures**: faltan #7 (documento cortado por el borde) y #10 (dos hojas
+   de verdad encimadas). Van 16/20.
+
+**Producto / negocio:**
+
+4. **Subir la capa gratis** a ~1 escaneo diario. Es el cambio de mayor
+   impacto y el más barato.
+5. **Diseñar el paquete Agenda + Scan**: qué incluye, cómo se vincula la
+   cuenta entre los dos repos, y qué precio.
+6. **Producir la Ola 1 de fichas** (3 juegos de capturas).
+7. **Buscar el D-U-N-S** — 2 minutos, y puede ahorrar un mes.
+
+**Nota de método:** varias conclusiones de esta sesión se corrigieron a sí
+mismas con datos (el 2.1% → 59%, el orden del nivel de persona, la
+estimación de descargas necesarias). Cuando un número de mercado venga de
+una analogía y no de una fuente, marcarlo como supuesto — aquí costó dos
+análisis equivocados antes de encontrar el dato real.
