@@ -341,6 +341,10 @@ sesión de Claude, leer inmediatamente:
 👉 **Para retomar, empieza por `docs/HANDOFF-2026-08-31.md`** — trae el
 estado, el pendiente que bloquea producción y los 8 frentes abiertos.
 
+💻 **¿Corres en el Mac mini de Alejandro?** Empieza por
+`docs/HANDOFF-MAC-MINI.md` — trae la secuencia exacta de comandos para
+terminar el build de iOS.
+
 🔨 **Build nativo de iOS en curso** (ChatGPT/Codex, en un Mac mini):
 `docs/BUILD-NATIVO-IOS.md`. Ojo: `docs/DISTRIBUCION.md` quedó desactualizado
 en la parte de iOS — ya no basta EAS, la app necesita prebuild por el módulo
