@@ -224,7 +224,7 @@ async function recibirArchivo(from, medio, mimePorDefecto) {
     [
       { id: 'ok', title: t(idioma, 'botonGuardar') },
       { id: 'app', title: t(idioma, 'botonApp') },
-      { id: 'otra_cosa', title: t(idioma, 'botonOtra') },
+      { id: 'cambiar_carpeta', title: t(idioma, 'botonCambiarCarpeta') },
     ]
   );
 }
@@ -244,11 +244,11 @@ async function handleDocument(from, documento) {
   await recibirArchivo(from, documento, 'application/pdf');
 }
 
-// Quién tocó "Es otra cosa" y sigue pendiente de decirnos qué era. Estado
-// efímero multi-turno → Map en memoria, como el resto del proyecto: si el
-// server reinicia se pierde y el usuario simplemente vuelve a mandar la foto.
-// Sin esto, su respuesta caía hasta el `bienvenida` del final y el bot
-// contestaba el saludo genérico como si nunca hubiera preguntado nada.
+// Quién tocó "Cambiar carpeta" / "Es otra cosa" y sigue pendiente de decirnos
+// dónde debe quedar. Este Map acelera el flujo normal, pero ya NO es la única
+// forma de reconocer la corrección: más abajo también detectamos lenguaje
+// natural contra el documento reciente, así un reinicio de Railway no rompe
+// la conversación entre el botón y la respuesta del usuario.
 const reclasificacionPendiente = new Map();
 
 // Media hora es de sobra para contestar "es la colegiatura de mi hijo", y
@@ -274,10 +274,36 @@ const QUIERE_PLAN = /(quiero|dame|activar|i want|upgrade to|get)\s+(el\s+)?(plan
 const QUIERE_SUSCRIPCION =
   /\b(cancelar|cancelaci[óo]n|mi suscripci[óo]n|dar de baja|cambiar (mi )?tarjeta|facturaci[óo]n|cancel|my subscription|unsubscribe|billing)\b/i;
 
+// Comandos explícitos para mover el último documento ya guardado. No dependen
+// del Map anterior y por eso siguen funcionando después de un redeploy.
+const QUIERE_REUBICAR_DOCUMENTO =
+  /(cambiar|cambia|mover|mueve|guardar|guarda|archivar|archiva|change|move|save|file).*(carpeta|folder|drive|documento|document)|\b(gu[áa]rdalo|mu[eé]velo|arch[ií]valo)\s+(en|a)\b/i;
+
+// Respuestas naturales que normalmente llegan justo después del guardado:
+// "Es un comprobante de colegiatura", "esto es de Patricio", "va en autos".
+// Solo se aceptan automáticamente si de verdad hay un documento de los últimos
+// 30 minutos; así una conversación posterior no mueve archivos por accidente.
+const PARECE_CORRECCION_RECIENTE =
+  /^(es\b|esto es\b|se trata de\b|corresponde a\b|va en\b|ponlo en\b|gu[áa]rdalo en\b|mu[eé]velo a\b|it is\b|it's\b|this is\b|put it in\b|save it in\b|move it to\b)/i;
+
+async function hayDocumentoReciente(userId) {
+  const { data: reciente } = await supabase
+    .from('scan_documents')
+    .select('created_at')
+    .eq('user_id', userId)
+    .order('created_at', { ascending: false })
+    .limit(1)
+    .maybeSingle();
+
+  if (!reciente?.created_at) return false;
+  const creado = new Date(reciente.created_at).getTime();
+  return Number.isFinite(creado) && Date.now() - creado < VENTANA_RECLASIFICAR_MS;
+}
+
 /**
- * El usuario acaba de decirnos qué era el documento después de "Es otra
- * cosa". Se reclasifica con esa pista y se MUEVE el archivo en Drive — no se
- * vuelve a subir, así que conserva su id y cualquier link ya compartido.
+ * El usuario acaba de decirnos qué era el documento o dónde quiere guardarlo.
+ * Se reclasifica con esa pista y se MUEVE el archivo en Drive — no se vuelve
+ * a subir, así que conserva su id y cualquier link ya compartido.
  */
 async function reclasificarUltimo(from, user, idioma, pista) {
   const { data: documento } = await supabase
@@ -376,14 +402,28 @@ async function handleText(from, text) {
   const user = await traerUsuario(from);
   const idioma = await idiomaDe(user, limpio);
 
-  // Va PRIMERO: si el usuario está contestando "Es otra cosa", su texto es la
-  // corrección, no una intención nueva. Se consume el pendiente aunque no
-  // haya usuario para no dejarlo colgado.
+  // Va PRIMERO: si el usuario está contestando "Cambiar carpeta" o el viejo
+  // botón "Es otra cosa", su texto es la corrección, no una intención nueva.
   if (tomarPendiente(from)) {
     if (!user) {
       await whatsapp.sendText(from, t(idioma, 'primeroApp'));
       return;
     }
+    await reclasificarUltimo(from, user, idioma, limpio);
+    return;
+  }
+
+  // También se puede pedir directamente, incluso si Railway reinició y perdió
+  // el Map: "mueve el último documento a Educación / Colegiaturas".
+  if (user && QUIERE_REUBICAR_DOCUMENTO.test(limpio)) {
+    await reclasificarUltimo(from, user, idioma, limpio);
+    return;
+  }
+
+  // Y resolvemos el caso de la captura real: después de guardar, el usuario
+  // puede escribir simplemente "Es un comprobante de pago de colegiatura..."
+  // sin tocar ningún botón. Solo usamos este atajo con un documento reciente.
+  if (user && PARECE_CORRECCION_RECIENTE.test(limpio) && (await hayDocumentoReciente(user.id))) {
     await reclasificarUltimo(from, user, idioma, limpio);
     return;
   }
@@ -467,11 +507,14 @@ async function handleButton(from, interactive) {
       from,
       t(idioma, 'verApp', { driveLink: reciente?.drive_link || '', appUrl: appUrl || '' })
     );
-  } else if (id === 'otra_cosa') {
-    // Se marca ANTES de preguntar: si el usuario contesta rapidísimo, el
-    // pendiente ya está puesto cuando llegue su texto.
+  } else if (id === 'cambiar_carpeta' || id === 'otra_cosa') {
+    // `otra_cosa` queda soportado para botones de mensajes anteriores al
+    // despliegue. Los nuevos muestran "Cambiar carpeta".
     marcarPendiente(from);
-    await whatsapp.sendText(from, t(idioma, 'otraCosa'));
+    await whatsapp.sendText(
+      from,
+      t(idioma, id === 'cambiar_carpeta' ? 'cambiarCarpeta' : 'otraCosa')
+    );
   }
 }
 
