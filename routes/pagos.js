@@ -164,40 +164,52 @@ router.post('/iap/verificar', requireAuth, async (req, res) => {
     const valorIdentidad =
       plataforma === 'apple' ? resultado.originalTransactionId : resultado.purchaseToken;
 
-    await supabase
-      .from('scan_users')
-      .update({ plan: resultado.plan, plan_vence: resultado.expiraEn, [campoIdentidad]: valorIdentidad })
-      .eq('id', req.usuario.id);
-
-    // Idempotente a propósito: este mismo endpoint atiende la compra Y el
-    // "restaurar compras", que el usuario puede tocar las veces que quiera.
-    // Sin esto, cada restauración dejaría una fila de pago repetida y las
-    // cuentas de ingresos saldrían infladas.
-    const { data: yaRegistrado } = await supabase
-      .from('scan_payments')
-      .select('id')
-      .eq('user_id', req.usuario.id)
-      .eq('payment_id', valorIdentidad)
-      .eq('fuente', plataforma)
-      .maybeSingle();
-
-    if (!yaRegistrado) {
-      await supabase.from('scan_payments').insert({
-        user_id: req.usuario.id,
-        plan: resultado.plan,
-        monto: 0, // el monto real lo cobra la tienda directo; aquí solo se registra el evento
-        moneda: req.usuario.moneda || 'mxn',
-        estado: 'pagado',
-        payment_id: valorIdentidad,
-        fuente: plataforma,
-      });
-    }
-
-    // Una compra restaurada puede estar VENCIDA: el recibo de Apple trae el
-    // historial completo, no solo lo vigente. `planVigente` ya lo trata como
-    // gratis, pero la app necesita saberlo para no decir "listo, restaurado"
-    // cuando en realidad no quedó nada activo.
+    // Una compra restaurada puede venir VENCIDA: el recibo de Apple trae el
+    // historial completo, no solo lo vigente.
     const vigente = new Date(resultado.expiraEn) > new Date();
+
+    // NO se toca la cuenta con una compra vencida. Parece un detalle y no lo
+    // es: al agregar "restaurar compras" este endpoint dejó de recibir solo
+    // compras recién hechas. Si alguien con plan vigente (pagado por Stripe,
+    // o una suscripción de tienda ya renovada) toca restaurar y la tienda
+    // devuelve un recibo viejo, escribir ese `plan_vence` pasado lo dejaría
+    // en gratis — le quitaríamos el plan a alguien que sí está pagando.
+    if (vigente) {
+      await supabase
+        .from('scan_users')
+        .update({ plan: resultado.plan, plan_vence: resultado.expiraEn, [campoIdentidad]: valorIdentidad })
+        .eq('id', req.usuario.id);
+
+      // Idempotente a propósito: este mismo endpoint atiende la compra Y el
+      // "restaurar compras", que el usuario puede tocar las veces que quiera.
+      // Sin esto, cada restauración dejaría una fila de pago repetida y las
+      // cuentas de ingresos saldrían infladas.
+      //
+      // El `limit(1)` importa: `maybeSingle()` REVIENTA si encuentra más de
+      // una fila, y puede haber duplicados de antes de que esto fuera
+      // idempotente. Sin el límite, el propio guardia contra duplicados
+      // fallaría justo en las cuentas que ya los tienen.
+      const { data: yaRegistrado } = await supabase
+        .from('scan_payments')
+        .select('id')
+        .eq('user_id', req.usuario.id)
+        .eq('payment_id', valorIdentidad)
+        .eq('fuente', plataforma)
+        .limit(1)
+        .maybeSingle();
+
+      if (!yaRegistrado) {
+        await supabase.from('scan_payments').insert({
+          user_id: req.usuario.id,
+          plan: resultado.plan,
+          monto: 0, // el monto real lo cobra la tienda directo; aquí solo se registra el evento
+          moneda: req.usuario.moneda || 'mxn',
+          estado: 'pagado',
+          payment_id: valorIdentidad,
+          fuente: plataforma,
+        });
+      }
+    }
 
     res.json({ plan: resultado.plan, planVence: resultado.expiraEn, vigente });
   } catch (err) {

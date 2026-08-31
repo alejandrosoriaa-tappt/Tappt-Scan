@@ -83,8 +83,11 @@ export async function comprarPlan(plan) {
   if (!productoId) throw new Error(`plan_sin_producto_iap: ${plan}`);
 
   await iniciar();
-  const [producto] = await fetchProducts({ skus: [productoId], type: 'subs' });
-  if (!producto) throw new Error('producto_no_encontrado_en_tienda');
+  // `fetchProducts` puede devolver **null**, no solo lista vacía (lo declara
+  // su propio tipo). Desestructurar null revienta con un TypeError feo en vez
+  // del error de producto que la pantalla sabe mostrar.
+  const productos = await fetchProducts({ skus: [productoId], type: 'subs' });
+  if (!productos?.length) throw new Error('producto_no_encontrado_en_tienda');
 
   return new Promise((resolve, reject) => {
     suscripcionActualizada = purchaseUpdatedListener(async (compra) => {
@@ -137,32 +140,37 @@ export async function restaurarCompras() {
 
   await iniciar();
   const compras = await getAvailablePurchases();
-  if (!compras.length) return null;
+  if (!compras?.length) return null;
 
+  // iOS y Android se restauran distinto, y mezclarlos en un solo bucle
+  // escondía errores. En iOS el recibo es UNO para toda la app y ya trae el
+  // historial completo: se manda una vez y si falla, falla de verdad — no
+  // hay una segunda oportunidad que esperar.
+  if (Platform.OS === 'ios') {
+    const resultado = await api.verificarCompraIAP(await cuerpoDeVerificacion(compras[0]));
+    return resultado.vigente ? resultado : null;
+  }
+
+  // En Android cada suscripción trae su propio token, así que sí hay varias
+  // que probar y que una falle no dice nada de las demás.
   let ultimoError = null;
 
   for (const compra of compras) {
-    if (Platform.OS !== 'ios' && !PRODUCTOS_IAP_IDS.includes(compra.productId)) continue;
+    if (!PRODUCTOS_IAP_IDS.includes(compra.productId)) continue;
 
     try {
       const resultado = await api.verificarCompraIAP(await cuerpoDeVerificacion(compra));
       if (resultado.vigente) return resultado;
     } catch (err) {
-      // Una compra de otro producto o ya vencida hace que el backend
-      // responda 400. No es motivo para abortar: puede haber otra más
-      // adelante en la lista que sí sirva.
+      // Una compra ya vencida hace que el backend responda 400. No es motivo
+      // para abortar: puede haber otra más adelante que sí sirva.
       ultimoError = err;
     }
-
-    // En iOS el recibo es UNO solo para toda la app y ya trae el historial
-    // completo, así que mandarlo una vez por compra sería repetir la misma
-    // llamada. Con la primera basta.
-    if (Platform.OS === 'ios') break;
   }
 
-  // Solo se reporta el error si NINGUNA compra sirvió y además hubo fallas;
-  // si simplemente estaban todas vencidas, es `null` y no es un error.
-  if (ultimoError && compras.length === 1) throw ultimoError;
+  // Si TODAS fallaron con error, eso sí se reporta — devolver "nada que
+  // restaurar" ante una falla real haría que el usuario crea que no compró.
+  if (ultimoError) throw ultimoError;
   return null;
 }
 
