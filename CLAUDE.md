@@ -1382,6 +1382,89 @@ Nada iniciado todavía. El camino, por orden de qué tarda más:
 
 No se necesita Xcode ni Android Studio: EAS compila en la nube.
 
+## 📊 Tamaño de la categoría en México y la meta del 5%
+
+Estimación construida por capas. **El único dato duro de toda la cadena son
+los $410K/mes de Scan Hero**; lo demás son supuestos razonados. La banda es
+confiable como orden de magnitud, el número exacto no.
+
+**Capa 1 — Scan Hero México**
+
+```
+Mundial iOS (Appfigures)        $410K USD/mes → $4.92M/año
+× México 30-45% del ingreso     $1.5 – 2.2M
++ Android (~+25%)               $1.9 – 2.8M USD/año
+```
+
+Corrección respecto de la estimación inicial: México es 59% de *descargas*
+pero menos del ingreso — **y no por precio**. Apple cobra en México casi lo
+mismo en dólares (con IVA incluido). La brecha es de **conversión y
+retención**, que en mercados emergentes corren al 40-60% de las de EE.UU.
+Por eso 30-45%, no el 25-35% estimado primero.
+
+**Capa 2 — CamScanner México**
+
+```
+CamScanner mundial (>70% de INTSIG)   ~$176M USD/año
+– China (50-60% doméstico)            → internacional $70-88M
+× México (3-6% del internacional)     $2 – 5M USD/año
+```
+
+Trampa que hay que recordar: **INTSIG es china y buena parte de su C-end es
+mercado doméstico.** Aplicarle un % de México al global infla el número.
+
+**Capa 3 — la cola larga**
+
+iScanner, TinyScanner, Genius Scan, SwiftScan, Scanner Pro, Adobe Scan,
+Microsoft Lens y decenas más. En categorías así los dos líderes concentran
+45-55% del ingreso.
+
+```
+Scan Hero + CamScanner MX      $3.9 – 7.8M
+÷ 45-55% de la categoría
+──────────────────────────────────────────
+CATEGORÍA EN MÉXICO ≈ $8 – 15M USD/año
+```
+
+**Verificación independiente (top-down):** mercado mexicano de apps ~$5.25 mil
+millones USD → productividad/negocios 3-5% ($150-260M) → escaneo 5-10% de eso
+= **$8-26M**. Los dos métodos se cruzan en $8-15M. Ese es el número a usar.
+
+### El 5%
+
+```
+Categoría         $8 – 15M USD/año   (punto medio ~$11M)
+× 5%              $400K – $750K USD/año
+                  $7.4M – $13.9M MXN/año   (punto medio ~$10M MXN)
+```
+
+### Y el argumento decisivo para subir el precio
+
+El mismo ingreso, según cómo se cobre:
+
+| Precio | Valor real/cliente/año | Clientes para $10M MXN |
+|---|---|---|
+| $299/año (hoy) | $299 | **33,400** |
+| $79/semana (10 sem. promedio) | ~$790 | **12,700** |
+| Paquete anual ~$1,200 | $1,200 | **8,300** |
+
+**Cobrando 4x más se necesitan 4x menos clientes.** Y 8,300 clientes es un
+problema cualitativamente distinto a 33,400: el primero se resuelve con
+producto y fichas bien hechas; el segundo exige una máquina de adquisición
+pagada que hoy no existe. Este es el argumento más fuerte a favor del
+paquete Agenda+Scan — no es solo cobrar más, es **volver alcanzable la meta**.
+
+### Calendario realista
+
+El 5% es meta de **año 2-3**, no de arranque. Año 1 apuntar a **1-2%**
+(~$2-3M MXN) para validar que el embudo convierte antes de invertir fuerte
+en adquisición.
+
+**Lo que más apretaría estos números:** una cuenta de **Appfigures o Sensor
+Tower con desglose por país**. Con eso se lee el reparto directo en vez de
+estimarlo, y se elimina el supuesto más frágil de toda la cadena (el
+reparto China/internacional de CamScanner).
+
 ## 🔜 Frentes abiertos para mañana
 
 **Técnicos (bloquean producto):**
@@ -1402,6 +1485,9 @@ No se necesita Xcode ni Android Studio: EAS compila en la nube.
    cuenta entre los dos repos, y qué precio.
 6. **Producir la Ola 1 de fichas** (3 juegos de capturas).
 7. **Buscar el D-U-N-S** — 2 minutos, y puede ahorrar un mes.
+8. **Evaluar una cuenta de Appfigures o Sensor Tower** con desglose por
+   país. Es lo único que convertiría la estimación de mercado de arriba en
+   dato duro, y de paso da visibilidad de la competencia por keyword.
 
 **Nota de método:** varias conclusiones de esta sesión se corrigieron a sí
 mismas con datos (el 2.1% → 59%, el orden del nivel de persona, la
