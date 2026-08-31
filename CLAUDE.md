@@ -268,10 +268,19 @@ Build, TestFlight y Play Internal Testing); para iOS nativo paso a paso,
 **`docs/BUILD-NATIVO-IOS.md`** — ahí está lo que falta en el repo (el
 `projectId` de EAS, los productos en App Store Connect y
 `APPLE_SHARED_SECRET` en Railway) y los bloqueadores de revisión de Apple.
-Su hermana **`docs/BUILD-NATIVO-ANDROID.md`** cubre Play, y trae el
-bloqueador duro de esa plataforma: **el repo está en Expo SDK 51 (API 34) y
-Play ya no acepta apps nuevas tan abajo** — hay que subir el SDK antes de
-poder publicar. iOS no tiene ese corte.
+Su hermana **`docs/BUILD-NATIVO-ANDROID.md`** cubre Play.
+
+**Upgrade de Expo SDK 51 → 57 (2026-08-31).** Era el bloqueador duro de
+Android: SDK 51 compila contra API 34 y Play ya no acepta apps nuevas tan
+abajo. El salto arrastró React 18→19, RN 0.74→0.86 y React Navigation 6→7.
+Dos cambios de código obligados: `expo-file-system` (la API vieja
+`readAsStringAsync` salió del export principal; `src/lib/importar.js` usa
+`new File(uri).base64()`) y **`react-native-iap`, que cambió de API entera**
+al pasarse a Nitro Modules — `compras.native.js` está reescrito contra
+`fetchProducts`/`requestPurchase`, y el recibo de iOS ahora se pide con
+`getReceiptDataIOS()` porque `purchaseToken` pasó a ser el JWS.
+**Verificado solo el bundle web; ningún build nativo se pudo correr** — la
+reescritura de IAP no se ha ejecutado contra una tienda real.
 
 **Restaurar compras** (`comprasIAP.restaurarCompras()` + botón en Ajustes):
 lo exige la guía 3.1.1 y resuelve el caso del usuario que reinstala o cambia

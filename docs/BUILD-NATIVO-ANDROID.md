@@ -20,38 +20,59 @@ Estas piezas se resolvieron una sola vez y sirven para las dos plataformas:
   Esa URL se pega en Play Console → Data safety.
 - ✅ Restaurar compras — `getAvailablePurchases()` funciona igual en Play.
 
-## 🔴 El bloqueador de Android: el target API
+## ✅ El bloqueador de Android: el target API — RESUELTO
 
 Google Play sube cada año el nivel de API mínimo que puede tener una app
-**nueva**, y deja de aceptar builds por debajo. Este repo está en **Expo SDK
-51 / React Native 0.74**, que compila contra **API 34**.
+**nueva**, y deja de aceptar builds por debajo. El repo estaba en **Expo SDK
+51 / React Native 0.74**, que compila contra **API 34** — por debajo del
+corte, o sea que el `.aab` se rechazaba al subirlo, antes de cualquier
+revisión.
 
-Para agosto de 2026 eso ya está por debajo del mínimo de Play (el corte de
-API 35 entró el 31-ago-2025, y hay otro cada año en la misma fecha). O sea:
-**el .aab de este repo no se puede publicar tal cual** — Play lo rechaza al
-subirlo, antes de cualquier revisión.
+**Ya se subió a Expo SDK 57 / React Native 0.86.** Fue un salto de seis
+majors y arrastró todo lo demás:
 
-Se arregla subiendo el SDK de Expo, no tocando `app.json`: el `targetSdk` lo
-fija la versión de React Native que trae el SDK. Es un upgrade de varias
-versiones (51 → la actual), así que **hay que presupuestarlo como trabajo
-propio**, no como un paso del release:
+| | Antes | Ahora |
+|---|---|---|
+| Expo | 51 | 57 |
+| React Native | 0.74.5 | 0.86.3 |
+| React | 18.2 | 19.2 |
+| React Navigation | 6 | 7 |
+| react-native-iap | 16.3 | 16.5 |
 
-```bash
-cd app
-npx expo install expo@latest --fix
-npx expo-doctor
-```
+### Lo que hubo que cambiar en el código
 
-Y después revalidar lo que más se rompe en estos saltos: `expo-camera`
-(cambió de API entre versiones), `expo-file-system` (API nueva a partir de
-SDK 52) y `react-native-iap`.
+1. **`expo-file-system`** — `readAsStringAsync` y `EncodingType` salieron del
+   export principal en SDK 52. `src/lib/importar.js` usa la API nueva
+   (`new File(uri).base64()`) en vez de `expo-file-system/legacy`, que está
+   deprecado y avisa en consola.
+2. **`react-native-iap` cambió de API entera** al pasarse a Nitro Modules.
+   `getSubscriptions` → `fetchProducts({skus, type:'subs'})`,
+   `requestSubscription` → `requestPurchase({request:{apple,google}, type})`.
+   `src/lib/compras.native.js` está reescrito contra la nueva.
+3. **El recibo de iOS ya no viene en la compra.** Desde 16.5 `purchaseToken`
+   es el **JWS** de la transacción (API moderna de Apple), y nuestro backend
+   valida con `verifyReceipt`, que espera el **recibo de la app** en base64 —
+   otra cosa. Por eso ahora se pide aparte con `getReceiptDataIOS()`. Ver el
+   riesgo anotado abajo.
 
-> **Confirmar el número exacto en Play Console antes de empezar** — la
-> política se mueve cada año y esta nota se escribió sin poder consultarla.
-> El mensaje de rechazo al subir el .aab dice el nivel requerido.
+`expo-image-manipulator` **no** hizo falta tocarlo: `manipulateAsync` sigue
+exportado (deprecado, pero presente), así que la cámara quedó igual.
 
-Nada de esto bloquea iOS: Apple no tiene un corte equivalente que impida a
-la SDK 51 subir a TestFlight hoy.
+### Lo que se verificó y lo que NO
+
+Verificado aquí: el bundle web compila entero (`expo export --platform web`),
+los 44 archivos de `src/` parsean con el Babel del SDK nuevo, y
+`expo config --type prebuild` resuelve los plugins sin error.
+
+**NO verificado, y es lo que falta:** ningún build nativo. No hay Mac ni EAS
+en el entorno donde se hizo el upgrade. En particular **la reescritura de
+`compras.native.js` no se ha ejecutado nunca contra una tienda real** — es
+código nuevo contra una API que cambió de raíz. Es lo primero a probar en el
+development build.
+
+> **Confirmar el nivel de API que pide Play hoy** — la política se mueve cada
+> año. SDK 57 va muy por encima del corte de API 34 que bloqueaba, pero el
+> número exacto lo dice el mensaje de rechazo al subir el `.aab`.
 
 ## Qué falta en el repo (aparte del SDK)
 
@@ -81,6 +102,19 @@ la SDK 51 subir a TestFlight hoy.
 6. ⬜ **Data safety** en Play Console: se recolecta número de teléfono
    (identificador), correo si el usuario lo da, y metadata de documentos.
    Ahí va también la URL de borrado de cuenta de arriba.
+
+## 🟡 Riesgo a verificar: `verifyReceipt` está deprecado
+
+`services/iap.js` valida los recibos de Apple contra `verifyReceipt`, el
+endpoint clásico. Apple lo dio por deprecado a favor de la **App Store Server
+API** (transacciones firmadas en JWS), y `react-native-iap` 16.5 ya se mudó a
+ese modelo — por eso el recibo viejo hay que pedirlo aparte con
+`getReceiptDataIOS()`.
+
+Hoy funciona y no se toca. Pero si Apple apaga `verifyReceipt`, la migración
+es de verdad: la App Store Server API no usa el shared secret, sino una llave
+`.p8` firmada, así que cambia `services/iap.js` entero y las variables de
+Railway. Vale tenerlo anotado antes de que sea una urgencia.
 
 ## 🟡 Riesgo a verificar: la API con la que validamos las compras
 
@@ -136,8 +170,9 @@ duplicado no rompe, pero tampoco hace falta.
 
 ## Orden recomendado
 
-1. **Subir el SDK de Expo** y revalidar cámara, archivos e IAP. Es el
-   bloqueador duro y no depende de Google.
+1. ~~**Subir el SDK de Expo**~~ ✅ hecho (51 → 57). Falta **revalidar en
+   dispositivo** cámara, importación de archivos e IAP: nada de eso se pudo
+   probar sin un build nativo.
 2. Cuenta de Play Developer (como organización) + `eas build:configure`.
 3. **APK `preview`** para repartir la beta mientras lo demás avanza.
 4. Alta de los dos productos + service account (archivo para EAS, JSON en

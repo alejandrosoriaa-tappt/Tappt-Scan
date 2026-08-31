@@ -2,12 +2,13 @@ import { Platform } from 'react-native';
 import {
   initConnection,
   endConnection,
-  getSubscriptions,
-  requestSubscription,
+  fetchProducts,
+  requestPurchase,
   purchaseUpdatedListener,
   purchaseErrorListener,
   finishTransaction,
   getAvailablePurchases,
+  getReceiptDataIOS,
 } from 'react-native-iap';
 import { api } from './api';
 
@@ -44,6 +45,29 @@ function detener() {
 }
 
 /**
+ * Arma el cuerpo que espera `POST /api/pagos/iap/verificar` a partir de una
+ * compra de la tienda.
+ *
+ * **En iOS no se manda `purchase.purchaseToken`.** Desde react-native-iap 16.5
+ * ese campo es el **JWS** de la transacción (API moderna de Apple), y nuestro
+ * backend valida con `verifyReceipt`, que espera el **recibo de la app** en
+ * base64 — otra cosa. Por eso el recibo se pide aparte con
+ * `getReceiptDataIOS()`. Si algún día el backend migra a la App Store Server
+ * API (que ya es lo que Apple recomienda), aquí se manda el JWS y esta
+ * llamada extra sobra.
+ */
+async function cuerpoDeVerificacion(compra) {
+  if (Platform.OS === 'ios') {
+    return { plataforma: 'apple', recibo: await getReceiptDataIOS() };
+  }
+  return {
+    plataforma: 'google',
+    productoId: compra.productId,
+    token: compra.purchaseToken,
+  };
+}
+
+/**
  * Compra un plan y activa la suscripción en el backend.
  *
  * El flujo real: 1) la tienda cobra y confirma la compra al dispositivo,
@@ -59,19 +83,13 @@ export async function comprarPlan(plan) {
   if (!productoId) throw new Error(`plan_sin_producto_iap: ${plan}`);
 
   await iniciar();
-  const [producto] = await getSubscriptions({ skus: [productoId] });
+  const [producto] = await fetchProducts({ skus: [productoId], type: 'subs' });
   if (!producto) throw new Error('producto_no_encontrado_en_tienda');
 
   return new Promise((resolve, reject) => {
     suscripcionActualizada = purchaseUpdatedListener(async (compra) => {
       try {
-        const plataforma = Platform.OS === 'ios' ? 'apple' : 'google';
-        const body =
-          plataforma === 'apple'
-            ? { plataforma, recibo: compra.transactionReceipt }
-            : { plataforma, productoId, token: compra.purchaseToken };
-
-        const resultado = await api.verificarCompraIAP(body);
+        const resultado = await api.verificarCompraIAP(await cuerpoDeVerificacion(compra));
         await finishTransaction({ purchase: compra, isConsumable: false });
         resolve(resultado);
       } catch (err) {
@@ -88,7 +106,12 @@ export async function comprarPlan(plan) {
       reject(err);
     });
 
-    requestSubscription({ sku: productoId }).catch(reject);
+    // La API de 16.5 pide la petición por plataforma: iOS compra UN sku,
+    // Android recibe una lista.
+    requestPurchase({
+      request: { apple: { sku: productoId }, google: { skus: [productoId] } },
+      type: 'subs',
+    }).catch(reject);
   });
 }
 
@@ -103,11 +126,11 @@ export async function comprarPlan(plan) {
  * endpoint que valida una compra nueva: el backend es quien decide, igual
  * que en la compra — el cliente nunca dice qué plan tiene.
  *
- * Se manda TODO lo que devuelva la tienda, no solo lo último: en Apple el
- * recibo trae el historial completo y una compra vieja puede venir vencida.
- * Por eso nos quedamos con el primer resultado que el backend marque como
- * `vigente`, y si ninguno lo está, se devuelve `null` para poder decir
- * "no hay nada que restaurar" en vez de un "listo" que no cambió nada.
+ * Se recorre TODO lo que devuelva la tienda, no solo lo último: una compra
+ * vieja puede venir vencida. Nos quedamos con el primer resultado que el
+ * backend marque como `vigente`, y si ninguno lo está se devuelve `null`
+ * para poder decir "no hay nada que restaurar" en vez de un "listo" que no
+ * cambió nada.
  */
 export async function restaurarCompras() {
   if (!iapDisponible) throw new Error('iap_no_disponible_en_web');
@@ -116,19 +139,13 @@ export async function restaurarCompras() {
   const compras = await getAvailablePurchases();
   if (!compras.length) return null;
 
-  const plataforma = Platform.OS === 'ios' ? 'apple' : 'google';
   let ultimoError = null;
 
   for (const compra of compras) {
-    if (plataforma === 'google' && !PRODUCTOS_IAP_IDS.includes(compra.productId)) continue;
+    if (Platform.OS !== 'ios' && !PRODUCTOS_IAP_IDS.includes(compra.productId)) continue;
 
     try {
-      const body =
-        plataforma === 'apple'
-          ? { plataforma, recibo: compra.transactionReceipt }
-          : { plataforma, productoId: compra.productId, token: compra.purchaseToken };
-
-      const resultado = await api.verificarCompraIAP(body);
+      const resultado = await api.verificarCompraIAP(await cuerpoDeVerificacion(compra));
       if (resultado.vigente) return resultado;
     } catch (err) {
       // Una compra de otro producto o ya vencida hace que el backend
@@ -136,6 +153,11 @@ export async function restaurarCompras() {
       // adelante en la lista que sí sirva.
       ultimoError = err;
     }
+
+    // En iOS el recibo es UNO solo para toda la app y ya trae el historial
+    // completo, así que mandarlo una vez por compra sería repetir la misma
+    // llamada. Con la primera basta.
+    if (Platform.OS === 'ios') break;
   }
 
   // Solo se reporta el error si NINGUNA compra sirvió y además hubo fallas;
