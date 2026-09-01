@@ -271,10 +271,15 @@ export default function RecorteScreen({ route, navigation }) {
     setEsquinas((previas) => previas.map((e, i) => (i === indice ? posicion : e)));
   };
 
-  const previsualizar = async () => {
+  const previsualizar = async (filtroSolicitado = filtro) => {
     setPrevisualizando(true);
     try {
-      const resultado = await api.vistaRecorte(fotoBase64, esquinas, filtro, 'auto');
+      const resultado = await api.vistaRecorte(
+        fotoBase64,
+        esquinas,
+        filtroSolicitado,
+        'auto'
+      );
       setVistaEnderezada(resultado.imagen);
     } catch (err) {
       alertar(t('noSePudo'), err.message);
@@ -418,7 +423,10 @@ export default function RecorteScreen({ route, navigation }) {
             style={estilos.filtroCelda}
             onPress={() => {
               setFiltro(id);
-              setVistaEnderezada(null);
+              // La selección debe verse en la hoja grande, no solamente en
+              // la miniatura. Usamos la misma tubería del guardado para que
+              // el resultado mostrado sea exactamente el que se conservará.
+              previsualizar(id);
             }}
             activeOpacity={0.8}
           >
@@ -455,7 +463,7 @@ export default function RecorteScreen({ route, navigation }) {
         </TouchableOpacity>
         <TouchableOpacity
           style={estilos.botonPrimario}
-          onPress={vistaEnderezada ? confirmar : previsualizar}
+          onPress={vistaEnderezada ? confirmar : () => previsualizar()}
           disabled={guardando || detectando || previsualizando}
         >
           <Text style={estilos.botonPrimarioTexto}>
