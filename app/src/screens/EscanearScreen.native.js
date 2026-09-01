@@ -18,6 +18,9 @@ export default function EscanearScreenNativa({ navigation }) {
   const [procesando, setProcesando] = useState(false);
   const [fallo, setFallo] = useState(false);
   const lanzado = useRef(false);
+  const instrucciones = Platform.OS === 'ios'
+    ? ['instruccionRegresarIOS', 'instruccionEncuadra', 'instruccionManualIOS']
+    : ['instruccionEncuadra', 'instruccionManualAndroid', 'instruccionTerminar'];
 
   const abrirEscaner = useCallback(async () => {
     if (lanzado.current) return;
@@ -60,20 +63,22 @@ export default function EscanearScreenNativa({ navigation }) {
           <Text style={estilos.detalle}>{t('escanerNativoDetalle')}</Text>
         ) : (
           <View style={estilos.instrucciones}>
-            <View style={estilos.paso}>
-              <Text style={estilos.numero}>1</Text>
-              <Text style={estilos.pasoTexto}>{t('instruccionEncuadra')}</Text>
-            </View>
-            <View style={estilos.paso}>
-              <Text style={estilos.numero}>2</Text>
-              <Text style={estilos.pasoTexto}>
-                {t(Platform.OS === 'ios' ? 'instruccionManualIOS' : 'instruccionManualAndroid')}
-              </Text>
-            </View>
-            <View style={estilos.paso}>
-              <Text style={estilos.numero}>3</Text>
-              <Text style={estilos.pasoTexto}>{t('instruccionTerminar')}</Text>
-            </View>
+            {instrucciones.map((clave, indice) => (
+              <View
+                key={clave}
+                style={[estilos.paso, Platform.OS === 'ios' && indice === 0 && estilos.pasoImportante]}
+              >
+                <Text style={estilos.numero}>{indice + 1}</Text>
+                <Text
+                  style={[
+                    estilos.pasoTexto,
+                    Platform.OS === 'ios' && indice === 0 && estilos.pasoTextoImportante,
+                  ]}
+                >
+                  {t(clave)}
+                </Text>
+              </View>
+            ))}
           </View>
         )}
         {!procesando ? (
@@ -103,6 +108,11 @@ const estilos = StyleSheet.create({
     gap: espacio.md,
   },
   paso: { flexDirection: 'row', alignItems: 'center' },
+  pasoImportante: {
+    padding: espacio.md,
+    borderRadius: radio.md,
+    backgroundColor: colores.primarioSuave,
+  },
   numero: {
     width: 30,
     height: 30,
@@ -115,6 +125,7 @@ const estilos = StyleSheet.create({
     textAlign: 'center',
   },
   pasoTexto: { flex: 1, ...tipo.cuerpo, color: colores.textoSuave, lineHeight: 21, marginLeft: espacio.md },
+  pasoTextoImportante: { color: colores.texto, fontWeight: '700' },
   boton: {
     minWidth: 190,
     minHeight: 50,

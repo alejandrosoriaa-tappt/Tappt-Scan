@@ -89,6 +89,8 @@ export const TEXTOS = {
     abriendoEscaner: 'Abriendo escáner…',
     antesDeEscanear: 'Antes de escanear',
     abrirEscaner: 'Abrir escáner',
+    instruccionRegresarIOS:
+      'IMPORTANTE: al terminar de revisar, toca la flecha superior izquierda para volver a la cámara y después toca la palomita azul superior derecha.',
     instruccionEncuadra: 'Coloca una sola página completa dentro de la cámara.',
     instruccionManualIOS: 'Toca “Shutter” si prefieres tomar cada página manualmente.',
     instruccionManualAndroid: 'Usa el disparador para capturar cada página cuando esté lista.',
@@ -417,6 +419,8 @@ export const TEXTOS = {
     abriendoEscaner: 'Opening scanner…',
     antesDeEscanear: 'Before scanning',
     abrirEscaner: 'Open scanner',
+    instruccionRegresarIOS:
+      'IMPORTANT: after reviewing, tap the top-left arrow to return to the camera, then tap the blue checkmark at the top right.',
     instruccionEncuadra: 'Place one complete page inside the camera view.',
     instruccionManualIOS: 'Tap “Shutter” if you prefer to capture each page manually.',
     instruccionManualAndroid: 'Use the shutter button to capture each page when it is ready.',

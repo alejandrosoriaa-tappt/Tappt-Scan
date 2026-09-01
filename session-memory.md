@@ -1,5 +1,11 @@
 # Memoria de trabajo de TapptScan
 
+## 2026-09-01 — Instrucción explícita para terminar VisionKit
+
+- La guía previa de iPhone ahora comienza con un aviso resaltado: desde la revisión de páginas hay que tocar la flecha superior izquierda para regresar a la cámara y después la palomita azul superior derecha para finalizar el lote.
+- VisionKit permanece sin cambios como escáner oficial de iOS; sólo se aclaró el recorrido impuesto por su interfaz.
+- Pendiente inmediato: recompilar en `iPhone ASA` y confirmar que el aviso se lea completo antes de abrir el escáner.
+
 ## 2026-09-01 — Guardado del lote y vista real de filtros
 
 - Los logs de Railway de las 07:07 confirmaron que `error_escaneo_lote` no provenía de VisionKit ni del PDF: Supabase devolvió `PGRST204` porque su caché aún no encontraba la columna `persona` de `scan_documents`.
