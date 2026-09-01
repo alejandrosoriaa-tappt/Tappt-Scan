@@ -1,5 +1,13 @@
 # Memoria de trabajo de TapptScan
 
+## 2026-08-31 — Clasificación visual más económica
+
+- Se confirmó que VisionKit continúa siendo el escáner definitivo de iOS; este cambio no modifica la captura nativa.
+- La clasificación y reclasificación de documentos cambió de Claude Opus a `claude-haiku-4-5-20251001`, conservando `CLAUDE_VISION_MODEL` como override.
+- Las 30 pruebas Node pasaron. El cambio quedó en `3081f5a` en la rama nativa y se llevó aisladamente a `main` como `988270a` para no mezclar todavía los demás cambios de iOS.
+- Railway desplegó `988270a` correctamente y `/health` respondió OK.
+- Pendiente: reenviar una imagen real por WhatsApp después de agregar/recargar la columna `persona` en Supabase; ese problema de esquema es independiente del modelo.
+
 ## 2026-08-31 — VisionKit recuperado en la rama de build Expo 57
 
 - La primera instalación física de la rama `claude/build-nativo-ios-docs-jud3zt` compiló y abrió, pero mostró la cámara personalizada de `expo-camera`: tomaba frames cada 1.4 segundos para el detector remoto, dibujaba contornos falsos y no estaba usando VisionKit.
