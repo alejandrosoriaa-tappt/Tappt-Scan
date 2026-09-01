@@ -1,5 +1,12 @@
 # Memoria de trabajo de TapptScan
 
+## 2026-09-01 — Editor: texto movible y tapado negro
+
+- Las anotaciones de texto ya colocadas se pueden arrastrar sobre la página; su nueva posición se conserva en coordenadas normalizadas y llega así al PDF final.
+- Los rectángulos de “Tapar” también se pueden mover y ahora son negros por defecto en la vista previa y en el PDF generado. El blanco anterior parecía un defecto visual y no una censura.
+- Se agregó una prueba que rasteriza el PDF editado y comprueba que el tapado predeterminado realmente produce píxeles negros.
+- Pendiente inmediato: reinstalar en `iPhone ASA` y validar arrastre de texto, colocación/movimiento del tapado y guardado de la versión en Drive.
+
 ## 2026-09-01 — Instrucción explícita para terminar VisionKit
 
 - La guía previa de iPhone ahora comienza con un aviso resaltado: desde la revisión de páginas hay que tocar la flecha superior izquierda para regresar a la cámara y después la palomita azul superior derecha para finalizar el lote.
