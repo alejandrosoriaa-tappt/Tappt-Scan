@@ -233,6 +233,7 @@ export const TEXTOS = {
 
     // Documentos
     buscar: 'Buscar documentos',
+    limpiarBusqueda: 'Limpiar búsqueda',
     recientes: 'Recientes',
     favoritos: 'Favoritos',
     porRevisar: 'Por revisar',
@@ -549,6 +550,7 @@ export const TEXTOS = {
     capturaFotoDetalle: 'From your gallery.',
 
     buscar: 'Search documents',
+    limpiarBusqueda: 'Clear search',
     recientes: 'Recent',
     favoritos: 'Favorites',
     porRevisar: 'To review',

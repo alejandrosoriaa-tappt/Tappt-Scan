@@ -157,7 +157,7 @@ const estilos = StyleSheet.create({
   titulo: { ...tipo.titulo, color: colores.texto, marginVertical: espacio.sm },
 
   encabezadoInterno: { marginBottom: espacio.sm },
-  volver: { flexDirection: 'row', alignItems: 'center', paddingVertical: espacio.xs },
+  volver: { alignSelf: 'flex-start', minHeight: 44, flexDirection: 'row', alignItems: 'center', paddingVertical: espacio.xs },
   volverTexto: { ...tipo.cuerpo, color: colores.primario, marginLeft: 2 },
 
   drive: { flexDirection: 'row', alignItems: 'center', marginTop: espacio.xs },
@@ -173,6 +173,7 @@ const estilos = StyleSheet.create({
   tarjetaCarpeta: {
     width: '48%',
     flexGrow: 1,
+    minHeight: 112,
     backgroundColor: colores.superficie,
     borderRadius: radio.lg,
     padding: espacio.md,

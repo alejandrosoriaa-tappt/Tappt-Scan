@@ -1,5 +1,14 @@
 # Memoria de trabajo de TapptScan
 
+## 2026-08-31 — Pase de pulido visual de la app
+
+- Se corrigió la barra inferior: “Documentos” ya no se parte en dos líneas, iconos y etiquetas ocupan cajas de altura fija y el escalado de texto no desplaza verticalmente los tabs.
+- Se corrigió el filtro activo de Documentos (antes blanco sobre blanco), se igualaron anchos y se agregó estado de accesibilidad. La búsqueda ahora tiene borde consistente y botón para limpiar.
+- Las rutas dejan de mostrar códigos internos como `/99 · Por revisar/` y se presentan como migas limpias.
+- El botón atrás nativo deja de mostrar el nombre técnico “Tabs”. Se reforzaron alineaciones con texto grande en detalle del documento, selector de mes, tarjetas de carpetas y Ajustes.
+- Verificación: 31/31 pruebas Node, export web y bundle iOS completados.
+- Pendiente: reinstalar el build del iPhone y hacer una pasada visual física por Inicio, Documentos, Gastos, Carpetas, detalle y Ajustes; cualquier diferencia propia de Dynamic Type debe validarse en dispositivo.
+
 ## 2026-08-31 — Editor y firma: `error_pagina` corregido
 
 - “Editar y firmar” fallaba al abrir una página PDF con `error_pagina`. Los logs de Railway mostraron que el `NodeCanvasFactory` interno de `pdfjs-dist` intentaba usar el paquete opcional `canvas`, cuyo binding no estaba disponible.

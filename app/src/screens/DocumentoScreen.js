@@ -45,7 +45,7 @@ function Campo({ etiqueta, valor }) {
   return (
     <View style={estilos.campo}>
       <Text style={estilos.campoEtiqueta}>{etiqueta}</Text>
-      <Text style={estilos.campoValor}>{valor ?? '—'}</Text>
+      <Text style={estilos.campoValor} numberOfLines={3}>{valor ?? '—'}</Text>
     </View>
   );
 }
@@ -135,7 +135,7 @@ export default function DocumentoScreen({ route, navigation }) {
         <View style={estilos.vistaPreviaIcono}>
           <Icono nombre={meta.icono} tamano={40} color={meta.trazo} grosor={1.6} />
         </View>
-        <Text style={estilos.nombreArchivo}>{documento.nombre_archivo}</Text>
+        <Text style={estilos.nombreArchivo} numberOfLines={2}>{documento.nombre_archivo}</Text>
       </View>
 
       <View style={estilos.badgeIA}>
@@ -271,7 +271,14 @@ const estilos = StyleSheet.create({
     flexDirection: 'row',
     gap: espacio.md,
   },
-  nombreArchivo: { fontSize: 13, color: colores.textoSuave, marginTop: espacio.sm },
+  nombreArchivo: {
+    maxWidth: '78%',
+    fontSize: 13,
+    lineHeight: 18,
+    color: colores.textoSuave,
+    marginTop: espacio.sm,
+    textAlign: 'center',
+  },
   tituloSeccion: {
     fontSize: 13,
     fontWeight: '700',
@@ -295,8 +302,8 @@ const estilos = StyleSheet.create({
     borderBottomWidth: StyleSheet.hairlineWidth,
     borderBottomColor: colores.divisor,
   },
-  campoEtiqueta: { fontSize: 14, color: colores.textoSuave },
-  campoValor: { fontSize: 14, fontWeight: '500', color: colores.texto },
+  campoEtiqueta: { flex: 0.42, fontSize: 14, color: colores.textoSuave, paddingRight: espacio.sm },
+  campoValor: { flex: 0.58, fontSize: 14, lineHeight: 19, fontWeight: '500', color: colores.texto, textAlign: 'right' },
   versionFila: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -315,6 +322,8 @@ const estilos = StyleSheet.create({
     borderColor: colores.divisor,
     borderRadius: 12,
     paddingVertical: espacio.md,
+    minHeight: 50,
+    justifyContent: 'center',
     alignItems: 'center',
   },
   botonPrimario: { backgroundColor: colores.primario, borderColor: colores.primario },

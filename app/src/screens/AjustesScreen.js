@@ -8,7 +8,7 @@ import { api } from '../lib/api';
 import { useIdioma } from '../i18n';
 import { alertar, alertarConBotones } from '../lib/alerta';
 import { TEXTOS } from '../i18n/textos';
-import { colores, espacio } from '../theme';
+import { colores, espacio, tipo } from '../theme';
 import { iapDisponible, comprasIAP } from '../lib/compras';
 
 const PLANES = { gratis: 'Gratis', personal: 'Personal', negocio: 'Negocio' };
@@ -253,7 +253,7 @@ export default function AjustesScreen() {
 const estilos = StyleSheet.create({
   pantalla: { flex: 1, backgroundColor: colores.fondo },
   contenido: { padding: espacio.md, paddingBottom: espacio.xl },
-  titulo: { fontSize: 26, fontWeight: '700', color: colores.texto },
+  titulo: { ...tipo.titulo, color: colores.texto, marginVertical: espacio.sm },
   tituloSeccion: {
     fontSize: 13,
     fontWeight: '700',
