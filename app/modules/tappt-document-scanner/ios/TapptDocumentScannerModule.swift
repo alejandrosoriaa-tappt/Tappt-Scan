@@ -1,8 +1,9 @@
 import ExpoModulesCore
 import VisionKit
 
-public final class TapptDocumentScannerModule: Module, VNDocumentCameraViewControllerDelegate {
+public final class TapptDocumentScannerModule: Module {
   private var pendingPromise: Promise?
+  private lazy var scannerDelegate = TapptDocumentScannerDelegate(owner: self)
 
   public func definition() -> ModuleDefinition {
     Name("TapptDocumentScanner")
@@ -23,7 +24,7 @@ public final class TapptDocumentScannerModule: Module, VNDocumentCameraViewContr
 
       self.pendingPromise = promise
       let controller = VNDocumentCameraViewController()
-      controller.delegate = self
+      controller.delegate = self.scannerDelegate
       presenter.present(controller, animated: true)
     }.runOnQueue(.main)
 
@@ -33,7 +34,7 @@ public final class TapptDocumentScannerModule: Module, VNDocumentCameraViewContr
     }
   }
 
-  public func documentCameraViewController(
+  fileprivate func documentCameraViewController(
     _ controller: VNDocumentCameraViewController,
     didFinishWith scan: VNDocumentCameraScan
   ) {
@@ -68,7 +69,7 @@ public final class TapptDocumentScannerModule: Module, VNDocumentCameraViewContr
     }
   }
 
-  public func documentCameraViewControllerDidCancel(_ controller: VNDocumentCameraViewController) {
+  fileprivate func documentCameraViewControllerDidCancel(_ controller: VNDocumentCameraViewController) {
     controller.dismiss(animated: true) {
       self.pendingPromise?.resolve([
         "cancelled": true,
@@ -79,7 +80,7 @@ public final class TapptDocumentScannerModule: Module, VNDocumentCameraViewContr
     }
   }
 
-  public func documentCameraViewController(
+  fileprivate func documentCameraViewController(
     _ controller: VNDocumentCameraViewController,
     didFailWithError error: Error
   ) {
@@ -95,5 +96,35 @@ public final class TapptDocumentScannerModule: Module, VNDocumentCameraViewContr
       self.pendingPromise?.reject(code, message)
       self.pendingPromise = nil
     }
+  }
+}
+
+// En Expo SDK 57 `Module` ya no hereda de `NSObject`, mientras que el
+// delegado de VisionKit conforma a `NSObjectProtocol`. Mantener el delegado
+// UIKit separado evita acoplar el módulo Expo a esa jerarquía de Objective-C.
+private final class TapptDocumentScannerDelegate: NSObject, VNDocumentCameraViewControllerDelegate {
+  private weak var owner: TapptDocumentScannerModule?
+
+  init(owner: TapptDocumentScannerModule) {
+    self.owner = owner
+    super.init()
+  }
+
+  func documentCameraViewController(
+    _ controller: VNDocumentCameraViewController,
+    didFinishWith scan: VNDocumentCameraScan
+  ) {
+    owner?.documentCameraViewController(controller, didFinishWith: scan)
+  }
+
+  func documentCameraViewControllerDidCancel(_ controller: VNDocumentCameraViewController) {
+    owner?.documentCameraViewControllerDidCancel(controller)
+  }
+
+  func documentCameraViewController(
+    _ controller: VNDocumentCameraViewController,
+    didFailWithError error: Error
+  ) {
+    owner?.documentCameraViewController(controller, didFailWithError: error)
   }
 }
