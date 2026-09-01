@@ -9,6 +9,7 @@
 - Se actualizó `escanerNativo.js` a la API de archivos de Expo 57 (`new File(uri).base64()`), evitando la API legacy retirada.
 - CocoaPods instaló correctamente `TapptDocumentScanner (0.1.0)` y lo enlazó con VisionKit. El bundle JavaScript iOS se exportó correctamente y las 30 pruebas Node pasaron.
 - El primer rebuild con Expo 57 reveló que `Module` ya no satisface `NSObjectProtocol`, requerido por `VNDocumentCameraViewControllerDelegate`. Se corrigió separando el delegado UIKit en `TapptDocumentScannerDelegate: NSObject`; el módulo Expo conserva la promesa y el delegado sólo reenvía los tres callbacks de VisionKit.
+- En la primera ejecución posterior, la pantalla quedó indefinidamente en “Abriendo escáner…”: la llamada se hacía al montar, antes de terminar la transición del Stack, y UIKit podía ignorar la presentación. Se agregó una espera de 450 ms y una guarda nativa que devuelve `ERR_VIEW_NOT_READY` en vez de dejar una promesa colgada.
 - Pendiente inmediato: recompilar/reinstalar en `iPhone ASA` desde Xcode y confirmar que al elegir Escanear aparezca la interfaz oficial de Apple, capture varias páginas y regrese al borrador. La compilación CLI dentro de Codex no puede hablar con CoreSimulator/Xcode XPC; la validación final se hace desde la GUI de Xcode.
 
 ## 2026-08-24 — scanner nativo híbrido

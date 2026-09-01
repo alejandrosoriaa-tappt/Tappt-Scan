@@ -43,7 +43,12 @@ export default function EscanearScreenNativa({ navigation }) {
   }, [borrador, navigation, t]);
 
   useEffect(() => {
-    abrirEscaner();
+    // La pantalla se monta antes de que termine la animación del Stack.
+    // Presentar VisionKit en ese instante puede ser ignorado por UIKit y la
+    // promesa queda abierta para siempre. Esperar un frame de transición
+    // garantiza que el view controller ya esté en la ventana.
+    const temporizador = setTimeout(abrirEscaner, 450);
+    return () => clearTimeout(temporizador);
   }, [abrirEscaner]);
 
   return (

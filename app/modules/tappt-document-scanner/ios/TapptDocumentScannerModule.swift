@@ -21,6 +21,10 @@ public final class TapptDocumentScannerModule: Module {
         promise.reject("ERR_NO_VIEW_CONTROLLER", "No se encontró una pantalla para abrir el escáner")
         return
       }
+      guard presenter.viewIfLoaded?.window != nil else {
+        promise.reject("ERR_VIEW_NOT_READY", "La pantalla todavía no está lista para abrir el escáner")
+        return
+      }
 
       self.pendingPromise = promise
       let controller = VNDocumentCameraViewController()
