@@ -60,7 +60,7 @@ async function classifyAndExtract(imageBuffer, mimeType) {
   const { data } = await axios.post(
     'https://api.anthropic.com/v1/messages',
     {
-      model: process.env.CLAUDE_VISION_MODEL || 'claude-opus-4-8',
+      model: process.env.CLAUDE_VISION_MODEL || 'claude-haiku-4-5-20251001',
       max_tokens: 1024,
       system: SYSTEM_PROMPT,
       messages: [
@@ -139,7 +139,7 @@ async function reclasificarConPista(extraido, pista) {
   const { data } = await axios.post(
     'https://api.anthropic.com/v1/messages',
     {
-      model: process.env.CLAUDE_VISION_MODEL || 'claude-opus-5',
+      model: process.env.CLAUDE_VISION_MODEL || 'claude-haiku-4-5-20251001',
       max_tokens: 512,
       system: SYSTEM_RECLASIFICAR,
       messages: [
