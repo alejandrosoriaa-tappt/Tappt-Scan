@@ -52,7 +52,11 @@ function Fila({ documento, onPress, t }) {
         </Text>
         {documento.ruta ? (
           <Text style={estilos.filaRuta} numberOfLines={1}>
-            {documento.ruta}
+            {documento.ruta
+              .split('/')
+              .filter(Boolean)
+              .map((segmento) => segmento.replace(/^\d+\s*·\s*/, ''))
+              .join(' › ')}
           </Text>
         ) : null}
       </View>
@@ -111,6 +115,16 @@ export default function DocumentosScreen({ navigation }) {
             value={busqueda}
             onChangeText={setBusqueda}
           />
+          {busqueda ? (
+            <TouchableOpacity
+              style={estilos.limpiarBusqueda}
+              onPress={() => setBusqueda('')}
+              accessibilityRole="button"
+              accessibilityLabel={t('limpiarBusqueda')}
+            >
+              <Icono nombre="cerrar" tamano={15} color={colores.textoTerciario} />
+            </TouchableOpacity>
+          ) : null}
         </View>
 
         <View style={estilos.pestanas}>
@@ -119,8 +133,16 @@ export default function DocumentosScreen({ navigation }) {
               key={clave}
               onPress={() => setPestana(clave)}
               style={[estilos.pestana, pestana === clave && estilos.pestanaActiva]}
+              accessibilityRole="tab"
+              accessibilityState={{ selected: pestana === clave }}
             >
-              <Text style={[estilos.pestanaTexto, pestana === clave && estilos.pestanaTextoActivo]}>
+              <Text
+                style={[estilos.pestanaTexto, pestana === clave && estilos.pestanaTextoActivo]}
+                numberOfLines={1}
+                adjustsFontSizeToFit
+                minimumFontScale={0.85}
+                maxFontSizeMultiplier={1.15}
+              >
                 {t(clave)}
               </Text>
             </TouchableOpacity>
@@ -133,6 +155,7 @@ export default function DocumentosScreen({ navigation }) {
         keyExtractor={(item) => item.id}
         contentContainerStyle={estilos.lista}
         stickySectionHeadersEnabled={false}
+        showsVerticalScrollIndicator={false}
         refreshing={documentos.cargando}
         onRefresh={documentos.recargar}
         renderSectionHeader={({ section }) => (
@@ -166,9 +189,18 @@ const estilos = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: colores.superficie,
+    borderWidth: 1,
+    borderColor: colores.divisor,
     borderRadius: radio.md,
     paddingHorizontal: espacio.md,
     ...sombra,
+  },
+  limpiarBusqueda: {
+    width: 32,
+    height: 32,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: -espacio.sm,
   },
 
   input: {
@@ -181,14 +213,21 @@ const estilos = StyleSheet.create({
 
   pestanas: { flexDirection: 'row', gap: espacio.sm, marginTop: espacio.md },
   pestana: {
+    flex: 1,
+    minWidth: 0,
+    minHeight: 36,
+    alignItems: 'center',
+    justifyContent: 'center',
     paddingVertical: espacio.xs + 2,
-    paddingHorizontal: espacio.md,
+    paddingHorizontal: espacio.sm,
     borderRadius: 20,
     backgroundColor: colores.superficie,
+    borderWidth: 1,
+    borderColor: colores.divisor,
   },
-  pestanaActiva: { backgroundColor: colores.texto },
-  pestanaTexto: { ...tipo.secundario, fontWeight: '600', color: colores.textoSuave },
-  pestanaTextoActivo: { color: '#FFFFFF' },
+  pestanaActiva: { backgroundColor: colores.primario, borderColor: colores.primario },
+  pestanaTexto: { ...tipo.secundario, fontWeight: '600', color: colores.textoSuave, textAlign: 'center' },
+  pestanaTextoActivo: { color: colores.blanco },
 
   lista: { padding: espacio.md, paddingTop: espacio.sm, paddingBottom: 96 },
   grupo: {

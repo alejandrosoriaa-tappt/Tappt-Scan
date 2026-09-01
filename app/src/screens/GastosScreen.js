@@ -194,8 +194,8 @@ const estilos = StyleSheet.create({
     marginBottom: espacio.md,
     ...sombra,
   },
-  flechaBoton: { paddingHorizontal: espacio.md, paddingVertical: espacio.xs },
-  mes: { ...tipo.cuerpoFuerte, color: colores.texto },
+  flechaBoton: { width: 44, height: 44, alignItems: 'center', justifyContent: 'center' },
+  mes: { flex: 1, ...tipo.cuerpoFuerte, color: colores.texto, textAlign: 'center' },
 
   tarjetaTotal: {
     backgroundColor: colores.oscuro,

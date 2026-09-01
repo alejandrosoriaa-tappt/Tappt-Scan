@@ -57,15 +57,25 @@ function BarraInferior({ state, navigation, onCapturar }) {
         key={ruta.key}
         style={estilos.tab}
         activeOpacity={0.7}
+        accessibilityRole="tab"
+        accessibilityState={{ selected: activo }}
         onPress={() => navigation.navigate(ruta.name)}
       >
-        <Icono
-          nombre={ICONOS[ruta.name]}
-          tamano={22}
-          color={activo ? colores.primario : '#98A5B0'}
-          grosor={activo ? 2.1 : 1.8}
-        />
-        <Text style={[estilos.tabTexto, activo && estilos.tabTextoActivo]}>
+        <View style={estilos.tabIcono}>
+          <Icono
+            nombre={ICONOS[ruta.name]}
+            tamano={22}
+            color={activo ? colores.primario : colores.textoTerciario}
+            grosor={activo ? 2.1 : 1.8}
+          />
+        </View>
+        <Text
+          style={[estilos.tabTexto, activo && estilos.tabTextoActivo]}
+          numberOfLines={1}
+          adjustsFontSizeToFit
+          minimumFontScale={0.86}
+          maxFontSizeMultiplier={1.1}
+        >
           {t(ruta.name.toLowerCase())}
         </Text>
       </TouchableOpacity>
@@ -163,6 +173,7 @@ export default function RootNavigator() {
   const encabezado = {
     headerTintColor: colores.primario,
     headerTitleStyle: { ...tipo.seccion, color: colores.texto },
+    headerBackButtonDisplayMode: 'minimal',
     headerShadowVisible: false,
     headerStyle: { backgroundColor: colores.fondo },
   };
@@ -186,9 +197,19 @@ const estilos = StyleSheet.create({
     borderTopWidth: StyleSheet.hairlineWidth,
     borderTopColor: colores.divisor,
   },
-  barra: { flexDirection: 'row', alignItems: 'flex-end', height: 58 },
-  tab: { flex: 1, alignItems: 'center', justifyContent: 'center', height: '100%', gap: 3 },
-  tabTexto: { ...tipo.menor, fontSize: 11, color: '#98A5B0' },
+  barra: { flexDirection: 'row', alignItems: 'center', height: 60 },
+  tab: { flex: 1, minWidth: 0, alignItems: 'center', justifyContent: 'center', height: '100%' },
+  tabIcono: { width: 24, height: 25, alignItems: 'center', justifyContent: 'center' },
+  tabTexto: {
+    width: '100%',
+    height: 15,
+    marginTop: 1,
+    fontSize: 10.5,
+    lineHeight: 13,
+    color: colores.textoTerciario,
+    textAlign: 'center',
+    includeFontPadding: false,
+  },
   tabTextoActivo: { color: colores.primario, fontWeight: '600' },
 
   huecoCentral: { width: 72, alignItems: 'center', height: '100%' },
