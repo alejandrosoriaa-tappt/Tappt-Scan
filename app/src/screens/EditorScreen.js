@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   View,
   Text,
@@ -11,6 +11,7 @@ import {
   ScrollView,
   Modal,
   Linking,
+  PanResponder,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import * as ImagePicker from 'expo-image-picker';
@@ -35,6 +36,47 @@ const HERRAMIENTAS = [
   { id: 'imagen', icono: 'camara' },
   { id: 'tapar', icono: 'recibo' },
 ];
+
+// Permite corregir la posición de una anotación ya colocada. Conserva las
+// coordenadas normalizadas (0..1) que espera el backend al generar el PDF.
+function AnotacionMovible({ anotacion, indice, lienzo, onMover, style, children }) {
+  const anotacionRef = useRef(anotacion);
+  const lienzoRef = useRef(lienzo);
+  const inicio = useRef({ x: 0, y: 0 });
+  anotacionRef.current = anotacion;
+  lienzoRef.current = lienzo;
+
+  const responder = useRef(
+    PanResponder.create({
+      onStartShouldSetPanResponder: () => true,
+      onMoveShouldSetPanResponder: () => true,
+      onPanResponderGrant: () => {
+        inicio.current = { x: anotacionRef.current.x, y: anotacionRef.current.y };
+      },
+      onPanResponderMove: (_evento, gesto) => {
+        const actual = lienzoRef.current;
+        if (!actual.ancho || !actual.alto) return;
+        onMover(indice, {
+          x: Math.min(0.96, Math.max(0, inicio.current.x + gesto.dx / actual.ancho)),
+          y: Math.min(0.96, Math.max(0, inicio.current.y + gesto.dy / actual.alto)),
+        });
+      },
+    })
+  ).current;
+
+  return (
+    <View
+      {...responder.panHandlers}
+      style={[
+        estilos.anotacionMovible,
+        { left: anotacion.x * lienzo.ancho, top: anotacion.y * lienzo.alto },
+        style,
+      ]}
+    >
+      {children}
+    </View>
+  );
+}
 
 export default function EditorScreen({ route, navigation }) {
   const { documento, paginaInicial } = route.params;
@@ -89,6 +131,11 @@ export default function EditorScreen({ route, navigation }) {
   });
 
   const agregar = (anotacion) => setAnotaciones((previas) => [...previas, anotacion]);
+  const moverAnotacion = (indice, posicion) => {
+    setAnotaciones((previas) =>
+      previas.map((anotacion, i) => (i === indice ? { ...anotacion, ...posicion } : anotacion))
+    );
+  };
 
   const tocarLienzo = async (evento) => {
     // Cada anotación recuerda en qué página se puso: el backend las aplica
@@ -107,7 +154,7 @@ export default function EditorScreen({ route, navigation }) {
     } else if (herramienta === 'emoji') {
       setEmojisAbiertos(true);
     } else if (herramienta === 'tapar') {
-      agregar({ tipo: 'tapar', ...posicion, ancho: 0.3, alto: 0.04 });
+      agregar({ tipo: 'tapar', ...posicion, ancho: 0.3, alto: 0.04, color: '#000000' });
     } else if (herramienta === 'imagen') {
       const resultado = await ImagePicker.launchImageLibraryAsync({ base64: true, quality: 0.7 });
       if (!resultado.canceled) {
@@ -231,22 +278,32 @@ export default function EditorScreen({ route, navigation }) {
 
               if (anotacion.tipo === 'tapar') {
                 return (
-                  <View
+                  <AnotacionMovible
                     key={indice}
-                    style={[
-                      estilos.tapar,
-                      posicion,
-                      { width: anotacion.ancho * lienzo.ancho, height: anotacion.alto * lienzo.alto },
-                    ]}
+                    anotacion={anotacion}
+                    indice={indice}
+                    lienzo={lienzo}
+                    onMover={moverAnotacion}
+                    style={{
+                      width: anotacion.ancho * lienzo.ancho,
+                      height: anotacion.alto * lienzo.alto,
+                      backgroundColor: anotacion.color || '#000000',
+                    }}
                   />
                 );
               }
 
               if (anotacion.tipo === 'texto') {
                 return (
-                  <Text key={indice} style={[estilos.textoPuesto, posicion]}>
-                    {anotacion.texto}
-                  </Text>
+                  <AnotacionMovible
+                    key={indice}
+                    anotacion={anotacion}
+                    indice={indice}
+                    lienzo={lienzo}
+                    onMover={moverAnotacion}
+                  >
+                    <Text style={estilos.textoPuesto}>{anotacion.texto}</Text>
+                  </AnotacionMovible>
                 );
               }
 
@@ -472,8 +529,8 @@ const estilos = StyleSheet.create({
     overflow: 'hidden',
   },
   imagen: { width: '100%', height: '100%' },
-  tapar: { position: 'absolute', backgroundColor: '#FFFFFF' },
-  textoPuesto: { position: 'absolute', fontSize: 16, color: '#0F172A', fontWeight: '500' },
+  anotacionMovible: { position: 'absolute', zIndex: 3 },
+  textoPuesto: { fontSize: 16, color: '#0F172A', fontWeight: '500' },
   imagenPuesta: { position: 'absolute', height: undefined, aspectRatio: 2 },
   pista: {
     fontSize: 12,

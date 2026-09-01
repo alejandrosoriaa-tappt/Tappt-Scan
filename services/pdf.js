@@ -155,8 +155,8 @@ async function desdeImagenes(buffers) {
  * arriba-izquierda — así el cliente no necesita saber los puntos del PDF ni
  * que su eje Y va al revés.
  *
- * Tipos: `texto`, `firma`, `imagen`, `emoji`, `tapar` (rectángulo blanco
- * para ocultar texto antes de reescribir encima).
+ * Tipos: `texto`, `firma`, `imagen`, `emoji`, `tapar` (rectángulo negro
+ * por defecto para censurar información).
  */
 async function aplicarAnotaciones(pdfBuffer, anotaciones = []) {
   const pdf = await PDFDocument.load(pdfBuffer);
@@ -173,12 +173,18 @@ async function aplicarAnotaciones(pdfBuffer, anotaciones = []) {
     const y = alto - (anotacion.y || 0) * alto; // el cliente manda Y desde arriba
 
     if (anotacion.tipo === 'tapar') {
+      const colorTapado = /^#[0-9A-Fa-f]{6}$/.test(anotacion.color || '')
+        ? anotacion.color
+        : '#000000';
+      const rojo = parseInt(colorTapado.slice(1, 3), 16) / 255;
+      const verde = parseInt(colorTapado.slice(3, 5), 16) / 255;
+      const azul = parseInt(colorTapado.slice(5, 7), 16) / 255;
       pagina.drawRectangle({
         x,
         y: y - (anotacion.alto || 0.03) * alto,
         width: (anotacion.ancho || 0.2) * ancho,
         height: (anotacion.alto || 0.03) * alto,
-        color: rgb(1, 1, 1),
+        color: rgb(rojo, verde, azul),
       });
       continue;
     }
