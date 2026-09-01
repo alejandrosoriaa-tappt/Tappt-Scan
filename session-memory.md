@@ -1,5 +1,14 @@
 # Memoria de trabajo de TapptScan
 
+## 2026-09-01 — Guardado del lote y vista real de filtros
+
+- Los logs de Railway de las 07:07 confirmaron que `error_escaneo_lote` no provenía de VisionKit ni del PDF: Supabase devolvió `PGRST204` porque su caché aún no encontraba la columna `persona` de `scan_documents`.
+- El registro del documento ahora reintenta sin `persona` únicamente ante ese error exacto. La clasificación, el PDF ya subido y la ruta de Drive ya no se pierden por un desfase de caché; cualquier otro error continúa fallando normalmente.
+- En el editor propio, tocar Original/Gris/B/N/Mejorar ahora actualiza la previsualización grande mediante la misma tubería que se usa al guardar. Antes sólo cambiaba el chip seleccionado y parecía que el control no funcionaba.
+- VisionKit se conserva como escáner iOS. Su editor de páginas no ofrece un botón final: la flecha vuelve a la cámara y la palomita azul superior termina el lote.
+- Verificación: 31/31 pruebas Node y bundle iOS completados.
+- Pendiente inmediato: desplegar el fallback en producción, reinstalar la app en `iPhone ASA` y validar VisionKit → palomita → Guardar PDF → clasificación → detalle con ruta de Drive; después validar visualmente los cuatro filtros.
+
 ## 2026-09-01 — VisionKit: instrucciones y regreso al borrador
 
 - Regla operativa confirmada: durante esta etapa, todas las pruebas nativas se hacen con `iPhone ASA` conectado físicamente a la Mac.

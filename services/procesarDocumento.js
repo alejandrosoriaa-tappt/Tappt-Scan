@@ -102,32 +102,51 @@ async function procesarArchivo(usuario, buffer, mimeType = 'image/jpeg', nombreO
     buffer: archivo,
   });
 
-  const { data: documento, error } = await supabase
+  const registro = {
+    user_id: usuario.id,
+    tipo: extraido.tipo || 'otro',
+    seccion: extraido.seccion || null,
+    subcarpeta: extraido.subcarpeta || null,
+    es_gasto: Boolean(extraido.es_gasto) && extraido.monto != null,
+    categoria_gasto: taxonomia.categoriaGastoValida(extraido.categoria_gasto),
+    concepto: extraido.concepto || null,
+    emisor: extraido.emisor || null,
+    persona: extraido.persona || null,
+    fecha: extraido.fecha || null,
+    monto: extraido.monto ?? null,
+    moneda: extraido.moneda || null,
+    nombre_archivo: nombreArchivo,
+    nombre_original: nombreOriginal,
+    ruta: naming.rutaLegible(tramos),
+    carpeta_id: carpetaId,
+    mime_type: 'application/pdf',
+    paginas,
+    drive_file_id: subido.id,
+    drive_link: subido.webViewLink,
+  };
+
+  let { data: documento, error } = await supabase
     .from('scan_documents')
-    .insert({
-      user_id: usuario.id,
-      tipo: extraido.tipo || 'otro',
-      seccion: extraido.seccion || null,
-      subcarpeta: extraido.subcarpeta || null,
-      es_gasto: Boolean(extraido.es_gasto) && extraido.monto != null,
-      categoria_gasto: taxonomia.categoriaGastoValida(extraido.categoria_gasto),
-      concepto: extraido.concepto || null,
-      emisor: extraido.emisor || null,
-      persona: extraido.persona || null,
-      fecha: extraido.fecha || null,
-      monto: extraido.monto ?? null,
-      moneda: extraido.moneda || null,
-      nombre_archivo: nombreArchivo,
-      nombre_original: nombreOriginal,
-      ruta: naming.rutaLegible(tramos),
-      carpeta_id: carpetaId,
-      mime_type: 'application/pdf',
-      paginas,
-      drive_file_id: subido.id,
-      drive_link: subido.webViewLink,
-    })
+    .insert(registro)
     .select()
     .single();
+
+  // PostgREST puede tardar en refrescar su caché después de agregar una
+  // columna. `persona` mejora la organización, pero nunca debe impedir que
+  // un PDF ya clasificado y subido a Drive se registre. Si la caché todavía
+  // no conoce exclusivamente esa columna, repetimos el insert sin ella.
+  if (
+    error?.code === 'PGRST204' &&
+    /['"]persona['"] column/i.test(error.message || '')
+  ) {
+    console.warn('[procesarDocumento] Supabase no reconoce persona; reintentando sin esa columna');
+    const { persona: _persona, ...registroCompatible } = registro;
+    ({ data: documento, error } = await supabase
+      .from('scan_documents')
+      .insert(registroCompatible)
+      .select()
+      .single());
+  }
   if (error) throw error;
 
   // El control de gastos es del plan Negocio. Se lanza sin await: si la
