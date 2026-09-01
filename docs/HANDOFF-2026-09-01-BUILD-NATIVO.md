@@ -2,6 +2,10 @@
 
 _Última actualización: 2026-09-01_
 
+> Para las pruebas funcionales actuales, seguir
+> [`CHECKLIST-QA-USUARIO.md`](./CHECKLIST-QA-USUARIO.md) en orden y registrar
+> cada fallo con hora y captura. Este checklist reemplaza las pruebas ad hoc.
+
 Estado exacto al cerrar la sesión de Claude Code. Rama
 **`claude/build-nativo-ios-docs-jud3zt`**, 5 commits, todo pusheado.
 

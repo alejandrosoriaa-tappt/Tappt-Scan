@@ -1,5 +1,22 @@
 # Memoria de trabajo de TapptScan
 
+## 2026-09-01 — Checklist maestro de pruebas desde la visión del usuario
+
+- Se creó `docs/CHECKLIST-QA-USUARIO.md` para sustituir pruebas aleatorias por recorridos repetibles con puertas de avance.
+- Cubre: primera apertura, login por WhatsApp, autorización/revocación de Drive, VisionKit y lote, recorte/filtros, clasificación y ruta, documentos/búsqueda/carpetas, editor/firma, importación, WhatsApp, gastos, cuenta/IAP/borrado, errores y calidad visual.
+- Cada fallo debe registrar captura, hora, acción, resultado y texto literal; la hora se usa para correlacionar Railway.
+- Pendiente inmediato: comenzar por el recorrido A y ejecutar A → B → C sin saltos en `iPhone ASA`; sólo después continuar con D y E.
+
+## 2026-09-01 — Corrección de portada para verificación OAuth de Google
+
+- Se confirmó en producción que `https://scan.tappt.lat/` sólo mostraba la pantalla “Entrar con WhatsApp”; Google la considera una portada detrás de acceso aunque la URL responda sin redirección.
+- Se creó una portada pública específica de TapptScan en `/`, con descripción del producto, flujo de uso, explicación transparente del permiso `drive.file`, tratamiento de la autorización y enlaces visibles a privacidad y términos.
+- La aplicación web autenticada se separó en `/app`; el retorno web del callback de Google y el `start_url` del manifest ahora apuntan a esa ruta.
+- Se amplió `/privacidad.html` con las operaciones realizadas sobre datos de Google, conservación de tokens y declaración de cumplimiento de Uso Limitado.
+- Verificación local: `git diff --check`, 32/32 pruebas Node y export web completados. No se pudo abrir un puerto HTTP local por la restricción del sandbox, pero se verificaron los artefactos generados y las rutas en código.
+- La configuración recomendada para Google Cloud queda: principal `https://scan.tappt.lat/`, privacidad `https://scan.tappt.lat/privacidad.html`, términos `https://scan.tappt.lat/terminos.html`, dominio autorizado `tappt.lat`. No se envió una nueva solicitud de verificación.
+- Pendiente inmediato: publicar estos cambios en la rama que despliega Railway, comprobar las cuatro URLs en producción y sólo entonces actualizar los enlaces de Información de la marca y pedir confirmación antes de “Enviar para verificación”.
+
 ## 2026-09-01 — Editor: texto movible y tapado negro
 
 - Las anotaciones de texto ya colocadas se pueden arrastrar sobre la página; su nueva posición se conserva en coordenadas normalizadas y llega así al PDF final.
