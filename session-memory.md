@@ -1,5 +1,14 @@
 # Memoria de trabajo de TapptScan
 
+## 2026-09-01 — VisionKit: instrucciones y regreso al borrador
+
+- Regla operativa confirmada: durante esta etapa, todas las pruebas nativas se hacen con `iPhone ASA` conectado físicamente a la Mac.
+- Tras terminar VisionKit, la app quedaba en “Abriendo escáner…” y React Navigation mostraba una acción `REPLACE` no manejada. Causa: `EscanearScreen.native.js` intentaba reemplazar hacia `Borrador`, pero la ruta registrada se llama `BorradorEscaneo`.
+- Se corrigió el destino y el resultado ahora debe regresar al borrador multipágina, desde donde continúa guardado y clasificación.
+- VisionKit ya no se abre automáticamente: primero aparece una guía de tres pasos para encuadrar, cambiar a `Shutter` manual y terminar con la palomita. Esto también elimina la presentación prematura durante la transición del Stack.
+- Verificación: bundle iOS completado y 31/31 pruebas Node.
+- Pendiente inmediato: recompilar en el iPhone conectado y validar captura → palomita → borrador → guardar → clasificación.
+
 ## 2026-08-31 — Pase de pulido visual de la app
 
 - Se corrigió la barra inferior: “Documentos” ya no se parte en dos líneas, iconos y etiquetas ocupan cajas de altura fija y el escalado de texto no desplaza verticalmente los tabs.
