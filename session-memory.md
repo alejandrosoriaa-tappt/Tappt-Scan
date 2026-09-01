@@ -1,5 +1,13 @@
 # Memoria de trabajo de TapptScan
 
+## 2026-08-31 — Editor y firma: `error_pagina` corregido
+
+- “Editar y firmar” fallaba al abrir una página PDF con `error_pagina`. Los logs de Railway mostraron que el `NodeCanvasFactory` interno de `pdfjs-dist` intentaba usar el paquete opcional `canvas`, cuyo binding no estaba disponible.
+- Se agregó `NapiCanvasFactory` en `services/pdf.js` y se entrega a `pdfjs` desde `getDocument`; los lienzos principal y temporales ahora usan `@napi-rs/canvas`, que ya forma parte del backend.
+- Se agregó una prueba de regresión que crea un PDF con una imagen y lo rasteriza nuevamente a PNG. Pasan 31/31 pruebas.
+- El arreglo quedó en `c5da817` en la rama nativa y se llevó aisladamente a `main` como `81cbe7e`. Railway reportó deployment exitoso para `scan.tappt.lat`.
+- Pendiente: tocar nuevamente “Editar y firmar” en el iPhone y validar carga, anotación/firma y guardado sobre el documento real.
+
 ## 2026-08-31 — Clasificación visual más económica
 
 - Se confirmó que VisionKit continúa siendo el escáner definitivo de iOS; este cambio no modifica la captura nativa.
