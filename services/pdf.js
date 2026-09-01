@@ -10,6 +10,33 @@ globalThis.DOMMatrix = globalThis.DOMMatrix || canvasLib.DOMMatrix;
 globalThis.Path2D = globalThis.Path2D || canvasLib.Path2D;
 globalThis.ImageData = globalThis.ImageData || canvasLib.ImageData;
 
+// pdf.js trae un NodeCanvasFactory que depende del paquete `canvas`. Ese
+// paquete es opcional y su binding nativo no está disponible en Railway,
+// aunque TapptScan ya usa @napi-rs/canvas. Además del lienzo principal,
+// pdf.js necesita crear lienzos temporales al pintar imágenes incrustadas;
+// por eso se le entrega explícitamente una fábrica respaldada por NAPI.
+class NapiCanvasFactory {
+  create(width, height) {
+    if (width <= 0 || height <= 0) throw new Error('Dimensiones de canvas inválidas');
+    const canvas = canvasLib.createCanvas(width, height);
+    return { canvas, context: canvas.getContext('2d') };
+  }
+
+  reset(canvasAndContext, width, height) {
+    if (!canvasAndContext?.canvas) throw new Error('Canvas no disponible');
+    canvasAndContext.canvas.width = width;
+    canvasAndContext.canvas.height = height;
+  }
+
+  destroy(canvasAndContext) {
+    if (!canvasAndContext?.canvas) return;
+    canvasAndContext.canvas.width = 0;
+    canvasAndContext.canvas.height = 0;
+    canvasAndContext.canvas = null;
+    canvasAndContext.context = null;
+  }
+}
+
 const FUENTES_ESTANDAR =
   path.join(require.resolve('pdfjs-dist/package.json'), '..', 'standard_fonts') + path.sep;
 
@@ -31,6 +58,7 @@ async function abrir(pdfBuffer) {
     data: new Uint8Array(pdfBuffer),
     isEvalSupported: false,
     standardFontDataUrl: FUENTES_ESTANDAR,
+    canvasFactory: new NapiCanvasFactory(),
   }).promise;
 }
 
@@ -54,7 +82,10 @@ async function renderizarPagina(pdfBuffer, indice = 0, escala = 2) {
   const vista = pagina.getViewport({ scale: escala });
 
   const canvas = canvasLib.createCanvas(Math.ceil(vista.width), Math.ceil(vista.height));
-  await pagina.render({ canvasContext: canvas.getContext('2d'), viewport: vista }).promise;
+  await pagina.render({
+    canvasContext: canvas.getContext('2d'),
+    viewport: vista,
+  }).promise;
 
   return canvas.toBuffer('image/png');
 }
