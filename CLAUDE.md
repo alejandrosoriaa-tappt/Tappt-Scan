@@ -307,8 +307,12 @@ Dos cambios de código obligados: `expo-file-system` (la API vieja
 al pasarse a Nitro Modules — `compras.native.js` está reescrito contra
 `fetchProducts`/`requestPurchase`, y el recibo de iOS ahora se pide con
 `getReceiptDataIOS()` porque `purchaseToken` pasó a ser el JWS.
-**Verificado solo el bundle web; ningún build nativo se pudo correr** — la
-reescritura de IAP no se ha ejecutado contra una tienda real.
+**Validado en dispositivo el 2026-09-01:** `xcodebuild` da **Build Succeeded**
+(0 errores) y la app corre en el simulador — la pantalla de Login renderiza y
+`Linking` funciona, así que React 19 y Navigation 7 no solo compilan, corren.
+Lo que sigue SIN probar: cámara (lo más frágil del salto de `expo-camera`
+15→57), importación de archivos, editor, y **el IAP contra una tienda real**.
+Estado completo y cómo retomar: **`docs/HANDOFF-2026-09-01-BUILD-NATIVO.md`**.
 
 **Restaurar compras** (`comprasIAP.restaurarCompras()` + botón en Ajustes):
 lo exige la guía 3.1.1 y resuelve el caso del usuario que reinstala o cambia
@@ -414,6 +418,19 @@ documentar siempre **rama, SHA base, PR, estado de validación y siguiente
 paso**. Antes de empezar: `git fetch --all` y revisar ramas `codex/*` además
 de `main`. Fusionar con merge, nunca rebase ni force-push sobre trabajo
 ajeno.
+
+Rama activa: **`claude/build-nativo-ios-docs-jud3zt`**. Desarrollar,
+commitear y pushear ahí. No abrir PR salvo que se pida explícitamente.
+
+**Entorno de build en el Mac mini** (para no repetir la pelea de medio día):
+macOS 26.6.2 · Xcode 26.6 · CLT 26.6 · CocoaPods 1.17.0. La cadena de
+versiones es rígida — iPhone con iOS 26.6 exige Xcode 26.x, que exige macOS
+26.2+. **CocoaPods se instala con `sudo gem install cocoapods`, NO con
+brew**: el Homebrew de esa Mac vive en `~/homebrew` (prefijo no estándar) y
+compila llvm/rust/ruby desde fuente, horas. El clon bueno está en
+`~/Documents/tappt-scan-ios`; hay otra copia vieja bajo `Documents/Codex/…`
+con cambios sin commitear que **no hay que tocar**. Detalles en
+`docs/HANDOFF-2026-09-01-BUILD-NATIVO.md`.
 
 ## 👉 Retomando la sesión (actualizado 2026-08-13 CDMX)
 
