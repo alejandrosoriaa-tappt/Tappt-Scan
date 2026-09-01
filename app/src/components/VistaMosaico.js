@@ -62,11 +62,18 @@ export default function VistaMosaico({
   const [modoSeleccion, setModoSeleccion] = useState(false);
   const [zoomIndice, setZoomIndice] = useState(null);
   const [procesando, setProcesando] = useState(false);
+  const [orden, setOrden] = useState([]);
+  const [ordenCambiado, setOrdenCambiado] = useState(false);
 
   const indices = useMemo(
     () => Array.from({ length: totalPaginas }, (_, i) => i),
     [totalPaginas]
   );
+
+  useEffect(() => {
+    setOrden(indices);
+    setOrdenCambiado(false);
+  }, [visible, totalPaginas]);
 
   // Documentos de este tipo (fichas técnicas, contratos) suelen ser pocas
   // páginas — se cargan todas de una vez para que el mosaico se sienta
@@ -109,6 +116,30 @@ export default function VistaMosaico({
   const tocarMiniatura = (i) => {
     if (modoSeleccion) alternar(i);
     else setZoomIndice(i);
+  };
+
+  const mover = (posicion, desplazamiento) => {
+    const destino = posicion + desplazamiento;
+    if (destino < 0 || destino >= orden.length) return;
+    setOrden((actual) => {
+      const copia = [...actual];
+      [copia[posicion], copia[destino]] = [copia[destino], copia[posicion]];
+      return copia;
+    });
+    setOrdenCambiado(true);
+  };
+
+  const guardarOrden = async () => {
+    setProcesando(true);
+    try {
+      const resultado = await api.reordenarPaginas(documentoId, orden);
+      setOrdenCambiado(false);
+      onPaginasEliminadas?.(resultado);
+    } catch (err) {
+      alertar(t('noSePudo'), err.message);
+    } finally {
+      setProcesando(false);
+    }
   };
 
   const compartirSeleccion = async () => {
@@ -178,7 +209,7 @@ export default function VistaMosaico({
         </View>
 
         <ScrollView contentContainerStyle={estilos.rejilla}>
-          {indices.map((i) => {
+          {orden.map((i, posicion) => {
             const miniatura = miniaturas[i];
             const marcada = seleccion.has(i);
             return (
@@ -209,12 +240,30 @@ export default function VistaMosaico({
                   ) : null}
                 </View>
                 <Text style={estilos.numeroPagina}>{i + 1}</Text>
+                {!modoSeleccion ? (
+                  <View style={estilos.ordenControles}>
+                    <TouchableOpacity onPress={() => mover(posicion, -1)} disabled={posicion === 0}>
+                      <Icono nombre="izquierda" tamano={16} color={posicion === 0 ? colores.divisor : colores.textoSuave} />
+                    </TouchableOpacity>
+                    <Text style={estilos.posicionPagina}>{posicion + 1}</Text>
+                    <TouchableOpacity onPress={() => mover(posicion, 1)} disabled={posicion === orden.length - 1}>
+                      <Icono nombre="derecha" tamano={16} color={posicion === orden.length - 1 ? colores.divisor : colores.textoSuave} />
+                    </TouchableOpacity>
+                  </View>
+                ) : null}
               </TouchableOpacity>
             );
           })}
         </ScrollView>
 
-        {modoSeleccion && seleccion.size > 0 ? (
+        {ordenCambiado && !modoSeleccion ? (
+          <View style={estilos.barraAcciones}>
+            <TouchableOpacity style={estilos.botonOrden} onPress={guardarOrden} disabled={procesando}>
+              <Icono nombre="verificado" tamano={18} color="#FFFFFF" />
+              <Text style={estilos.botonOrdenTexto}>{t('guardarOrden')}</Text>
+            </TouchableOpacity>
+          </View>
+        ) : modoSeleccion && seleccion.size > 0 ? (
           <View style={estilos.barraAcciones}>
             <TouchableOpacity
               style={estilos.botonAccion}
@@ -355,6 +404,8 @@ const estilos = StyleSheet.create({
   },
   checkMarcado: { backgroundColor: colores.primario, borderColor: colores.primario },
   numeroPagina: { fontSize: 12, color: colores.textoSuave, marginTop: espacio.xs },
+  ordenControles: { flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 4 },
+  posicionPagina: { fontSize: 10, color: colores.textoTerciario },
   barraAcciones: {
     flexDirection: 'row',
     gap: espacio.sm,
@@ -377,6 +428,8 @@ const estilos = StyleSheet.create({
   botonAccionDestructivo: { borderColor: colores.peligro },
   botonAccionTexto: { color: colores.texto, fontSize: 14, fontWeight: '600' },
   botonAccionTextoDestructivo: { color: colores.peligro },
+  botonOrden: { flex: 1, minHeight: 44, borderRadius: 12, backgroundColor: colores.primario, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: espacio.sm },
+  botonOrdenTexto: { color: '#FFFFFF', fontWeight: '800' },
   capaProcesando: {
     ...StyleSheet.absoluteFillObject,
     backgroundColor: 'rgba(0,0,0,0.35)',

@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, StyleSheet } from 'react-native';
+import { Platform, View, StyleSheet } from 'react-native';
 
 /**
  * Dibuja un cuadrilátero como cuatro Views rotadas, sin SVG.
@@ -18,7 +18,7 @@ import { View, StyleSheet } from 'react-native';
  * `puntos` van en píxeles de pantalla ya proyectados (ver lib/preview.js),
  * en orden, y se cierra el polígono solo.
  */
-export default function ContornoQuad({ puntos, color, grosor = 2 }) {
+export default function ContornoQuad({ puntos, color, relleno = 'rgba(24,184,117,0.18)', grosor = 2 }) {
   if (!puntos || puntos.length !== 4) return null;
 
   const lados = puntos.map((p1, i) => {
@@ -28,14 +28,24 @@ export default function ContornoQuad({ puntos, color, grosor = 2 }) {
     return { key: i, left: p1.x, top: p1.y, width: largo, angulo };
   });
 
-  // SIN RELLENO, a propósito. Se intentó aproximarlo con la caja que envuelve
-  // al quad y en el dispositivo se veía mal: con el documento inclinado esa
-  // caja es bastante más grande que el cuadrilátero, así que la mancha
-  // sugería una detección distinta —y mayor— de la que en realidad hubo. Un
-  // overlay que miente sobre lo que detectó es peor que uno sin relleno, y el
-  // benchmark tampoco lo necesita: su quad es una línea fina y limpia.
+  // En web usamos clip-path para que el velo cubra el cuadrilátero exacto,
+  // no la caja rectangular que lo envuelve. Así la transparencia sigue las
+  // cuatro esquinas aun cuando el documento esté inclinado. El contorno con
+  // Views se conserva porque es la implementación comprobada en Safari/iPhone.
+  const recorte = Platform.OS === 'web'
+    ? `polygon(${puntos.map((p) => `${p.x}px ${p.y}px`).join(', ')})`
+    : null;
+
   return (
     <View style={StyleSheet.absoluteFill} pointerEvents="none">
+      {recorte ? (
+        <View
+          style={[
+            StyleSheet.absoluteFill,
+            { backgroundColor: relleno, clipPath: recorte },
+          ]}
+        />
+      ) : null}
       {lados.map((lado) => (
         <View
           key={lado.key}

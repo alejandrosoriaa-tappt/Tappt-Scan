@@ -5,6 +5,7 @@
   "main": "server.js",
   "scripts": {
     "start": "node server.js",
+    "test": "node --test test/*.test.js",
     "dev": "nodemon server.js",
     "build:web": "npm --prefix app ci && npm --prefix app run build:web",
     "variables": "node scripts/variables.js",
@@ -12,6 +13,7 @@
     "variables:revisar": "node scripts/variables.js --revisar",
     "docquad:model": "node scripts/docquad-model.js",
     "docquad:spike": "node scripts/docquad-spike.js",
+    "docaligner:fixtures": "node scripts/docaligner-fixtures.js",
     "scanner:fixtures": "node scripts/scanner-fixtures.js"
   },
   "license": "UNLICENSED",

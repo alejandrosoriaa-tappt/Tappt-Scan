@@ -13,6 +13,7 @@ import AjustesScreen from '../screens/AjustesScreen';
 import DocumentoScreen from '../screens/DocumentoScreen';
 import EditorScreen from '../screens/EditorScreen';
 import RecorteScreen from '../screens/RecorteScreen';
+import BorradorEscaneoScreen from '../screens/BorradorEscaneoScreen';
 import LoginScreen from '../screens/LoginScreen';
 import OnboardingScreen from '../screens/OnboardingScreen';
 
@@ -24,6 +25,7 @@ import { importarArchivo, importarDeGaleria } from '../lib/importar';
 import { alertar } from '../lib/alerta';
 import { useSesion } from '../context/SesionContext';
 import { useIdioma } from '../i18n';
+import { useBorradorEscaneo } from '../context/BorradorEscaneoContext';
 import { colores, espacio, tipo, sombra } from '../theme';
 
 const Tab = createBottomTabNavigator();
@@ -91,6 +93,7 @@ function Tabs({ navigation }) {
   const { t } = useIdioma();
   const [hoja, setHoja] = useState(false);
   const [limite, setLimite] = useState(false);
+  const borrador = useBorradorEscaneo();
 
   const importar = async (elegir) => {
     try {
@@ -118,7 +121,10 @@ function Tabs({ navigation }) {
       <HojaCaptura
         visible={hoja}
         onCerrar={() => setHoja(false)}
-        onEscanear={() => navigation.navigate('Escanear')}
+        onEscanear={() => {
+          borrador.iniciar();
+          navigation.navigate('Escanear');
+        }}
         onImportarArchivo={() => importar(importarArchivo)}
         onImportarFoto={() => importar(importarDeGaleria)}
       />
@@ -168,6 +174,7 @@ export default function RootNavigator() {
       <Stack.Screen name="Editor" component={EditorScreen} options={{ title: t('editar') }} />
       <Stack.Screen name="Recorte" component={RecorteScreen} options={{ title: t('ajustarRecorte') }} />
       <Stack.Screen name="Escanear" component={EscanearScreen} options={{ headerShown: false }} />
+      <Stack.Screen name="BorradorEscaneo" component={BorradorEscaneoScreen} options={{ headerShown: false }} />
       <Stack.Screen name="Ajustes" component={AjustesScreen} options={{ title: t('ajustes') }} />
     </Stack.Navigator>
   );

@@ -25,7 +25,7 @@ foto de un recibo de luz  →  CFE_Agosto_2026_$1,847.pdf
 ```
 
 Al conectar Drive se crea de golpe **todo el árbol de carpetas**
-(`services/taxonomia.js`, 36 carpetas) para que el usuario lo vea listo
+(`services/taxonomia.js`, 41 carpetas) para que el usuario lo vea listo
 desde el primer momento. Los niveles de emisor y año se crean solos
 conforme llegan documentos. Lo que el clasificador no reconozca con
 confianza cae en **`99 · Por revisar`** — un buzón para que el usuario lo
@@ -178,8 +178,36 @@ warm-up de DocQuad.
   un **eje independiente**: la carpeta dice dónde vive el documento, la
   categoría de gasto dice en qué se fue el dinero (un ticket de gasolina
   vive en Vehículos pero cuenta como `gasolina`).
+### Nivel de persona en la ruta (2026-08-27)
+
+Algunos documentos son **de alguien** —la colegiatura de un hijo, el estudio
+médico de un familiar— y agruparlos por categoría los desparrama: las boletas
+de Patricio por un lado, sus colegiaturas por otro. Por eso las secciones
+marcadas `porPersona: true` en `taxonomia.js` (hoy solo **Educación**) llevan
+un nivel extra con el nombre, **arriba de la subcarpeta**:
+
+```
+08 · Educación / Patricio Soria / Colegiaturas y pagos / Colegio Alemán / 2026
+08 · Educación / Patricio Soria / Boletas y certificados / SEP / 2026
+                └── todo lo del mismo hijo vive junto
+```
+
+Es un nivel **dinámico**, igual que el emisor y el año: no hay ningún nombre
+escrito en el código —ni el de un hijo real en el repo— lo llena el
+clasificador con lo que diga el documento o la corrección del usuario por
+WhatsApp ("es de mi hijo Patricio Soria"). Para sumar otra sección basta
+marcarle `porPersona: true`; Salud es la candidata obvia.
+
+Si no se sabe de quién es, **el nivel se omite** en vez de inventar un
+nombre: `filter(Boolean)` en `naming.rutaPara`. Y `usaPersona()` limita el
+nivel a esas secciones, así que un recibo de CFE con `persona` no la usa.
+
+Columna `scan_documents.persona` (migración al final de `scan_schema.sql`).
+Los documentos ya archivados se quedan en null: no se reclasifica hacia atrás.
+
 - `services/naming.js` — convierte el JSON extraído en la ruta
-  (`sección/subcarpeta/emisor/año`) y el nombre
+  (`sección/subcarpeta/emisor/año`, o `sección/persona/subcarpeta/emisor/año`
+  en las secciones marcadas `porPersona` — ver abajo) y el nombre
   (`CFE_Agosto_2026_$1,847.pdf`). Limpia razones sociales y manda a
   `99 · Por revisar` lo que no case con la taxonomía.
 - `services/drive.js` — OAuth de Google (**solo scope `drive.file`**, ver
@@ -341,8 +369,51 @@ sesión de Claude, leer inmediatamente:
 
 ## Rama de trabajo
 
-Rama activa: **`claude/new-session-9mhtdk`**. Desarrollar, commitear y
-pushear ahí. No abrir PR salvo que se pida explícitamente.
+👉 **Para retomar, empieza por `docs/HANDOFF-2026-08-31.md`** — trae el
+estado, el pendiente que bloquea producción y los 8 frentes abiertos.
+
+💻 **¿Corres en el Mac mini de Alejandro?** Empieza por
+`docs/HANDOFF-MAC-MINI.md` — trae la secuencia exacta de comandos para
+terminar el build de iOS.
+
+🔨 **Build nativo de iOS en curso** (ChatGPT/Codex, en un Mac mini):
+`docs/BUILD-NATIVO-IOS.md`. Ojo: `docs/DISTRIBUCION.md` quedó desactualizado
+en la parte de iOS — ya no basta EAS, la app necesita prebuild por el módulo
+nativo `TapptDocumentScanner`.
+
+**`main` es la rama de referencia** (fusionada el 2026-08-31). Todo el
+trabajo de las sesiones de agosto —scanner multipágina, reclasificación por
+WhatsApp, sección Educación, memoria de mercado— vive ahí.
+
+Ramas anteriores ya fusionadas y que NO hay que seguir usando:
+`claude/tappt-scan-memory-review-u0oook`, `claude/new-session-9mhtdk`.
+
+Para trabajo nuevo: partir de `main` con rama propia.
+
+## ⚠️ Quién trabaja en este repo
+
+Son **tres**, y conviene saber quién hizo qué antes de tocar nada:
+
+| Quién | Cómo commitea | Dónde deja su rastro |
+|---|---|---|
+| **Alejandro** | `Alejandro Soria` | — |
+| **Claude** (Claude Code) | autor `Claude` | `CLAUDE.md` + `docs/HANDOFF-<fecha>.md` |
+| **ChatGPT / Codex** | bajo la identidad de Alejandro (`alejandrosoriaa-tappt`) | ramas `codex/*` + `docs/HANDOFF-CHATGPT-<fecha>-*.md` |
+
+**Ojo con la atribución por autor de git: no sirve para distinguir a Codex
+de Alejandro** — Codex commitea con la cuenta de él. Lo que sí distingue es
+el **prefijo de rama** (`codex/`) y sus **archivos de handoff**.
+
+Casi todo el trabajo del scanner de agosto (multipágina, estabilizador de
+quad, A/B de cámara `18aaa71`, fix de Drive revocado) es de **ChatGPT/Codex**,
+no de otra sesión de Claude. Una versión anterior de esta memoria lo
+atribuía mal.
+
+**Convención que propuso Codex y conviene adoptar todos:** al cerrar,
+documentar siempre **rama, SHA base, PR, estado de validación y siguiente
+paso**. Antes de empezar: `git fetch --all` y revisar ramas `codex/*` además
+de `main`. Fusionar con merge, nunca rebase ni force-push sobre trabajo
+ajeno.
 
 ## 👉 Retomando la sesión (actualizado 2026-08-13 CDMX)
 
@@ -718,6 +789,222 @@ granito-vacio   11   ·  madera-vacia   0   ·  oscuro-vacio   2
 mínimo CON documento: 82
 ```
 
+### `oscuro-documento` (2026-08-18) — cierra el escenario 9, cuarta superficie con el mismo patrón
+
+Entró la contraparte de `oscuro-vacio`: el mismo tapete de fibra de carbono,
+ahora con dos hojas encima (una con texto arriba, una en blanco debajo,
+traslapadas un poco). El ground truth es la hoja en blanco —la que detectó
+el dispositivo—, trazado a mano sobre su contorno visible y verificado
+dibujándolo encima (`scanner/fixtures/manifest.js`).
+
+```
+oscuro-documento   IoU=0.996  confiable=false  acuerdo=0.664
+   docquad: IoU=0.996  z=[3.26, 3.67, 3.47, 2.83]  LOW_PEAK_MARGIN
+   opencv:  SIN_ACUERDO_ENTRE_DETECTORES
+   mask:    areaGt05=239  meanProb=0.059  ← sana, muy arriba del umbral (40 / 0.012)
+```
+
+Dos cosas confirmadas:
+
+1. **La puerta de máscara no se dispara en falso.** Es justo el par que se
+   necesitaba: `oscuro-vacio` (areaGt05=2) vs. `oscuro-documento`
+   (areaGt05=239) — 120× de separación en la misma superficie, con
+   documento real de por medio, no solo medido en teoría.
+2. **Es la CUARTA superficie con el caso abierto de siempre**: DocQuad
+   acierta (IoU 0.996, prácticamente perfecto) y el compuesto lo degrada a
+   parcial porque OpenCV no está de acuerdo (0.664). Mismo patrón que
+   granito centrado, granito de lado y madera — ya son cuatro superficies
+   distintas donde el que falla es OpenCV, no DocQuad.
+
+Corrido en el banco (`npm run scanner:fixtures`) sin tocar el detector:
+**cero regresión**, los 12 fixtures anteriores conservan IoU y estado
+idénticos. `oscuro-documento` entra como caso abierto (no tumba CI).
+
+### `oscuro-libreta` (2026-08-18) — el par completo: mismo fondo, caso normal
+
+Llegó también el JSON que le faltaba a la foto de la libreta sobre el mismo
+tapete oscuro (se había capturado antes que `oscuro-documento`, en la misma
+sesión de fotos, pero el JSON se traspapeló). A diferencia de
+`oscuro-documento`, aquí **los dos detectores concuerdan** (acuerdo 0.982) y
+el resultado es `confiable: true` — el caso ordinario que sí funciona.
+
+```
+oscuro-libreta   IoU=0.999  confiable=true  acuerdo=0.982
+   docquad: IoU=0.981  z=[3.54, 3.13, 2.83, 3.15]  LOW_PEAK_MARGIN (igual descartado, pero coincide con OpenCV)
+   opencv:  opencv-paper, sin discrepancia
+   mask:    areaGt05=928  meanProb=0.225  ← la más alta del banco
+```
+
+Con `oscuro-documento` y `oscuro-libreta` ya hay, en la MISMA superficie
+oscura, el par completo: vacío (puerta se apaga), documento con desacuerdo
+(caso abierto, degrada a parcial) y documento con acuerdo (caso normal,
+confiable). Es la primera superficie del banco con los tres estados
+cubiertos a la vez. Cero regresión en el resto del banco.
+
+### `granito-tapete` (2026-08-19) — quinta superficie con el mismo patrón
+
+Documento de una página completa (trámite gob.mx) sobre un tapete gris,
+encima de otra encimera de granito claro con vetas. Escena nueva de
+granito, distinta de `granito-centrado`/`granito-de-lado` (esas no tenían
+tapete debajo).
+
+```
+granito-tapete   IoU=0.999  confiable=false  acuerdo=0.440
+   docquad: IoU=0.999  z=[3.50, 3.66, 3.08, 2.88]  LOW_PEAK_MARGIN
+   opencv:  area=0.704  ← se traga tapete + encimera, casi el doble de DocQuad (0.338)
+   mask:    areaGt05=1020  meanProb=0.249  ← sana, consistente con el resto del banco
+```
+
+Es la QUINTA superficie —después de granito centrado, granito de lado,
+madera y `oscuro-documento`— donde pasa exactamente lo mismo: el quad de
+DocQuad calza casi perfecto (verificado dibujándolo encima) y el compuesto
+lo degrada a parcial porque OpenCV se traga una superficie más grande que
+el papel. Con cinco superficies distintas mostrando el mismo patrón, la
+evidencia para revisar la regla del compuesto (confiar en DocQuad cuando su
+única objeción es `LOW_PEAK_MARGIN` y la máscara está sana) sigue creciendo
+— pero, como con el 5σ, no se toca sin medir primero contra el banco
+completo. Cero regresión en el resto del banco (`npm run scanner:fixtures`).
+
+### Franja borrosa en un borde del frame (2026-08-19) — fusión de sensores en 0.5x, no el lente
+
+En dos fixtures reales (`granito-tapete` y su par sin registrar de la misma
+sesión) apareció una franja borrosa vertical pegada al borde izquierdo,
+corriendo todo el alto del frame, idéntica en posición en ambas tomas. El
+usuario descartó el lente físico (probó con otra app y no aparece). Revisado
+el código de captura (`CamaraDoc.web.js`), `capturar()` solo hace un
+`drawImage` directo del frame de video a un canvas — no hay recorte ni
+composición ahí que pudiera meter una franja así. El problema viene del
+stream de cámara, antes de que la app lo toque.
+
+Hipótesis: `abrirStreamMasAbierto()` forzaba el zoom al **mínimo físico
+exacto** del track (`caps.zoom.min`, 0.5x en iPhone) vía `applyConstraints`.
+Ese 0.5x exacto es la frontera donde iOS funde el sensor ultra angular con
+el principal ("seamless zoom"); el sensor ultra angular está desplazado
+físicamente del principal, así que un error de paralaje en esa fusión cae
+consistentemente hacia un borde — no al azar, y no del lado que cambiaría
+si fuera un dedo tapando el lente. Que no aparezca en otra app cuadra: si
+esa app no fuerza el 0.5x físico exacto, nunca entra a esa frontera, o usa
+la corrección propietaria de Apple que Safari/WebRTC no expone igual.
+
+**Cambio (sin validar en dispositivo todavía):** `ZOOM_PREFERIDO = 0.6` en
+`abrirStreamMasAbierto()` — pide un zoom un poco arriba del mínimo físico
+(clampado entre `caps.zoom.min` y `caps.zoom.max`) en vez del mínimo exacto.
+De paso acerca el encuadre al de CamScanner, que hoy se ve más cerrado
+(más zoom) que el nuestro. **Falta la prueba real**: confirmar que la
+franja desaparece y que el campo visual sigue sintiéndose abierto. Si
+0.6x no alcanza a evitar la frontera de fusión, subir un poco más, pero
+medido con una toma nueva — no a ojo.
+
+**Primera señal, sin confirmar todavía:** la siguiente toma real que llegó
+después del cambio (`poca-luz`, ver abajo) no muestra la franja. Una sola
+toma no prueba nada —la escena también cambió (otro cuarto, otra luz)— pero
+es consistente con que el ajuste esté funcionando.
+
+### 🔴 ABIERTO (2026-08-20) — la hipótesis del zoom probablemente era la equivocada
+
+**El problema NO está resuelto y el diagnóstico de arriba está en duda.** El
+usuario siguió reportando imagen suave/borrosa después del cambio a 0.6x, en
+tomas nuevas (`152511175Z`, `153619182Z`) y contra una comparativa de
+CamScanner sobre la MISMA libreta donde CamScanner conserva claramente más
+microdetalle en el texto a lápiz.
+
+**Dos errores de método de esta sesión, anotados para no repetirlos:**
+
+1. **Se midió nitidez sobre el frame de 640px del detector.** Ese frame está
+   reducido a propósito (`ANCHO_DETECCION = 640`) — es la entrada del
+   detector, no la foto que se guarda. Medir nitidez ahí no dice nada sobre
+   la calidad real de captura. Hay que separar **tres** cosas y medirlas por
+   separado: (a) preview, (b) fixture 640 del detector, (c) **captura final
+   full-res**, que es la única que no puede salir borrosa.
+2. **Se aceptó "no veo la franja" como evidencia de arreglo.** Varianza de
+   Laplaciano por franjas sobre un frame downscaled no separa el caso; las
+   tres tomas "sin franja" no prueban nada.
+
+**Sospechoso mucho más fuerte (análisis externo, ChatGPT, 2026-08-20):** la
+regresión no es el zoom sino **la selección de cámara ultra angular** que se
+introdujo el 2026-08-12 al pasar de `expo-camera` a `getUserMedia`.
+`puntuarAngular()` en `CamaraDoc.web.js` da **+100** a cualquier device cuyo
+label diga `ultra-wide`/`0.5`/`wide angle`, y `abrirStreamMasAbierto()`
+**sustituye el stream inicial por ese sin verificar nada**:
+
+```js
+const segundo = await navigator.mediaDevices.getUserMedia(c);
+inicial.getTracks().forEach((t) => t.stop());
+elegido = segundo;   // ← no se comprueba qué resolución entregó de verdad
+```
+
+Dos agujeros ahí:
+
+- **La ultra-wide del iPhone es un sensor peor** (más chico, óptica más
+  suave), sobre todo con luz de interior. Estamos cambiando calidad por
+  campo visual y asumiendo que "más angular = mejor".
+- **`BASE_VIDEO` pide 4032×3024 como `ideal`, no `exact`.** `ideal` significa
+  "lo más parecido que puedas": el navegador puede negociar bastante menos y
+  nosotros lo aceptamos igual. No hay quality/resolution gate.
+
+CamScanner probablemente NO usa la ultra-wide física continuamente para su
+encuadre abierto — es un supuesto nuestro, nunca verificado.
+
+**Probabilidades del análisis externo** (de mayor a menor): selección de
+ultra-wide sacrificando calidad · resolución negociada por debajo de lo
+pedido sin gate · autofocus/exposure sin estabilizar al capturar · JPEG 0.92
+(poco probable por sí solo) · DocQuad/OpenCV (**descartado**: el frame ya
+llega degradado al detector).
+
+**Lo que falta y por qué se paró aquí:** el fixture JSON de hoy trae
+diagnóstico del DETECTOR, no de la CÁMARA, así que no se puede confirmar
+nada. `CamaraDoc.web.js` ya expone `diagnostico()` con `track.getSettings()`,
+`getCapabilities()`, `label`, `videoWidth/videoHeight` — pero eso **no se
+está guardando en el fixture**, que es exactamente el dato que haría falta.
+
+**Siguiente paso acordado — prueba A/B, sin tocar DocQuad/OpenCV:**
+
+- **A** — cámara actual: selección automática ultra-wide + zoom forzado.
+- **B** — cámara principal: `facingMode: environment`, sin selección
+  explícita de angular y **sin tocar zoom**.
+
+Mismo teléfono, misma libreta, misma distancia y luz. Registrar en ambas:
+`label | videoWidth×videoHeight | track settings width×height | zoom |
+fixture JPEG | captura final JPEG`, y comparar **fixture y captura full-res
+por separado**. Si B recupera la nitidez, la regresión es la selección de
+ultra-wide.
+
+Después, la política correcta no es renunciar al encuadre abierto sino
+**priorizar la cámara principal y usar la ultra angular solo cuando de
+verdad entrega resolución/calidad suficiente** — con un gate antes de
+sustituir el stream inicial, nunca por lo que diga el label.
+
+Decisión de producto del usuario: **prefiere perder algo de zoom-out antes
+que escanear borroso.**
+
+### `poca-luz` (2026-08-19) — cierra el escenario 8, y de paso blanco sobre blanco
+
+Documento sobre la tapa de un excusado, baño con luz muy baja (brillo medio
+~53/255). Doble dificultad: poca luz Y blanco sobre blanco —el borde entre
+papel y tapa casi no tiene contraste—, la combinación más dura del banco
+hasta ahora.
+
+```
+poca-luz   IoU=0.953  confiable=false  acuerdo=0.450
+   docquad: chosenSource=MASK (esquinas descartadas con penalty ~2000000)
+   opencv:  area=0.434 vs. 0.207 de DocQuad — discrepancia fuerte
+   mask:    areaGt05=468  meanProb=0.113
+```
+
+Ground truth anotado a mano con realce gamma (0.4) sobre la imagen original
+—a simple vista el borde es invisible— y verificado dibujándolo encima: el
+quad crudo de DocQuad tenía el borde superior ~2% más arriba de donde
+realmente está el papel (el margen en blanco sobre el título se leyó como
+parte de la tapa). El resto de los bordes sí coincidía. Por esa
+incertidumbre extra en la propia anotación, este fixture usa `minIoU: 0.75`
+en vez del 0.85 del resto del banco.
+
+**El rechazo a confiable es correcto.** DocQuad descarta sus propias
+esquinas (penalty extremo) y cae a la máscara; OpenCV da un área más del
+doble que DocQuad. Ninguno de los dos tiene evidencia sólida en esta
+escena, y el compuesto responde bien: no inventa confianza que no existe.
+Corrido en el banco: cero regresión (8/16 OK).
+
 ### Comparación con CamScanner (2026-08-18) — la brecha es LATENCIA, no puntería
 
 Se revisaron capturas de CamScanner en vivo sobre la misma libreta. Primera
@@ -772,6 +1059,41 @@ Lo correcto es **separar las dos decisiones**:
 
 La puerta de máscara es lo que hace seguro el "siempre dibujar": sobre mesa
 vacía ya no inventa nada.
+
+### ✅ RESUELTO (2026-08-19) — el quad parcial ya no se tira
+
+Implementado en dos puntos, no solo uno — `EscanearScreen` pasaba `null` si
+no era `'listo'`, pero **`RecorteScreen` también tiraba el quad por su
+cuenta** al terminar su propia redetección full-res si no salía confiable
+(`resultado.confiable ? resultado.esquinas : MARCO_COMPLETO`), así que
+arreglar solo el primero no habría bastado.
+
+```js
+// EscanearScreen.js — antes: null salvo 'listo'
+esquinasIniciales: deteccion.estado !== 'buscando' ? deteccion.esquinas : null,
+// RecorteScreen.js — antes: MARCO_COMPLETO si !confiable
+setEsquinas(resultado.esquinas || MARCO_COMPLETO);
+```
+
+La razón original de tirar el quad no confiable en `RecorteScreen` estaba
+documentada y era real: un caso donde una región chica y equivocada
+(~335×410px sobre una foto de ~1300×1900px) dejaba el documento borroso si
+el usuario guardaba sin ajustar. Pero esa protección ya no depende de
+esconder el quad — depende del aviso (`ajustaAMano`) más el botón **"Toda
+la foto"**, que resetea a `MARCO_COMPLETO` en un toque. Con eso, mostrar el
+mejor candidato disponible es estrictamente mejor: en los cuatro casos
+abiertos con IoU 0.89-0.999 (`granito-tapete`, `oscuro-documento`,
+`madera-libreta`, `granito-de-lado`) el usuario ahora ajusta un quad casi
+perfecto en vez de dibujar las 4 esquinas desde cero.
+
+Motivado por un research addendum externo (`TapptScan_Research_Addendum_
+Claude_20260819.pdf`, compartido por el usuario) que revisó FairScan,
+MakeACopy y otros scanners open source y llegó a la misma conclusión de
+forma independiente: *"if detection is imperfect in camera mode, the best
+quad is preserved into RecorteScreen rather than discarded"* — coincide con
+lo que ya estaba escrito arriba, y confirma que no hace falta reemplazar el
+detector, solo terminar de conectar lo que ya existe. WhatsApp no se tocó:
+`confiable` sigue estricto ahí, porque actúa sin que nadie mire.
 
 ### Scanners open source revisados (2026-08-18)
 
@@ -846,9 +1168,28 @@ granito — cada detector falla en el escenario donde el otro acierta, y por
 eso el acuerdo entre ambos sigue siendo mejor evidencia que cualquiera por
 separado.
 
-### 🔴 SIGUIENTE PASO — bloqueado esperando datos
+### 🔴 SIGUIENTE PASO (2026-08-20) — la regresión de NITIDEZ va primero
 
-**Las 9 tomas que faltan del banco de fixtures.** Es lo único que falta para poder
+Antes que cualquier fixture o ajuste del detector: **la prueba A/B de cámara
+en `CamaraDoc.web.js`** descrita arriba ("la hipótesis del zoom probablemente
+era la equivocada"). Un scanner que entrega imagen suave no se arregla
+midiendo IoU — el frame ya llega degradado al detector.
+
+Orden concreto para quien retome:
+
+1. Guardar el diagnóstico de CÁMARA en el fixture (`diagnostico()` ya existe
+   en `CamaraDoc.web.js`, pero no se está escribiendo al JSON). Sin eso no
+   se puede confirmar nada.
+2. A/B ultra-wide vs. cámara principal, comparando **captura full-res**, no
+   el frame de 640 del detector.
+3. Según el resultado: quality/resolution gate antes de sustituir el stream
+   inicial, en vez de confiar en el label del device.
+
+No tocar DocQuad/OpenCV ni sus umbrales mientras tanto.
+
+### Fixtures pendientes (en pausa hasta cerrar lo de arriba)
+
+**Las tomas que faltan del banco de fixtures.** Es lo que falta para poder
 avanzar en el caso del granito y para revisar si el 5σ ya se puede mover.
 Instrucciones y lista de escenarios en `scanner/fixtures/fotos/README.md`.
 
@@ -911,7 +1252,7 @@ el handoff anterior. El orden acordado sigue siendo:
 0    Captura full-res + overlay             en validación web / nativo pendiente
 1    PNG → JPEG                             avanzado/resuelto en web actual
 1.5  Spike DocQuad (3 runtimes)            Node avanzado; web/native pendientes
-1.6  scanner-fixtures (20 + ground truth)  banco y metrica IoU listos; van 12/20 fotos
+1.6  scanner-fixtures (20 + ground truth)  banco y metrica IoU listos; van 16/20 fotos
 2    DocQuad Node / WhatsApp                integración en curso
 3    DocQuad Web + Native                   pendiente
 4    AutoCapture + Quality                  pendiente
@@ -948,9 +1289,274 @@ Otros pendientes de producto:
   1 documento = 1 foto = 1 PDF; lote implica varias páginas por PDF, un
   temporal que sobrevive entre captura y subida, y decidir qué pasa si se
   cierra la app a medias.
-- **Fotos del banco de fixtures: van 11 de 20** (una sintética). Ocho tomas
+- **Fotos del banco de fixtures: van 16 de 20** (una sintética). Trece tomas
   reales del dispositivo: `granito-centrado`, `granito-de-lado`,
   `granito-vacio`, `escritorio-cuaderno`, `escritorio-lejos`,
-  `escritorio-angulo`, `madera-libreta` y `madera-vacia` (ver abajo). Falta
-  sobre todo **superficie oscura**, con documento y vacía. Sin la imagen
-  original no se pueden fijar como prueba de regresión.
+  `escritorio-angulo`, `madera-libreta`, `madera-vacia`, `oscuro-vacio`,
+  `oscuro-documento`, `oscuro-libreta`, `granito-tapete` y `poca-luz` (ver
+  arriba). Escenario 9 (superficie oscura) ya cerrado, vacía y con
+  documento, con los tres estados del compuesto cubiertos en la misma
+  superficie. Escenario 8 (poca luz) también cerrado. El caso abierto de
+  superficie clara (DocQuad acierta, OpenCV falla) ya tiene CINCO
+  superficies midiéndolo. Falta: documento cortado por el borde (#7) y dos
+  hojas de verdad encimadas (#10) — ver `scanner/fixtures/fotos/README.md`
+  para el checklist completo.
+
+---
+
+# 📌 Sesiones 2026-08-26 al 31 — mercado, precio y producto empaquetado
+
+Esta sesión fue mitad código y mitad estrategia. Lo de estrategia cambia
+decisiones de producto, así que queda aquí y no en un doc aparte.
+
+## Lo que se construyó (ya pusheado)
+
+| Commit | Qué |
+|---|---|
+| `957d060` | "Es otra cosa" ahora reclasifica de verdad (Map de estado pendiente + `vision.reclasificarConPista` + `drive.moverArchivo`) |
+| `6de8577` | Sección `08 · Educación` + nivel de persona en la ruta |
+
+⚠️ **PENDIENTE OPERATIVO:** correr el `ALTER TABLE scan_documents add column
+if not exists persona text;` en Supabase. Sin eso, la reclasificación con
+persona falla en producción. Está al final de `scan_schema.sql`.
+
+## 🇲🇽 El hallazgo del día: México es EL mercado, no un mercado
+
+Datos de Appfigures sobre **Scan Hero** (competidor, iOS, jul 2026):
+
+```
+Descargas mundiales/mes     <5,000        ↓ en declive
+Ingreso mundial/mes         $410K USD     ↓ en declive (después de comisiones)
+Rating                      4.62 (1.1M reseñas), 29M usuarios, 10 años
+
+Most Downloaded:
+  🇲🇽 México      59%   ← el dato
+     Angola        3%
+     Lituania      3%
+     Tailandia     2%
+```
+
+**México es el 59% de las descargas de un scanner global.** La estimación
+previa de esta sesión usaba el 2.1% que México pesa en el mercado global de
+apps — **estaba mal por un factor de ~28x** para esta categoría. México corre
+sobre trámites (INE, comprobante de domicilio, CFDI, actas), y eso hace que
+la demanda de escaneo aquí no se parezca al promedio mundial.
+
+Estimación del negocio de Scan Hero en México: **$1.2–1.7M USD/año**
+(~$22–31M MXN), o sea **25,000–30,000 suscriptores mexicanos**.
+
+Y con 59% de <5,000 descargas, **Scan Hero capta hoy solo ~3,000 descargas
+mensuales en México, a la baja**. No se compite contra un gigante en
+crecimiento: contra un producto genérico de 10 años que dejó de moverse.
+
+## 🔴 El problema de precio (bloquea todo lo demás)
+
+|  | Scan Hero | TapptScan |
+|---|---|---|
+| Anual | ~$1,399 MXN | **$299 MXN** |
+| Semanal | ~$99 MXN | — |
+| Capa gratis | **3 páginas/día** (~90/mes) | **5 escaneos/mes** |
+
+*(Precios de Scan Hero: EE.UU. verificado — semanal $4.99, mensual $14.99,
+anual $69.99. El equivalente mexicano es estimado por escalón de Apple, sin
+verificar en tienda.)*
+
+**Es la peor combinación posible:** la capa gratis corta al usuario **antes**
+de que llegue al momento en que se enamora (ver su archivo aparecer solo en
+Drive), y el plan de pago vale **una quinta parte** de lo que el mercado ya
+paga. Traer más tráfico a ese embudo solo agranda la fuga.
+
+**Dirección acordada con el usuario:** cobrar más y dar mucho más.
+Rango que él propone: **$79–89 MXN/semana** ($4,108–4,628/año), justo debajo
+de Scan Hero.
+
+Dos advertencias que quedan anotadas junto a la idea:
+
+1. **El churn semanal es brutal.** Pocos pasan de 8–12 semanas, así que el
+   ingreso real por usuario es una fracción del anualizado (~$630–1,070 MXN
+   si duran 8–12 semanas). Aun así es 2–3.5x el $299 actual.
+2. **Apple y PROFECO vigilan los semanales con prueba gratis.** La mecánica
+   hay que diseñarla con cuidado: prueba honesta, cancelación clara, sin
+   patrones oscuros. Un rechazo de App Review por esto cuesta semanas.
+
+**Primer paso, independiente del precio final:** subir la capa gratis a algo
+cercano a **un escaneo diario**. Hoy es el cuello de botella de adopción.
+
+## 💡 La idea grande: el paquete WhatsApp
+
+Del usuario, y vale la pena tomarla en serio:
+
+> **WhatsApp es el gran diferenciador.** Al usuario de TapptScan le
+> regalamos Tappt Agenda. Agenda + calendario + Google Drive + scanner.
+
+Por qué encaja: los dos productos ya existen, los dos son nativos de
+WhatsApp, y juntos cubren el día de una persona que trabaja por su cuenta —
+su agenda y sus papeles, en el mismo chat, sin instalar nada. Eso **sí**
+justifica $79–89/semana; $299/año no lo justificaba ni para un scanner solo.
+
+Ninguno de los competidores puede responder: CamScanner y Scan Hero no
+tienen agenda, y ningún calendario tiene scanner con clasificación por IA.
+
+⚠️ **Ojo con la regla permanente de verticales.** Empaquetar es una decisión
+**comercial**, no una fusión de código. `tappt-backend` (agenda) y
+`tappt-scan` siguen siendo repos, deploys y números de WhatsApp separados.
+Lo que se comparte es la oferta y, en su caso, la identidad del usuario —
+no las tablas. Definir cómo se vincula una cuenta entre los dos es trabajo
+de diseño pendiente, no un detalle.
+
+## Plan de fichas de App Store (listo)
+
+**8 Custom Product Pages** para la App Store mexicana, con copy, keywords y
+las 3 capturas de cada una:
+**https://claude.ai/code/artifact/66b7bbf7-7e6b-426e-a039-0b5eb90d7411**
+
+Ordenadas en tres olas: (1) Facturas y CFDI, Trámites, Colegiaturas —
+(2) Gasolina y viáticos, Control de gastos, Firmar sin imprimir —
+(3) Obra y campo, Salud familiar.
+
+Datos operativos que hay que recordar:
+
+- Apple permite **70 fichas** por app (subió de 35 en oct 2025). **Gratis**,
+  incluidas en los $99 USD/año. Scan Hero usa 29.
+- Por ficha **sí** cambian: capturas, video, texto promocional (170 car.) y
+  **keywords asignadas**.
+- Por ficha **no** cambian: nombre de la app, subtítulo, descripción larga.
+- **Desde julio 2025 las fichas con keywords salen en búsqueda orgánica**,
+  no solo en campañas pagadas. O sea: funcionan sin presupuesto de ads.
+- Cada ficha pasa por revisión de Apple — mandarlas juntas.
+
+## Cuentas de desarrollador — estado
+
+Nada iniciado todavía. El camino, por orden de qué tarda más:
+
+1. **D-U-N-S Number** (si Tappt se inscribe como empresa) — **gratis**, pero
+   hasta **30 días hábiles**. Buscar primero en
+   `developer.apple.com/enroll/duns-lookup/`: **es probable que Tappt ya
+   tenga uno** sin saberlo, y eso ahorra el cuello de botella entero.
+2. **Apple Developer Program**, 99 USD/año. Se tramita desde la app
+   **Apple Developer** (iPhone), con identificación oficial. Individual:
+   24–48 h. Organización: 1–2 semanas (y hay reportes de 3+). Decisión
+   tomada: **organización**, para que la App Store diga "Tappt" y no un
+   nombre personal — y porque Apple no convierte individual → organización
+   después.
+3. **Google Play**, 25 USD una sola vez. **Abrirla como organización**: una
+   cuenta personal nueva exige 12 testers durante 14 días antes de publicar.
+4. **En paralelo:** publicar la pantalla de consentimiento de Google Cloud a
+   producción. En modo *Testing* los refresh tokens caducan a los 7 días y a
+   los testers se les desconectaría el Drive cada semana (parecería bug
+   nuestro). Ver `docs/GOOGLE-DRIVE.md`.
+
+No se necesita Xcode ni Android Studio: EAS compila en la nube.
+
+## 📊 Tamaño de la categoría en México y la meta del 5%
+
+Estimación construida por capas. **El único dato duro de toda la cadena son
+los $410K/mes de Scan Hero**; lo demás son supuestos razonados. La banda es
+confiable como orden de magnitud, el número exacto no.
+
+**Capa 1 — Scan Hero México**
+
+```
+Mundial iOS (Appfigures)        $410K USD/mes → $4.92M/año
+× México 30-45% del ingreso     $1.5 – 2.2M
++ Android (~+25%)               $1.9 – 2.8M USD/año
+```
+
+Corrección respecto de la estimación inicial: México es 59% de *descargas*
+pero menos del ingreso — **y no por precio**. Apple cobra en México casi lo
+mismo en dólares (con IVA incluido). La brecha es de **conversión y
+retención**, que en mercados emergentes corren al 40-60% de las de EE.UU.
+Por eso 30-45%, no el 25-35% estimado primero.
+
+**Capa 2 — CamScanner México**
+
+```
+CamScanner mundial (>70% de INTSIG)   ~$176M USD/año
+– China (50-60% doméstico)            → internacional $70-88M
+× México (3-6% del internacional)     $2 – 5M USD/año
+```
+
+Trampa que hay que recordar: **INTSIG es china y buena parte de su C-end es
+mercado doméstico.** Aplicarle un % de México al global infla el número.
+
+**Capa 3 — la cola larga**
+
+iScanner, TinyScanner, Genius Scan, SwiftScan, Scanner Pro, Adobe Scan,
+Microsoft Lens y decenas más. En categorías así los dos líderes concentran
+45-55% del ingreso.
+
+```
+Scan Hero + CamScanner MX      $3.9 – 7.8M
+÷ 45-55% de la categoría
+──────────────────────────────────────────
+CATEGORÍA EN MÉXICO ≈ $8 – 15M USD/año
+```
+
+**Verificación independiente (top-down):** mercado mexicano de apps ~$5.25 mil
+millones USD → productividad/negocios 3-5% ($150-260M) → escaneo 5-10% de eso
+= **$8-26M**. Los dos métodos se cruzan en $8-15M. Ese es el número a usar.
+
+### El 5%
+
+```
+Categoría         $8 – 15M USD/año   (punto medio ~$11M)
+× 5%              $400K – $750K USD/año
+                  $7.4M – $13.9M MXN/año   (punto medio ~$10M MXN)
+```
+
+### Y el argumento decisivo para subir el precio
+
+El mismo ingreso, según cómo se cobre:
+
+| Precio | Valor real/cliente/año | Clientes para $10M MXN |
+|---|---|---|
+| $299/año (hoy) | $299 | **33,400** |
+| $79/semana (10 sem. promedio) | ~$790 | **12,700** |
+| Paquete anual ~$1,200 | $1,200 | **8,300** |
+
+**Cobrando 4x más se necesitan 4x menos clientes.** Y 8,300 clientes es un
+problema cualitativamente distinto a 33,400: el primero se resuelve con
+producto y fichas bien hechas; el segundo exige una máquina de adquisición
+pagada que hoy no existe. Este es el argumento más fuerte a favor del
+paquete Agenda+Scan — no es solo cobrar más, es **volver alcanzable la meta**.
+
+### Calendario realista
+
+El 5% es meta de **año 2-3**, no de arranque. Año 1 apuntar a **1-2%**
+(~$2-3M MXN) para validar que el embudo convierte antes de invertir fuerte
+en adquisición.
+
+**Lo que más apretaría estos números:** una cuenta de **Appfigures o Sensor
+Tower con desglose por país**. Con eso se lee el reparto directo en vez de
+estimarlo, y se elimina el supuesto más frágil de toda la cadena (el
+reparto China/internacional de CamScanner).
+
+## 🔜 Frentes abiertos para mañana
+
+**Técnicos (bloquean producto):**
+
+1. **Regresión de nitidez de cámara** — sigue abierta. Ver la sección
+   "🔴 ABIERTO (2026-08-20)". Otra sesión pusheó `18aaa71 fix(camara): A/B
+   primary vs ultra-wide con gate de resolución` — **revisar qué hizo antes
+   de duplicar trabajo.**
+2. **Correr el ALTER TABLE de `persona`** en Supabase.
+3. **Fixtures**: faltan #7 (documento cortado por el borde) y #10 (dos hojas
+   de verdad encimadas). Van 16/20.
+
+**Producto / negocio:**
+
+4. **Subir la capa gratis** a ~1 escaneo diario. Es el cambio de mayor
+   impacto y el más barato.
+5. **Diseñar el paquete Agenda + Scan**: qué incluye, cómo se vincula la
+   cuenta entre los dos repos, y qué precio.
+6. **Producir la Ola 1 de fichas** (3 juegos de capturas).
+7. **Buscar el D-U-N-S** — 2 minutos, y puede ahorrar un mes.
+8. **Evaluar una cuenta de Appfigures o Sensor Tower** con desglose por
+   país. Es lo único que convertiría la estimación de mercado de arriba en
+   dato duro, y de paso da visibilidad de la competencia por keyword.
+
+**Nota de método:** varias conclusiones de esta sesión se corrigieron a sí
+mismas con datos (el 2.1% → 59%, el orden del nivel de persona, la
+estimación de descargas necesarias). Cuando un número de mercado venga de
+una analogía y no de una fuente, marcarlo como supuesto — aquí costó dos
+análisis equivocados antes de encontrar el dato real.

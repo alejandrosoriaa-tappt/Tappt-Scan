@@ -103,6 +103,20 @@ async function desdeImagen(buffer, mimeType = 'image/jpeg') {
   return Buffer.from(await pdf.save());
 }
 
+// Construye un único PDF conservando el orden del borrador. Cada página
+// adopta la proporción de su imagen ya enderezada, sin forzar un lienzo
+// cuadrado ni mezclar tamaños de manera accidental.
+async function desdeImagenes(buffers) {
+  const documento = await PDFDocument.create();
+  for (const buffer of buffers) {
+    const esPng = buffer[0] === 0x89 && buffer[1] === 0x50;
+    const imagen = esPng ? await documento.embedPng(buffer) : await documento.embedJpg(buffer);
+    const pagina = documento.addPage([imagen.width, imagen.height]);
+    pagina.drawImage(imagen, { x: 0, y: 0, width: imagen.width, height: imagen.height });
+  }
+  return Buffer.from(await documento.save());
+}
+
 /**
  * Aplica anotaciones sobre un PDF existente.
  *
@@ -194,6 +208,7 @@ async function copiarPaginas(pdfBuffer, indices) {
 
 module.exports = {
   desdeImagen,
+  desdeImagenes,
   aplicarAnotaciones,
   copiarPaginas,
   esPdf,

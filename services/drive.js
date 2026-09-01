@@ -158,6 +158,38 @@ async function uploadFile(tokens, { folderId, name, mimeType, buffer }) {
   return data;
 }
 
+/**
+ * Mueve y/o renombra un archivo ya subido. Se usa cuando el usuario corrige
+ * la clasificación por WhatsApp ("es otra cosa"): el archivo NO se vuelve a
+ * subir, solo cambia de carpeta y de nombre, así que conserva su
+ * `drive_file_id` y cualquier link que ya se haya compartido.
+ *
+ * Drive exige mandar el padre viejo en `removeParents` para sacarlo de ahí;
+ * si solo se agrega el nuevo, el archivo queda en las DOS carpetas.
+ */
+async function moverArchivo(tokens, { fileId, carpetaDestinoId, nuevoNombre, carpetaOrigenId }) {
+  const auth = oauthClient(tokens);
+  const drive = google.drive({ version: 'v3', auth });
+
+  // Si no nos dijeron de dónde sale, se lo preguntamos a Drive: un archivo
+  // puede tener varios padres y quitarlos todos es lo que deja el estado
+  // limpio.
+  let origen = carpetaOrigenId;
+  if (!origen) {
+    const { data } = await drive.files.get({ fileId, fields: 'parents' });
+    origen = (data.parents || []).join(',');
+  }
+
+  const { data } = await drive.files.update({
+    fileId,
+    addParents: carpetaDestinoId,
+    removeParents: origen || undefined,
+    resource: nuevoNombre ? { name: nuevoNombre } : {},
+    fields: 'id, webViewLink',
+  });
+  return data;
+}
+
 async function downloadFile(tokens, fileId) {
   const auth = oauthClient(tokens);
   const drive = google.drive({ version: 'v3', auth });
@@ -201,6 +233,7 @@ module.exports = {
   listarCarpeta,
   usoDeAlmacenamiento,
   uploadFile,
+  moverArchivo,
   downloadFile,
   revocarAcceso,
   ROOT_FOLDER_NAME,

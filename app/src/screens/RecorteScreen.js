@@ -16,6 +16,7 @@ import { useIdioma } from '../i18n';
 import HojaLimite from '../components/HojaLimite';
 import Icono from '../components/Icono';
 import { colores, espacio } from '../theme';
+import { useBorradorEscaneo } from '../context/BorradorEscaneoContext';
 
 // El guardado es UN solo request que en el servidor sube a Drive, endereza
 // la perspectiva y clasifica con Claude, en ese orden — pero desde la app
@@ -167,8 +168,17 @@ function Tirador({ indice, esquina, rectImagen, onMover }) {
 }
 
 export default function RecorteScreen({ route, navigation }) {
-  const { fotoBase64, fotoAncho, fotoAlto, esquinasIniciales } = route.params;
+  const {
+    fotoBase64,
+    fotoAncho,
+    fotoAlto,
+    esquinasIniciales,
+    modoLote = false,
+    paginaId = null,
+    filtroInicial = 'mejorar',
+  } = route.params;
   const { refrescarCuenta } = useSesion();
+  const borrador = useBorradorEscaneo();
   const { t } = useIdioma();
 
   const [esquinas, setEsquinas] = useState(esquinasIniciales || MARCO_COMPLETO);
@@ -182,8 +192,12 @@ export default function RecorteScreen({ route, navigation }) {
   const [aviso, setAviso] = useState(null);
   const [guardando, setGuardando] = useState(false);
   const [limite, setLimite] = useState(false);
-  const [filtro, setFiltro] = useState('color');
+  // "Mejorar" es el acabado de documento: papel mas blanco y texto con
+  // contraste. Original sigue disponible para quien prefiera la foto fiel.
+  const [filtro, setFiltro] = useState(filtroInicial);
   const [miniaturas, setMiniaturas] = useState({});
+  const [vistaEnderezada, setVistaEnderezada] = useState(null);
+  const [previsualizando, setPrevisualizando] = useState(false);
   const pasoProcesando = useProcesando(guardando);
   const textosProcesando = useMemo(
     () => [t('procesandoSubiendo'), t('procesandoEnderezando'), t('procesandoClasificando')],
@@ -199,21 +213,30 @@ export default function RecorteScreen({ route, navigation }) {
   // Siempre re-detectamos sobre la captura full-res; `esquinasIniciales`
   // sólo pueden servir como guía provisional mientras responde DocQuad.
   useEffect(() => {
+    // Al volver a editar una página del lote respetamos exactamente el
+    // recorte que el usuario ya confirmó. Redetectar aquí movería las
+    // esquinas otra vez y haría que "Editar" pareciera deshacer su trabajo.
+    if (paginaId) {
+      setDetectando(false);
+      return undefined;
+    }
     let cancelado = false;
 
     api
       .detectarBordes(fotoBase64)
       .then((resultado) => {
         if (cancelado) return;
-        // Si el detector no confía en lo que encontró, NO se usa esa región
-        // como recorte inicial — puede ser una zona chica y equivocada (una
-        // luz de fondo, un reflejo), y aplicarla igual encoge la foto real
-        // a esa región chica, dejando el documento borroso al guardar
-        // (probado: 335×410px en vez de los ~1300×1900px que captura la
-        // cámara). Sin confianza, se arranca del cuadro completo — el
-        // usuario dibuja su propio recorte si quiere uno.
-        setEsquinas(resultado.confiable ? resultado.esquinas : MARCO_COMPLETO);
-        if (!resultado.confiable) {
+        // Regla de seguridad: una detección parcial jamás se convierte en
+        // recorte predeterminado. En la libreta abierta del 2026-08-22 el
+        // motor encontró sucesivamente una página y triángulos del centro;
+        // al estabilizarlos y pulsar continuar se guardó una franja diagonal.
+        // Es preferible conservar la foto completa y pedir ajuste manual a
+        // eliminar contenido. Solo un quad confiable puede pre-recortar.
+        if (resultado.confiable && resultado.esquinas?.length === 4) {
+          setEsquinas(resultado.esquinas);
+          setAviso(null);
+        } else {
+          setEsquinas(MARCO_COMPLETO);
           setAviso(t('ajustaAMano'));
         }
       })
@@ -223,7 +246,7 @@ export default function RecorteScreen({ route, navigation }) {
     return () => {
       cancelado = true;
     };
-  }, [fotoBase64, esquinasIniciales]);
+  }, [fotoBase64, esquinasIniciales, paginaId]);
 
   // Las 4 miniaturas se piden una sola vez por foto — son solo vista
   // previa (chico, rápido), no bloquean el recorte ni el guardado.
@@ -243,13 +266,43 @@ export default function RecorteScreen({ route, navigation }) {
     };
   }, [fotoBase64]);
 
-  const moverEsquina = (indice, posicion) =>
+  const moverEsquina = (indice, posicion) => {
+    setVistaEnderezada(null);
     setEsquinas((previas) => previas.map((e, i) => (i === indice ? posicion : e)));
+  };
+
+  const previsualizar = async () => {
+    setPrevisualizando(true);
+    try {
+      const resultado = await api.vistaRecorte(fotoBase64, esquinas, filtro, 'auto');
+      setVistaEnderezada(resultado.imagen);
+    } catch (err) {
+      alertar(t('noSePudo'), err.message);
+    } finally {
+      setPrevisualizando(false);
+    }
+  };
 
   const confirmar = async () => {
+    if (modoLote) {
+      const pagina = {
+        imagen: fotoBase64,
+        ancho: fotoAncho,
+        alto: fotoAlto,
+        esquinas,
+        filtro,
+        formato: 'auto',
+        vista: vistaEnderezada,
+      };
+      if (paginaId) borrador.actualizarPagina(paginaId, pagina);
+      else borrador.agregarPagina(pagina);
+      navigation.goBack();
+      return;
+    }
+
     setGuardando(true);
     try {
-      const documento = await api.escanear(fotoBase64, 'image/jpeg', esquinas, filtro);
+      const documento = await api.escanear(fotoBase64, 'image/jpeg', esquinas, filtro, 'auto');
       refrescarCuenta();
       navigation.replace('Documento', { documento });
     } catch (err) {
@@ -295,7 +348,7 @@ export default function RecorteScreen({ route, navigation }) {
         }
       >
         <Image
-          source={{ uri: `data:image/jpeg;base64,${fotoBase64}` }}
+          source={{ uri: vistaEnderezada || `data:image/jpeg;base64,${fotoBase64}` }}
           style={StyleSheet.absoluteFill}
           resizeMode="contain"
           // `fotoAncho/fotoAlto` vienen de la cámara y evitan esperar este
@@ -309,7 +362,7 @@ export default function RecorteScreen({ route, navigation }) {
           }}
         />
 
-        {lados.map((lado) => (
+        {!vistaEnderezada && lados.map((lado) => (
           <View
             key={lado.key}
             style={[
@@ -324,7 +377,7 @@ export default function RecorteScreen({ route, navigation }) {
           />
         ))}
 
-        {esquinas.map((esquina, indice) => (
+        {!vistaEnderezada && esquinas.map((esquina, indice) => (
           <Tirador
             key={indice}
             indice={indice}
@@ -334,10 +387,12 @@ export default function RecorteScreen({ route, navigation }) {
           />
         ))}
 
-        {detectando ? (
+        {detectando || previsualizando ? (
           <View style={estilos.capaCargando}>
             <ActivityIndicator color="#FFFFFF" />
-            <Text style={estilos.cargandoTexto}>{t('buscandoDocumento')}</Text>
+            <Text style={estilos.cargandoTexto}>
+              {previsualizando ? t('procesandoEnderezando') : t('buscandoDocumento')}
+            </Text>
           </View>
         ) : null}
 
@@ -361,7 +416,10 @@ export default function RecorteScreen({ route, navigation }) {
           <TouchableOpacity
             key={id}
             style={estilos.filtroCelda}
-            onPress={() => setFiltro(id)}
+            onPress={() => {
+              setFiltro(id);
+              setVistaEnderezada(null);
+            }}
             activeOpacity={0.8}
           >
             <View style={[estilos.filtroMarco, filtro === id && estilos.filtroMarcoActivo]}>
@@ -381,16 +439,30 @@ export default function RecorteScreen({ route, navigation }) {
       <View style={estilos.acciones}>
         <TouchableOpacity
           style={estilos.botonSecundario}
-          onPress={() => setEsquinas(MARCO_COMPLETO)}
+          onPress={() => {
+            if (vistaEnderezada) {
+              setVistaEnderezada(null);
+              setTamanoImagen(
+                fotoAncho && fotoAlto ? { ancho: fotoAncho, alto: fotoAlto } : null
+              );
+            }
+            else setEsquinas(MARCO_COMPLETO);
+          }}
         >
-          <Text style={estilos.botonSecundarioTexto}>{t('todaLaFoto')}</Text>
+          <Text style={estilos.botonSecundarioTexto}>
+            {vistaEnderezada ? t('ajustarRecorte') : t('todaLaFoto')}
+          </Text>
         </TouchableOpacity>
         <TouchableOpacity
           style={estilos.botonPrimario}
-          onPress={confirmar}
-          disabled={guardando || detectando}
+          onPress={vistaEnderezada ? confirmar : previsualizar}
+          disabled={guardando || detectando || previsualizando}
         >
-          <Text style={estilos.botonPrimarioTexto}>{t('enderezarGuardar')}</Text>
+          <Text style={estilos.botonPrimarioTexto}>
+            {vistaEnderezada
+              ? (modoLote ? (paginaId ? t('guardarCambios') : t('agregarAlLote')) : t('guardarPdf'))
+              : t('enderezarGuardar')}
+          </Text>
         </TouchableOpacity>
       </View>
 

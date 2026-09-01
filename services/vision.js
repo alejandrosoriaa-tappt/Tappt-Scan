@@ -16,6 +16,7 @@ documento y devuelves SOLO un JSON, sin texto adicional ni bloques de código.
   "categoria_gasto": "clave de categoría de gasto, o null si no es un gasto",
   "concepto": "qué se compró o pagó, en 3-6 palabras (ej. \"comida en restaurante\", \"gasolina Magna 40L\") o null",
   "emisor": "nombre corto y reconocible de quien emite (ej. CFE, Telmex, IMSS) o null",
+  "persona": "nombre de la persona DE QUIEN es el documento (el alumno, el paciente), o null",
   "fecha": "YYYY-MM-DD del documento, o null",
   "periodo_mes": 1-12 del periodo que cubre el documento, o null,
   "periodo_anio": año de cuatro dígitos del periodo, o null,
@@ -38,6 +39,10 @@ Reglas:
   Es preferible eso a archivarlo mal.
 - "emisor" debe ser la marca corta, no la razón social completa:
   "CFE", no "Comisión Federal de Electricidad, S.A. de C.V.".
+- "persona" es de QUIÉN es el documento, no quién lo paga ni quién lo emite:
+  en una colegiatura es el alumno, en un estudio médico el paciente. Nombre
+  completo tal como aparece, sin títulos ("Patricio Soria", no "Sr. Patricio").
+  Si el documento no dice de quién es, null.
 - Un recibo de luz, agua, gas, internet o teléfono del hogar va en
   casa/servicios. Un ticket de compra o gasto suelto va en dinero/recibos.
 - Si el documento cubre un periodo (un mes de consumo), usa ese periodo en
@@ -90,4 +95,80 @@ async function classifyAndExtract(imageBuffer, mimeType) {
   }
 }
 
-module.exports = { classifyAndExtract };
+// Reclasificación: el usuario dice en qué se equivocó el clasificador. No se
+// vuelve a mirar la imagen —el documento ya está en Drive y bajarlo para
+// re-mirarlo sería lento y caro—; se le pasa lo que YA se extrajo más lo que
+// el usuario acaba de decir, que suele ser la señal más fuerte de todas
+// ("es la colegiatura de mi hijo" resuelve una carpeta que la foto no).
+const SYSTEM_RECLASIFICAR = `Eres el motor de clasificación de TapptScan. Un documento ya se archivó y el
+usuario está CORRIGIENDO dónde quedó. Recibes los datos que se extrajeron y la
+corrección del usuario en lenguaje natural. Devuelves SOLO un JSON, sin texto
+adicional ni bloques de código.
+
+{
+  "seccion": "clave de sección del catálogo, o null",
+  "subcarpeta": "clave de subcarpeta de ESA sección, o null",
+  "categoria_gasto": "clave de categoría de gasto, o null",
+  "concepto": "qué se compró o pagó, en 3-6 palabras, o null",
+  "emisor": "nombre corto de quien emite, o null",
+  "persona": "nombre de la persona DE QUIEN es el documento, o null"
+}
+
+Catálogo de carpetas (sección: subcarpetas válidas):
+${taxonomia.catalogoParaPrompt()}
+
+Categorías de gasto:
+${taxonomia.CATEGORIAS_GASTO.join(', ')}
+
+Reglas:
+- La corrección del usuario MANDA sobre lo que se extrajo antes. Si dice que
+  es de otra categoría, hazle caso aunque el documento parezca otra cosa.
+- "seccion" y "subcarpeta" deben salir EXACTAMENTE del catálogo, y la
+  subcarpeta debe pertenecer a la sección elegida.
+- Si la corrección no alcanza para ubicarlo, deja ambas en null: se queda en
+  "99 · Por revisar". Es preferible a archivarlo mal otra vez.
+- Conserva los datos que el usuario no está corrigiendo: si solo habla de la
+  carpeta, devuelve el emisor y el concepto que ya traía.
+- Si el usuario menciona de quién es el documento —"es de mi hijo Patricio
+  Soria", "esto es de Ana"— eso va en "persona", con el nombre tal cual lo
+  dijo. Es un nivel de carpeta aparte, NO lo metas en "subcarpeta": la
+  subcarpeta debe seguir saliendo del catálogo.
+- No inventes datos: lo que no sepas va en null.`;
+
+async function reclasificarConPista(extraido, pista) {
+  const { data } = await axios.post(
+    'https://api.anthropic.com/v1/messages',
+    {
+      model: process.env.CLAUDE_VISION_MODEL || 'claude-opus-5',
+      max_tokens: 512,
+      system: SYSTEM_RECLASIFICAR,
+      messages: [
+        {
+          role: 'user',
+          content:
+            `Datos extraídos del documento:\n${JSON.stringify(extraido, null, 2)}\n\n` +
+            `Corrección del usuario:\n"${pista}"`,
+        },
+      ],
+    },
+    {
+      headers: {
+        'x-api-key': process.env.ANTHROPIC_API_KEY,
+        'anthropic-version': '2023-06-01',
+        'content-type': 'application/json',
+      },
+    }
+  );
+
+  const texto = data.content?.[0]?.text || '{}';
+  const limpio = texto.replace(/^```(?:json)?\s*/i, '').replace(/```\s*$/, '').trim();
+
+  try {
+    return JSON.parse(limpio);
+  } catch (err) {
+    console.error('[vision] reclasificación no parseable:', texto.slice(0, 200));
+    return null;
+  }
+}
+
+module.exports = { classifyAndExtract, reclasificarConPista };

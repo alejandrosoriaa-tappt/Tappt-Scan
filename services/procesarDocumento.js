@@ -4,6 +4,7 @@ const drive = require('./drive');
 const pdf = require('./pdf');
 const imagen = require('./imagen');
 const docquad = require('./docquad');
+const alineacionIA = require('./alineacionIA');
 const supabase = require('./supabase');
 const taxonomia = require('./taxonomia');
 const sheets = require('./sheets');
@@ -33,7 +34,21 @@ async function procesarArchivo(usuario, buffer, mimeType = 'image/jpeg', nombreO
   // estética es preferible a cortar información del documento.
   if (!entradaEsPdf) {
     try {
-      const { esquinas, confiable, razon, diagnostico } = await docquad.detectarDocumento(buffer);
+      let { esquinas, confiable, razon, diagnostico, fuente } = await docquad.detectarDocumento(buffer);
+      // La IA nunca inventa un recorte por sí sola. Solo puede corroborar un
+      // quad parcial local cuando ambos coinciden sobre el mismo papel.
+      if (!confiable && esquinas?.length === 4 && alineacionIA.habilitada()) {
+        const ia = await alineacionIA.corroborar(buffer, esquinas);
+        diagnostico = { ...diagnostico, ia };
+        if (ia.confirmada) {
+          confiable = true;
+          fuente = `${fuente || 'scanner'}+openai`;
+          razon = null;
+          console.log(`[procesarDocumento] quad corroborado por IA; IoU=${ia.acuerdoIoU.toFixed(3)}`);
+        } else {
+          console.log(`[procesarDocumento] IA no corroboró el quad: ${ia.razon}`);
+        }
+      }
       // Una imagen ya corregida por RecorteScreen normalmente ocupa casi todo
       // el frame. No volver a proyectarla: una segunda homografía sólo puede
       // degradar nitidez o recortar bordes. En WhatsApp una foto encuadrada de
@@ -45,7 +60,7 @@ async function procesarArchivo(usuario, buffer, mimeType = 'image/jpeg', nombreO
         // de entrada; reflejarlo evita declarar un media type incorrecto.
         mimeType = 'image/jpeg';
       } else if (razon) {
-        console.log(`[procesarDocumento] DocQuad sin confianza: ${razon}`);
+        console.log(`[procesarDocumento] detector sin confianza: ${razon}; fuente=${fuente || 'scanner'}`);
       }
     } catch (err) {
       // Un fallo aquí no debe tumbar el escaneo completo: seguimos con la
@@ -98,6 +113,7 @@ async function procesarArchivo(usuario, buffer, mimeType = 'image/jpeg', nombreO
       categoria_gasto: taxonomia.categoriaGastoValida(extraido.categoria_gasto),
       concepto: extraido.concepto || null,
       emisor: extraido.emisor || null,
+      persona: extraido.persona || null,
       fecha: extraido.fecha || null,
       monto: extraido.monto ?? null,
       moneda: extraido.moneda || null,

@@ -5,6 +5,13 @@ _Última actualización: 2026-08-31_
 > **iOS nativo tiene su propia guía:** `docs/BUILD-NATIVO-IOS.md` — qué falta
 > en el repo, IAP, y los bloqueadores de revisión de Apple.
 
+> ⚠️ **Desactualizado para iOS (2026-08-31).** Lo de abajo asume que todo se
+> compila con EAS en la nube y que no hace falta Xcode. **Ya no aplica**:
+> desde que la app incluye el módulo nativo propio `TapptDocumentScanner`,
+> no corre en Expo Go y necesita prebuild + compilación nativa.
+> Ver **`docs/BUILD-NATIVO-IOS.md`** para el estado real del build de iOS.
+> Los niveles 0 (web app) y 3 (tiendas) siguen vigentes.
+
 Cuatro caminos, de menos a más ceremonia. Los dos primeros se pueden hacer
 hoy sin pagar nada ni abrir cuentas de tienda.
 

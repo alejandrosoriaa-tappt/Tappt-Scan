@@ -15,6 +15,8 @@ const MENSAJES = {
       'Hola, soy TapptScan. Mándame la foto de un documento —o reenvíame un PDF— y lo guardo directo en tu Google Drive.',
     sinDrive:
       'Todavía no tienes tu Google Drive conectado. Baja la app de TapptScan para conectarlo y guardar tus documentos automáticamente.',
+    driveExpirado:
+      'Tu conexión con Google Drive venció o fue revocada. Vuelve a conectarla aquí y después mándame la foto otra vez:\n{appUrl}',
     limite:
       'Ya usaste tus {limite} escaneos gratis de este mes. Pásate al plan Personal y escanea sin límite — escríbeme "quiero personal" y te mando el link.',
     guardado: 'Listo 📄\n\n*{archivo}*{paginas}\n📁 {ruta}{drive}{editar}\n\n¿Todo bien?',
@@ -45,6 +47,12 @@ const MENSAJES = {
     gastosEsNegocio:
       'Esa pregunta la contesto con el plan Negocio: llevo tus gastos en una hoja dentro de tu Drive y te respondo aquí mismo. Escríbeme "quiero negocio" y te mando el link.',
     otraCosa: 'Ok, dime qué tipo de documento es o mándame otra foto.',
+    reclasificado: '✅ Listo, lo moví a {ruta}\n\n📄 {nombre}',
+    reclasificadoPorRevisar:
+      'Con eso no me alcanza para ubicarlo, así que lo dejé en "99 · Por revisar" para que lo muevas tú desde Drive.',
+    reclasificarSinDocumento:
+      'No encuentro un documento reciente que corregir. Mándame la foto otra vez.',
+    reclasificarFallo: 'No pude moverlo. Inténtalo desde Drive o mándamelo de nuevo.',
     botonGuardar: 'Guardar',
     botonApp: 'Editar en la app',
     botonOtra: 'Es otra cosa',
@@ -55,6 +63,8 @@ const MENSAJES = {
       "Hi, I'm TapptScan. Send me a photo of a document — or forward me a PDF — and I'll save it straight to your Google Drive.",
     sinDrive:
       "You haven't connected your Google Drive yet. Download the TapptScan app to connect it and save your documents automatically.",
+    driveExpirado:
+      'Your Google Drive connection expired or was revoked. Reconnect it here, then send me the photo again:\n{appUrl}',
     limite:
       'You\'ve used your {limite} free scans this month. Upgrade to Personal for unlimited scans — reply "I want personal" and I\'ll send you the link.',
     guardado: 'Done 📄\n\n*{archivo}*{paginas}\n📁 {ruta}{drive}{editar}\n\nAll good?',
@@ -81,6 +91,12 @@ const MENSAJES = {
     gastosEsNegocio:
       'That one comes with the Business plan: I keep your expenses in a sheet inside your Drive and answer right here. Reply "I want business" and I\'ll send you the link.',
     otraCosa: "Okay — tell me what kind of document it is, or send me another photo.",
+    reclasificado: '✅ Done, I moved it to {ruta}\n\n📄 {nombre}',
+    reclasificadoPorRevisar:
+      'That\'s not enough for me to place it, so I left it in "99 · Por revisar" for you to move from Drive.',
+    reclasificarSinDocumento:
+      "I can't find a recent document to correct. Send me the photo again.",
+    reclasificarFallo: "I couldn't move it. Try from Drive or send it to me again.",
     botonGuardar: 'Save',
     botonApp: 'Edit in app',
     botonOtra: "It's something else",
