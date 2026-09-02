@@ -25,10 +25,11 @@
     },
     "android": {
       "package": "lat.tappt.scan",
-      "versionCode": 1,
+      "versionCode": 3,
       "permissions": [
-        "CAMERA",
-        "READ_EXTERNAL_STORAGE"
+        "android.permission.CAMERA",
+        "android.permission.READ_EXTERNAL_STORAGE",
+        "android.permission.RECORD_AUDIO"
       ]
     },
     "plugins": [
@@ -55,6 +56,12 @@
       "backgroundColor": "#0F1720",
       "display": "standalone",
       "favicon": "./assets/favicon.png"
-    }
+    },
+    "extra": {
+      "eas": {
+        "projectId": "6bb36fe4-fa13-4386-9fbd-fb9ccc6cb8b0"
+      }
+    },
+    "owner": "tapptscan-team"
   }
 }

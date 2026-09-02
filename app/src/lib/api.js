@@ -207,6 +207,7 @@ export const api = {
       method: 'PUT',
       body: JSON.stringify({ favorito }),
     }),
+  miniatura: (id) => request(`/api/documentos/${id}/miniatura`),
   pagina: (id, n = 0) => request(`/api/documentos/${id}/pagina/${n}`),
   editar: (id, anotaciones) =>
     request(`/api/documentos/${id}/editar`, {

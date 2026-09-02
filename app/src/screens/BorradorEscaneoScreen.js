@@ -172,10 +172,13 @@ export default function BorradorEscaneoScreen({ navigation }) {
             <Text style={estilos.botonSecundarioTexto}>{t('volverEditor')}</Text>
           </TouchableOpacity>
         ) : null}
-        <TouchableOpacity style={estilos.botonGuardar} onPress={guardar} disabled={guardando}>
-          {guardando ? <ActivityIndicator color="#FFFFFF" /> : <Icono nombre="verificado" tamano={20} color="#FFFFFF" />}
-          <Text style={estilos.botonGuardarTexto}>{t('guardarPdf')}</Text>
-        </TouchableOpacity>
+        <View style={estilos.continuarCaja}>
+          <Text style={estilos.continuarAyuda}>{t('firmaDespuesDeGuardar')}</Text>
+          <TouchableOpacity style={estilos.botonGuardar} onPress={guardar} disabled={guardando}>
+            {guardando ? <ActivityIndicator color="#FFFFFF" /> : <Icono nombre="verificado" tamano={20} color="#FFFFFF" />}
+            <Text style={estilos.botonGuardarTexto}>{t('guardarYContinuar')}</Text>
+          </TouchableOpacity>
+        </View>
       </View>
     </SafeAreaView>
   );
@@ -210,7 +213,9 @@ const estilos = StyleSheet.create({
   herramientas: { flexDirection: 'row', borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: '#25303B', paddingVertical: espacio.sm },
   herramienta: { flex: 1, alignItems: 'center', gap: 4, paddingHorizontal: 2 },
   herramientaTexto: { fontSize: 9, textAlign: 'center' },
-  pie: { flexDirection: 'row', gap: espacio.sm, padding: espacio.md, borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: '#25303B' },
+  pie: { flexDirection: 'row', alignItems: 'flex-end', gap: espacio.sm, padding: espacio.md, borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: '#25303B' },
+  continuarCaja: { flex: 1, gap: espacio.xs },
+  continuarAyuda: { color: '#9BA8B3', fontSize: 11, lineHeight: 15, textAlign: 'center' },
   botonGuardar: { flex: 1, minHeight: 48, borderRadius: 12, backgroundColor: colores.primario, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: espacio.sm, ...sombra },
   botonGuardarTexto: { color: '#FFFFFF', fontWeight: '800', fontSize: 15 },
   botonSecundario: { minHeight: 48, paddingHorizontal: espacio.md, borderRadius: 12, borderWidth: 1, borderColor: '#34414D', alignItems: 'center', justifyContent: 'center' },
