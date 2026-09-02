@@ -158,4 +158,6 @@
 - La portada aparece ahora en tres lugares: pantalla de resultado/detalle después de clasificar, lista general de Documentos y lista compacta de Recientes en Inicio. En el detalle conserva una insignia visible con el tipo clasificado.
 - Se incrementó Android a `versionCode` 3 para que la próxima APK incluya tanto ML Kit FULL como las portadas.
 - Verificación local: 32/32 pruebas Node, archivos JS válidos y export Android correcto (1061 módulos).
-- Pendiente: desplegar el endpoint en Railway, construir/instalar la APK v3 y validar que las miniaturas aparezcan después de guardar, al volver a Documentos y en Inicio; confirmar comportamiento con PDF multipágina e imagen individual.
+- El cambio funcional quedó en `033610e` en la rama nativa y se llevó a `main` como `bb30312`. Railway respondió saludable y la ruta nueva respondió `401 falta_token`, confirmando que el endpoint quedó desplegado.
+- APK Android v3 enviada a EAS: build `7b654b68-81a7-4c09-9c2d-f5792ea85b31`, URL `https://expo.dev/accounts/tapptscan-team/projects/tappt-scan/builds/7b654b68-81a7-4c09-9c2d-f5792ea85b31`.
+- Pendiente: esperar `FINISHED`, instalar la APK v3 y validar que las miniaturas aparezcan después de guardar, al volver a Documentos y en Inicio; confirmar comportamiento con PDF multipágina e imagen individual.
