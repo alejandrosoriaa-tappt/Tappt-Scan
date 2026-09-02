@@ -15,6 +15,7 @@ import { api } from '../lib/api';
 import { useSesion } from '../context/SesionContext';
 import { useIdioma } from '../i18n';
 import Icono, { IconoChip } from '../components/Icono';
+import DocumentoMiniatura from '../components/DocumentoMiniatura';
 import { Tarjeta, Barra, formatoDinero, formatoBytes } from '../components/comunes';
 import { colores, porTipo, espacio, radio, tipo, sombra } from '../theme';
 
@@ -71,7 +72,7 @@ function Reciente({ documento, onPress }) {
 
   return (
     <TouchableOpacity style={estilos.reciente} activeOpacity={0.75} onPress={onPress}>
-      <IconoChip nombre={meta.icono} fondo={meta.fondo} trazo={meta.trazo} tamano={40} />
+      <DocumentoMiniatura documento={documento} width={40} height={50} />
       <View style={estilos.recienteCentro}>
         <Text style={estilos.recienteTitulo} numberOfLines={1}>
           {documento.nombre_archivo || documento.emisor || t('sinEmisor')}

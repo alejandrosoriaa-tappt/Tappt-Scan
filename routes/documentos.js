@@ -211,6 +211,37 @@ async function traerDocumento(req) {
   return data;
 }
 
+// Portada liviana para listas y pantalla de resultado. El original sigue
+// viviendo únicamente en Drive: se descarga bajo demanda y se devuelve una
+// miniatura pequeña, nunca el archivo completo ni una copia persistente.
+router.get('/:id/miniatura', requireAuth, async (req, res) => {
+  try {
+    const documento = await traerDocumento(req);
+    if (!documento) return res.status(404).json({ error: 'documento_no_encontrado' });
+
+    const original = await drive.downloadFile(req.usuario.drive_tokens, documento.drive_file_id);
+    let miniatura;
+    let mimeType;
+
+    if (pdf.esPdf(original)) {
+      miniatura = await pdf.renderizarPagina(original, 0, 0.35);
+      mimeType = 'image/png';
+    } else {
+      miniatura = await imagenServicio.aplicarFiltro(original, 'color', 240);
+      mimeType = 'image/jpeg';
+    }
+
+    res.json({
+      imagen: miniatura.toString('base64'),
+      mimeType,
+      paginas: documento.paginas || 1,
+    });
+  } catch (err) {
+    console.error(`[documentos] error generando miniatura doc=${req.params.id}`, err);
+    res.status(500).json({ error: 'error_miniatura' });
+  }
+});
+
 // Devuelve una página lista para mostrar y anotar en la app. Si el original
 // es PDF se rasteriza esa página; si es imagen, se manda tal cual. El
 // backend no guarda copia: baja de Drive, convierte y responde.

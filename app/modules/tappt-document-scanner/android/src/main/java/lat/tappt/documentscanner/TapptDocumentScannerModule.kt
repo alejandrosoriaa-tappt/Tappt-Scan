@@ -35,7 +35,9 @@ class TapptDocumentScannerModule : Module() {
         .setGalleryImportAllowed(true)
         .setPageLimit(maxPages)
         .setResultFormats(GmsDocumentScannerOptions.RESULT_FORMAT_JPEG)
-        .setScannerMode(GmsDocumentScannerOptions.SCANNER_MODE_BASE)
+        // FULL conserva la interfaz nativa fluida de ML Kit y además activa
+        // la limpieza por ML de sombras, manchas y dedos, junto con filtros.
+        .setScannerMode(GmsDocumentScannerOptions.SCANNER_MODE_FULL)
         .build()
 
       pendingPromise = promise

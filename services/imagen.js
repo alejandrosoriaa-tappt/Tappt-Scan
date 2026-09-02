@@ -416,7 +416,10 @@ function limitesDeContraste(canal, total, agresivo = false) {
   const histograma = new Array(256).fill(0);
   for (let i = 0; i < total; i++) histograma[canal[i]]++;
 
-  const recorte = Math.round(total * (agresivo ? 0.03 : 0.01));
+  // Un recorte de 3% convertía sombras grandes (incluida la silueta del
+  // teléfono/persona) en negro sólido. "Mejorar" debe limpiar el papel sin
+  // destruir información: usa un percentil más conservador que antes.
+  const recorte = Math.round(total * (agresivo ? 0.005 : 0.01));
   let acumulado = 0;
   let bajo = 0;
   for (; bajo < 255; bajo++) {
@@ -502,9 +505,14 @@ async function aplicarFiltro(buffer, filtro = 'color', anchoMax = null) {
 
     for (let i = 0; i < total; i++) {
       const j = i * 4;
-      datos[j] = ((datos[j] - bajo) / rango) * 255;
-      datos[j + 1] = ((datos[j + 1] - bajo) / rango) * 255;
-      datos[j + 2] = ((datos[j + 2] - bajo) / rango) * 255;
+      const mezclaOriginal = filtro === 'mejorar' ? 0.28 : 0;
+      const mezclaAjustada = 1 - mezclaOriginal;
+      const rojo = datos[j];
+      const verde = datos[j + 1];
+      const azul = datos[j + 2];
+      datos[j] = (((rojo - bajo) / rango) * 255) * mezclaAjustada + rojo * mezclaOriginal;
+      datos[j + 1] = (((verde - bajo) / rango) * 255) * mezclaAjustada + verde * mezclaOriginal;
+      datos[j + 2] = (((azul - bajo) / rango) * 255) * mezclaAjustada + azul * mezclaOriginal;
     }
   }
 

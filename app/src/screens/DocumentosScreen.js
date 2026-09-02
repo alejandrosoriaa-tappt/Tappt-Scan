@@ -12,7 +12,8 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import useCargar from '../hooks/useCargar';
 import { api } from '../lib/api';
 import { useIdioma } from '../i18n';
-import Icono, { IconoChip } from '../components/Icono';
+import Icono from '../components/Icono';
+import DocumentoMiniatura from '../components/DocumentoMiniatura';
 import { formatoDinero } from '../components/comunes';
 import { colores, porTipo, espacio, radio, tipo, sombra } from '../theme';
 
@@ -40,7 +41,12 @@ function Fila({ documento, onPress, t }) {
 
   return (
     <TouchableOpacity style={estilos.fila} activeOpacity={0.7} onPress={onPress}>
-      <IconoChip nombre={meta.icono} fondo={meta.fondo} trazo={meta.trazo} tamano={44} />
+      <View>
+        <DocumentoMiniatura documento={documento} width={52} height={66} />
+        <View style={[estilos.tipoInsignia, { backgroundColor: meta.fondo }]}>
+          <Icono nombre={meta.icono} tamano={12} color={meta.trazo} grosor={2} />
+        </View>
+      </View>
 
       <View style={estilos.filaCentro}>
         <Text style={estilos.filaTitulo} numberOfLines={1}>
@@ -261,4 +267,16 @@ const estilos = StyleSheet.create({
   filaSub: { ...tipo.menor, color: colores.textoSuave, marginTop: 2 },
   filaRuta: { fontSize: 11, color: '#94A3AE', marginTop: 2 },
   filaMonto: { ...tipo.cuerpoFuerte, fontSize: 14, color: colores.texto, marginLeft: espacio.sm },
+  tipoInsignia: {
+    position: 'absolute',
+    left: -5,
+    bottom: -5,
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    borderWidth: 2,
+    borderColor: colores.superficie,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
 });

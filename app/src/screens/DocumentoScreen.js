@@ -4,6 +4,7 @@ import { useFocusEffect } from '@react-navigation/native';
 import { api } from '../lib/api';
 import { alertar, alertarConBotones } from '../lib/alerta';
 import Icono from '../components/Icono';
+import DocumentoMiniatura from '../components/DocumentoMiniatura';
 import HojaAcciones from '../components/HojaAcciones';
 import useCargar from '../hooks/useCargar';
 import { useIdioma } from '../i18n';
@@ -132,8 +133,12 @@ export default function DocumentoScreen({ route, navigation }) {
             <Icono nombre="mas_opciones" tamano={22} color={colores.textoTerciario} />
           </TouchableOpacity>
         </View>
-        <View style={estilos.vistaPreviaIcono}>
-          <Icono nombre={meta.icono} tamano={40} color={meta.trazo} grosor={1.6} />
+        <View style={estilos.portadaCaja}>
+          <DocumentoMiniatura documento={documento} width={142} height={184} />
+          <View style={[estilos.portadaTipo, { backgroundColor: meta.fondo }]}>
+            <Icono nombre={meta.icono} tamano={15} color={meta.trazo} grosor={2} />
+            <Text style={[estilos.portadaTipoTexto, { color: meta.trazo }]}>{t(meta.clave)}</Text>
+          </View>
         </View>
         <Text style={estilos.nombreArchivo} numberOfLines={2}>{documento.nombre_archivo}</Text>
       </View>
@@ -251,7 +256,21 @@ const estilos = StyleSheet.create({
     justifyContent: 'center',
     paddingVertical: espacio.xl,
   },
-  vistaPreviaIcono: { marginBottom: espacio.xs },
+  portadaCaja: { marginBottom: espacio.xs },
+  portadaTipo: {
+    position: 'absolute',
+    left: 8,
+    right: 8,
+    bottom: 8,
+    minHeight: 28,
+    borderRadius: 14,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 5,
+    paddingHorizontal: espacio.sm,
+  },
+  portadaTipoTexto: { fontSize: 11, fontWeight: '800' },
   badgeIA: {
     flexDirection: 'row',
     alignItems: 'center',
