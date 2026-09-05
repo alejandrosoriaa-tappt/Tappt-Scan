@@ -81,15 +81,22 @@ export default function BorradorEscaneoScreen({ navigation }) {
       const marcoCompleto = [
         { x: 0, y: 0 }, { x: 1, y: 0 }, { x: 1, y: 1 }, { x: 0, y: 1 },
       ];
-      const documento = await api.escanearLote(borrador.paginas.map((item) => ({
-        // La vista aprobada ya tiene perspectiva y filtro. Reutilizarla evita
-        // subir la foto original y repetir todo el procesamiento pesado.
-        imagen: item.vista || item.imagen,
-        procesada: Boolean(item.vista),
-        esquinas: item.vista ? marcoCompleto : item.esquinas,
-        filtro: item.vista ? 'color' : item.filtro,
-        formato: item.formato,
-      })));
+      const documento = await api.escanearLote(borrador.paginas.map((item) => {
+        // En web/recorte, `vista` es un data URI que sí se puede mandar al
+        // servidor. En el scanner nativo es una ruta local `file://...` usada
+        // únicamente para mostrar la miniatura; sus bytes Base64 están en
+        // `imagen`. Mandar la ruta como Base64 produce un JPEG inválido.
+        const vistaEmbebida = typeof item.vista === 'string'
+          && item.vista.startsWith('data:image/');
+        const yaProcesada = vistaEmbebida || Boolean(item.origen);
+        return {
+          imagen: vistaEmbebida ? item.vista : item.imagen,
+          procesada: yaProcesada,
+          esquinas: yaProcesada ? marcoCompleto : item.esquinas,
+          filtro: yaProcesada ? 'color' : item.filtro,
+          formato: item.formato,
+        };
+      }));
       refrescarCuenta();
       navigation.reset({
         index: 1,
