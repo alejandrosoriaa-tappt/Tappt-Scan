@@ -167,9 +167,13 @@ router.post('/escanear-lote', requireAuth, async (req, res) => {
         return res.status(400).json({ error: 'pagina_invalida' });
       }
       let buffer = Buffer.from(pagina.imagen.replace(/^data:[^;]+;base64,/, ''), 'base64');
-      buffer = await imagenServicio.corregirPerspectiva(buffer, pagina.esquinas, pagina.formato);
-      if (pagina.filtro && pagina.filtro !== 'color') {
-        buffer = await imagenServicio.aplicarFiltro(buffer, pagina.filtro);
+      // RecorteScreen ya produjo la vista final aprobada. No repetir una
+      // homografía y un filtro costosos si el cliente envía esa versión.
+      if (!pagina.procesada) {
+        buffer = await imagenServicio.corregirPerspectiva(buffer, pagina.esquinas, pagina.formato);
+        if (pagina.filtro && pagina.filtro !== 'color') {
+          buffer = await imagenServicio.aplicarFiltro(buffer, pagina.filtro);
+        }
       }
       corregidas.push(buffer);
     }

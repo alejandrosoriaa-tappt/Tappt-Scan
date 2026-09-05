@@ -1,6 +1,6 @@
 import React, { useEffect, useRef } from 'react';
-import { View, Text, Animated, StyleSheet } from 'react-native';
-import { colores, tipo, espacio } from '../theme';
+import { View, Image, Animated, StyleSheet } from 'react-native';
+import { colores } from '../theme';
 
 /**
  * Pantalla de entrada — brief prompt 1: sobria, oscura, centrada en marca,
@@ -27,9 +27,7 @@ export default function Splash() {
   return (
     <View style={estilos.pantalla}>
       <Animated.View style={{ opacity: pulso }}>
-        <Text style={estilos.logo}>
-          Tappt<Text style={estilos.logoAcento}>Scan</Text>
-        </Text>
+        <Image source={require('../../assets/tappt-logo.png')} style={estilos.logo} resizeMode="contain" />
       </Animated.View>
     </View>
   );
@@ -42,6 +40,5 @@ const estilos = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  logo: { fontSize: 34, fontWeight: '700', letterSpacing: -0.8, color: colores.texto },
-  logoAcento: { color: colores.primario },
+  logo: { width: 156, height: 156 },
 });

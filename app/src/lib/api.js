@@ -125,15 +125,28 @@ function guardarFixtureScanner(imagen, resultado) {
 // Toda llamada al backend va firmada con el token de TapptScan.
 async function request(ruta, opciones = {}) {
   const token = await leerToken();
+  const controlador = new AbortController();
+  const limiteMs = opciones.timeoutMs || 45_000;
+  const temporizador = setTimeout(() => controlador.abort(), limiteMs);
 
-  const respuesta = await fetch(`${BASE}${ruta}`, {
-    ...opciones,
-    headers: {
-      'Content-Type': 'application/json',
-      ...(token ? { Authorization: `Bearer ${token}` } : {}),
-      ...opciones.headers,
-    },
-  });
+  let respuesta;
+  try {
+    const { timeoutMs: _timeoutMs, ...opcionesFetch } = opciones;
+    respuesta = await fetch(`${BASE}${ruta}`, {
+      ...opcionesFetch,
+      signal: controlador.signal,
+      headers: {
+        'Content-Type': 'application/json',
+        ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        ...opciones.headers,
+      },
+    });
+  } catch (err) {
+    if (err?.name === 'AbortError') throw new Error('tiempo_agotado');
+    throw err;
+  } finally {
+    clearTimeout(temporizador);
+  }
 
   if (!respuesta.ok) {
     const detalle = await respuesta.json().catch(() => ({}));
@@ -170,6 +183,7 @@ export const api = {
     request('/api/documentos/escanear-lote', {
       method: 'POST',
       body: JSON.stringify({ paginas }),
+      timeoutMs: 75_000,
     }),
   vistaFiltro: (imagen, filtro) =>
     request('/api/documentos/vista-filtro', {

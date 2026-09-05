@@ -5,6 +5,7 @@ import {
   TouchableOpacity,
   StyleSheet,
   ActivityIndicator,
+  Image,
   Linking,
   Platform,
 } from 'react-native';
@@ -93,9 +94,8 @@ export default function LoginScreen() {
     <SafeAreaView style={estilos.pantalla}>
       <View style={estilos.contenido}>
         <View style={estilos.marca}>
-          <Text style={estilos.logo}>
-            Tappt<Text style={estilos.logoAcento}>Scan</Text>
-          </Text>
+          <Image source={require('../../assets/tappt-logo.png')} style={estilos.logoImagen} resizeMode="contain" />
+          <Text style={estilos.nombreMarca}>Tappt</Text>
           <Text style={estilos.promesa}>{t('promesa')}</Text>
         </View>
 
@@ -157,8 +157,8 @@ const estilos = StyleSheet.create({
   contenido: { flex: 1, justifyContent: 'center', padding: espacio.lg },
 
   marca: { alignItems: 'center', marginBottom: espacio.xl },
-  logo: { fontSize: 34, fontWeight: '700', color: colores.texto, letterSpacing: -0.8 },
-  logoAcento: { color: colores.primario },
+  logoImagen: { width: 124, height: 124 },
+  nombreMarca: { fontSize: 30, fontWeight: '700', color: colores.texto, letterSpacing: -0.7, marginTop: espacio.sm },
   promesa: {
     ...tipo.cuerpo,
     color: colores.textoSuave,

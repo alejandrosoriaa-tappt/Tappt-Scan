@@ -85,7 +85,15 @@ async function procesarArchivo(usuario, buffer, mimeType = 'image/jpeg', nombreO
     mimeVision = 'image/png';
   }
 
-  const extraido = await vision.classifyAndExtract(paraVision, mimeVision);
+  let extraido;
+  try {
+    extraido = await vision.classifyAndExtract(paraVision, mimeVision);
+  } catch (err) {
+    // La clasificación mejora la ruta, pero jamás debe impedir que el usuario
+    // guarde su PDF. Si la IA tarda o falla, continúa en Por revisar.
+    console.warn('[procesarDocumento] clasificación no disponible; guardando por revisar', err.message);
+    extraido = { tipo: 'otro', seccion: null, subcarpeta: null };
+  }
 
   // Las fotos se envuelven en un PDF; los PDF se conservan intactos.
   const archivo = entradaEsPdf ? buffer : await pdf.desdeImagen(buffer, mimeType);

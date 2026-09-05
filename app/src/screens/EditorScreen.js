@@ -39,7 +39,7 @@ const HERRAMIENTAS = [
 
 // Permite corregir la posición de una anotación ya colocada. Conserva las
 // coordenadas normalizadas (0..1) que espera el backend al generar el PDF.
-function AnotacionMovible({ anotacion, indice, lienzo, onMover, style, children }) {
+function AnotacionMovible({ anotacion, indice, lienzo, onMover, onSeleccionar, seleccionada, style, children }) {
   const anotacionRef = useRef(anotacion);
   const lienzoRef = useRef(lienzo);
   const inicio = useRef({ x: 0, y: 0 });
@@ -51,6 +51,7 @@ function AnotacionMovible({ anotacion, indice, lienzo, onMover, style, children 
       onStartShouldSetPanResponder: () => true,
       onMoveShouldSetPanResponder: () => true,
       onPanResponderGrant: () => {
+        onSeleccionar(indice);
         inicio.current = { x: anotacionRef.current.x, y: anotacionRef.current.y };
       },
       onPanResponderMove: (_evento, gesto) => {
@@ -70,6 +71,7 @@ function AnotacionMovible({ anotacion, indice, lienzo, onMover, style, children 
       style={[
         estilos.anotacionMovible,
         { left: anotacion.x * lienzo.ancho, top: anotacion.y * lienzo.alto },
+        seleccionada && estilos.anotacionSeleccionada,
         style,
       ]}
     >
@@ -86,6 +88,7 @@ export default function EditorScreen({ route, navigation }) {
   const [anotaciones, setAnotaciones] = useState([]);
   const [lienzo, setLienzo] = useState({ ancho: 1, alto: 1 });
   const [guardando, setGuardando] = useState(false);
+  const [seleccionada, setSeleccionada] = useState(null);
 
   // Las páginas se piden al backend una por una: si el original es PDF las
   // rasteriza, si es imagen la manda tal cual.
@@ -130,11 +133,40 @@ export default function EditorScreen({ route, navigation }) {
     y: evento.nativeEvent.locationY / lienzo.alto,
   });
 
-  const agregar = (anotacion) => setAnotaciones((previas) => [...previas, anotacion]);
+  const agregar = (anotacion) => setAnotaciones((previas) => {
+    setSeleccionada(previas.length);
+    return [...previas, anotacion];
+  });
   const moverAnotacion = (indice, posicion) => {
     setAnotaciones((previas) =>
       previas.map((anotacion, i) => (i === indice ? { ...anotacion, ...posicion } : anotacion))
     );
+  };
+
+  const ajustarSeleccionada = (cambios) => {
+    if (seleccionada === null) return;
+    setAnotaciones((previas) =>
+      previas.map((anotacion, indice) =>
+        indice === seleccionada ? { ...anotacion, ...cambios(anotacion) } : anotacion
+      )
+    );
+  };
+
+  const cambiarTamano = (factor) => ajustarSeleccionada((anotacion) => ({
+    ancho: Math.min(0.8, Math.max(0.08, (anotacion.ancho || 0.25) * factor)),
+    ...(anotacion.tipo === 'tapar'
+      ? { alto: Math.min(0.3, Math.max(0.02, (anotacion.alto || 0.04) * factor)) }
+      : {}),
+  }));
+
+  const rotarSeleccionada = () => ajustarSeleccionada((anotacion) => ({
+    rotacion: ((anotacion.rotacion || 0) + 90) % 360,
+  }));
+
+  const eliminarSeleccionada = () => {
+    if (seleccionada === null) return;
+    setAnotaciones((previas) => previas.filter((_, indice) => indice !== seleccionada));
+    setSeleccionada(null);
   };
 
   const tocarLienzo = async (evento) => {
@@ -284,6 +316,8 @@ export default function EditorScreen({ route, navigation }) {
                     indice={indice}
                     lienzo={lienzo}
                     onMover={moverAnotacion}
+                    onSeleccionar={setSeleccionada}
+                    seleccionada={seleccionada === indice}
                     style={{
                       width: anotacion.ancho * lienzo.ancho,
                       height: anotacion.alto * lienzo.alto,
@@ -301,6 +335,8 @@ export default function EditorScreen({ route, navigation }) {
                     indice={indice}
                     lienzo={lienzo}
                     onMover={moverAnotacion}
+                    onSeleccionar={setSeleccionada}
+                    seleccionada={seleccionada === indice}
                   >
                     <Text style={estilos.textoPuesto}>{anotacion.texto}</Text>
                   </AnotacionMovible>
@@ -308,20 +344,61 @@ export default function EditorScreen({ route, navigation }) {
               }
 
               return (
-                <Image
+                <AnotacionMovible
                   key={indice}
-                  source={{ uri: anotacion.datos }}
-                  style={[
-                    estilos.imagenPuesta,
-                    posicion,
-                    { width: anotacion.ancho * lienzo.ancho },
-                  ]}
-                  resizeMode="contain"
-                />
+                  anotacion={anotacion}
+                  indice={indice}
+                  lienzo={lienzo}
+                  onMover={moverAnotacion}
+                  onSeleccionar={setSeleccionada}
+                  seleccionada={seleccionada === indice}
+                  style={{
+                    width: anotacion.ancho * lienzo.ancho,
+                    transform: [{ rotate: `${anotacion.rotacion || 0}deg` }],
+                  }}
+                >
+                  <Image
+                    source={{ uri: anotacion.datos }}
+                    style={estilos.imagenPuesta}
+                    resizeMode="contain"
+                  />
+                </AnotacionMovible>
               );
             })}
           </View>
         </TouchableWithoutFeedback>
+
+        {seleccionada !== null && anotaciones[seleccionada] ? (
+          <View style={estilos.controlesAnotacion}>
+            <Text style={estilos.controlTitulo}>{t(anotaciones[seleccionada].tipo)}</Text>
+            <TouchableOpacity style={estilos.controlBoton} onPress={() => cambiarTamano(0.82)}>
+              <Text style={estilos.controlTexto}>−</Text>
+            </TouchableOpacity>
+            <TouchableOpacity style={estilos.controlBoton} onPress={() => cambiarTamano(1.22)}>
+              <Text style={estilos.controlTexto}>＋</Text>
+            </TouchableOpacity>
+            {anotaciones[seleccionada].tipo === 'firma' || anotaciones[seleccionada].tipo === 'imagen' ? (
+              <TouchableOpacity style={estilos.controlBoton} onPress={rotarSeleccionada}>
+                <Text style={estilos.controlTexto}>↻</Text>
+              </TouchableOpacity>
+            ) : null}
+            {anotaciones[seleccionada].tipo === 'tapar' ? (
+              <>
+                {['#000000', '#FFFFFF', '#EF4444'].map((color) => (
+                  <TouchableOpacity
+                    key={color}
+                    accessibilityLabel={`Color ${color}`}
+                    style={[estilos.controlColor, { backgroundColor: color }]}
+                    onPress={() => ajustarSeleccionada(() => ({ color }))}
+                  />
+                ))}
+              </>
+            ) : null}
+            <TouchableOpacity style={[estilos.controlBoton, estilos.controlEliminar]} onPress={eliminarSeleccionada}>
+              <Text style={estilos.controlEliminarTexto}>×</Text>
+            </TouchableOpacity>
+          </View>
+        ) : null}
 
         {totalPaginas > 1 ? (
           <View style={estilos.paginador}>
@@ -531,7 +608,36 @@ const estilos = StyleSheet.create({
   imagen: { width: '100%', height: '100%' },
   anotacionMovible: { position: 'absolute', zIndex: 3 },
   textoPuesto: { fontSize: 16, color: '#0F172A', fontWeight: '500' },
-  imagenPuesta: { position: 'absolute', height: undefined, aspectRatio: 2 },
+  anotacionSeleccionada: {
+    borderWidth: 2,
+    borderColor: colores.primario,
+    borderStyle: 'dashed',
+  },
+  imagenPuesta: { width: '100%', aspectRatio: 2 },
+  controlesAnotacion: {
+    minHeight: 48,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    marginTop: espacio.sm,
+    paddingHorizontal: espacio.sm,
+    borderRadius: radio.lg,
+    backgroundColor: colores.superficie,
+  },
+  controlTitulo: { color: colores.texto, fontSize: 12, fontWeight: '700', marginRight: 2 },
+  controlBoton: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: colores.primarioSuave,
+  },
+  controlTexto: { color: colores.primario, fontSize: 22, fontWeight: '700' },
+  controlColor: { width: 26, height: 26, borderRadius: 13, borderWidth: 1, borderColor: colores.divisor },
+  controlEliminar: { backgroundColor: '#3A2024' },
+  controlEliminarTexto: { color: colores.peligro, fontSize: 24, lineHeight: 26 },
   pista: {
     fontSize: 12,
     color: colores.textoSuave,

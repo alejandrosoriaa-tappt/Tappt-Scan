@@ -19,6 +19,14 @@ function formatoFecha(iso, idioma) {
   });
 }
 
+function nombreLegible(nombre = '') {
+  return nombre
+    .replace(/\.pdf$/i, '')
+    .replace(/[_-]+/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
 // En web, react-native-web no implementa Share — se usa la Web Share API
 // del navegador si existe (Safari/Chrome en celular la traen), y si no,
 // simplemente se abre el link de Drive, igual que el botón de al lado.
@@ -119,7 +127,17 @@ export default function DocumentoScreen({ route, navigation }) {
 
   return (
     <ScrollView style={estilos.pantalla} contentContainerStyle={estilos.contenido}>
-      <View style={[estilos.vistaPrevia, { backgroundColor: meta.fondo }]}>
+      <View style={estilos.estadoListo}>
+        <View style={estilos.estadoIcono}>
+          <Icono nombre="verificado" tamano={20} color="#FFFFFF" />
+        </View>
+        <View style={estilos.estadoTextos}>
+          <Text style={estilos.estadoTitulo}>{t('documentoGuardado')}</Text>
+          <Text style={estilos.estadoDetalle}>{t('guardadoEnGoogleDrive')}</Text>
+        </View>
+      </View>
+
+      <View style={estilos.vistaPrevia}>
         <View style={estilos.accionesEsquina}>
           <TouchableOpacity onPress={alternarFavorito} hitSlop={12}>
             <Icono
@@ -134,13 +152,12 @@ export default function DocumentoScreen({ route, navigation }) {
           </TouchableOpacity>
         </View>
         <View style={estilos.portadaCaja}>
-          <DocumentoMiniatura documento={documento} width={142} height={184} />
-          <View style={[estilos.portadaTipo, { backgroundColor: meta.fondo }]}>
-            <Icono nombre={meta.icono} tamano={15} color={meta.trazo} grosor={2} />
-            <Text style={[estilos.portadaTipoTexto, { color: meta.trazo }]}>{t(meta.clave)}</Text>
-          </View>
+          <DocumentoMiniatura documento={documento} width={176} height={228} />
         </View>
-        <Text style={estilos.nombreArchivo} numberOfLines={2}>{documento.nombre_archivo}</Text>
+        <Text style={estilos.nombreArchivo} numberOfLines={2}>{nombreLegible(documento.nombre_archivo)}</Text>
+        <Text style={estilos.rutaResumen} numberOfLines={2}>
+          {(documento.ruta || '').replace(/^\/+|\/+$/g, '').replace(/\//g, '  ›  ')}
+        </Text>
       </View>
 
       <View style={estilos.badgeIA}>
@@ -149,6 +166,14 @@ export default function DocumentoScreen({ route, navigation }) {
           {t('clasificadoComo', { tipo: t(meta.clave) })}
         </Text>
       </View>
+
+      <TouchableOpacity
+        style={[estilos.boton, estilos.botonPrimario, estilos.abrirDrivePrincipal]}
+        onPress={() => Linking.openURL(documento.drive_link)}
+      >
+        <Icono nombre="nube" tamano={19} color="#FFFFFF" />
+        <Text style={[estilos.botonTexto, estilos.botonTextoPrimario]}>{t('abrirEnDrive')}</Text>
+      </TouchableOpacity>
 
       <Text style={estilos.tituloSeccion}>{t('datosExtraidos')}</Text>
       <View style={estilos.tarjeta}>
@@ -185,12 +210,6 @@ export default function DocumentoScreen({ route, navigation }) {
         </TouchableOpacity>
         <TouchableOpacity style={estilos.boton} onPress={() => compartir(documento, t)}>
           <Text style={estilos.botonTexto}>{t('compartir')}</Text>
-        </TouchableOpacity>
-        <TouchableOpacity
-          style={[estilos.boton, estilos.botonPrimario]}
-          onPress={() => Linking.openURL(documento.drive_link)}
-        >
-          <Text style={[estilos.botonTexto, estilos.botonTextoPrimario]}>{t('abrirEnDrive')}</Text>
         </TouchableOpacity>
       </View>
 
@@ -250,11 +269,32 @@ export default function DocumentoScreen({ route, navigation }) {
 const estilos = StyleSheet.create({
   pantalla: { flex: 1, backgroundColor: colores.fondo },
   contenido: { padding: espacio.md, paddingBottom: espacio.xl },
-  vistaPrevia: {
-    borderRadius: 16,
+  estadoListo: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: espacio.sm,
+    marginBottom: espacio.md,
+  },
+  estadoIcono: {
+    width: 38,
+    height: 38,
+    borderRadius: 19,
     alignItems: 'center',
     justifyContent: 'center',
-    paddingVertical: espacio.xl,
+    backgroundColor: colores.primario,
+  },
+  estadoTextos: { flex: 1 },
+  estadoTitulo: { color: colores.texto, fontSize: 19, fontWeight: '800' },
+  estadoDetalle: { color: colores.textoSuave, fontSize: 12, marginTop: 2 },
+  vistaPrevia: {
+    borderRadius: 18,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: espacio.lg,
+    paddingHorizontal: espacio.md,
+    backgroundColor: colores.superficie,
+    borderWidth: 1,
+    borderColor: colores.divisor,
   },
   portadaCaja: { marginBottom: espacio.xs },
   portadaTipo: {
@@ -291,11 +331,20 @@ const estilos = StyleSheet.create({
     gap: espacio.md,
   },
   nombreArchivo: {
-    maxWidth: '78%',
-    fontSize: 13,
-    lineHeight: 18,
+    maxWidth: '88%',
+    fontSize: 16,
+    lineHeight: 21,
+    fontWeight: '700',
+    color: colores.texto,
+    marginTop: espacio.md,
+    textAlign: 'center',
+  },
+  rutaResumen: {
+    maxWidth: '90%',
     color: colores.textoSuave,
-    marginTop: espacio.sm,
+    fontSize: 12,
+    lineHeight: 17,
+    marginTop: 5,
     textAlign: 'center',
   },
   tituloSeccion: {
@@ -346,6 +395,7 @@ const estilos = StyleSheet.create({
     alignItems: 'center',
   },
   botonPrimario: { backgroundColor: colores.primario, borderColor: colores.primario },
+  abrirDrivePrincipal: { marginTop: espacio.md, flexDirection: 'row', gap: espacio.sm },
   botonTexto: { fontSize: 15, fontWeight: '600', color: colores.texto },
   botonTextoPrimario: { color: '#FFFFFF' },
   nota: {

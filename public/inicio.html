@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<meta name="description" content="TapptScan escanea, clasifica y organiza tus documentos en tu propio Google Drive." />
+<title>TapptScan — tus documentos organizados en tu Google Drive</title>
+<style>
+  :root { color-scheme: light; --ink:#0d1b2a; --muted:#526273; --green:#18b875; --green-dark:#087c4d; --paper:#f6faf8; --line:#dce9e2; }
+  * { box-sizing: border-box; }
+  body { margin:0; font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif; color:var(--ink); background:#fff; line-height:1.55; }
+  a { color:var(--green-dark); }
+  .wrap { width:min(1080px,calc(100% - 40px)); margin:0 auto; }
+  header { display:flex; align-items:center; justify-content:space-between; min-height:72px; gap:20px; }
+  .brand { color:var(--ink); font-size:21px; font-weight:800; text-decoration:none; letter-spacing:-.02em; }
+  .login { display:inline-flex; align-items:center; justify-content:center; border:1px solid var(--green); border-radius:999px; padding:9px 17px; font-weight:700; text-decoration:none; }
+  .hero { padding:70px 0 62px; background:linear-gradient(145deg,#fff 30%,#eaf8f1); border-block:1px solid var(--line); }
+  .hero-grid { display:grid; grid-template-columns:1.25fr .75fr; align-items:center; gap:56px; }
+  .eyebrow { color:var(--green-dark); font-size:14px; font-weight:800; letter-spacing:.08em; text-transform:uppercase; }
+  h1 { max-width:760px; margin:12px 0 20px; font-size:clamp(38px,6vw,68px); line-height:1.03; letter-spacing:-.045em; }
+  .lead { max-width:680px; color:var(--muted); font-size:clamp(18px,2vw,22px); }
+  .actions { display:flex; flex-wrap:wrap; gap:12px; margin-top:30px; }
+  .primary,.secondary { display:inline-flex; padding:13px 21px; border-radius:12px; font-weight:800; text-decoration:none; }
+  .primary { color:#fff; background:var(--green-dark); }
+  .secondary { color:var(--ink); border:1px solid #b8cdc2; background:#fff; }
+  .drive-card { padding:28px; border:1px solid var(--line); border-radius:24px; background:rgba(255,255,255,.9); box-shadow:0 18px 50px rgba(13,27,42,.08); }
+  .drive-card strong { display:block; margin-bottom:10px; font-size:19px; }
+  .drive-card code { display:block; overflow-wrap:anywhere; padding:14px; border-radius:10px; background:var(--paper); color:#164d39; }
+  main section { padding:72px 0; }
+  h2 { margin:0 0 15px; font-size:clamp(28px,4vw,42px); letter-spacing:-.025em; }
+  .section-intro { max-width:720px; margin-bottom:34px; color:var(--muted); font-size:18px; }
+  .cards { display:grid; grid-template-columns:repeat(3,1fr); gap:18px; }
+  .card { padding:25px; border:1px solid var(--line); border-radius:18px; background:#fff; }
+  .card span { display:inline-grid; place-items:center; width:34px; height:34px; border-radius:50%; color:#fff; background:var(--green-dark); font-weight:800; }
+  .card h3 { margin:17px 0 8px; }
+  .card p { margin:0; color:var(--muted); }
+  .privacy { background:var(--paper); border-block:1px solid var(--line); }
+  .privacy-grid { display:grid; grid-template-columns:1fr 1fr; gap:44px; }
+  .privacy ul { margin:0; padding-left:22px; color:var(--muted); }
+  .privacy li + li { margin-top:10px; }
+  footer { padding:28px 0 45px; color:var(--muted); font-size:14px; }
+  footer .wrap { display:flex; flex-wrap:wrap; justify-content:space-between; gap:18px; }
+  footer nav { display:flex; flex-wrap:wrap; gap:18px; }
+  @media (max-width:760px) { .hero-grid,.privacy-grid,.cards { grid-template-columns:1fr; } .hero { padding-top:48px; } .drive-card { display:none; } }
+</style>
+</head>
+<body>
+  <header class="wrap">
+    <a class="brand" href="/" aria-label="TapptScan, inicio">TapptScan</a>
+    <a class="login" href="/app">Entrar a la app</a>
+  </header>
+
+  <div class="hero">
+    <div class="wrap hero-grid">
+      <div>
+        <div class="eyebrow">Escanea · clasifica · encuentra</div>
+        <h1>Tus documentos, organizados en tu propio Google Drive.</h1>
+        <p class="lead">TapptScan convierte fotos y PDF en documentos ordenados: identifica su tipo, emisor, fecha y monto, les da un nombre útil y los archiva en la carpeta correcta.</p>
+        <div class="actions">
+          <a class="primary" href="/app">Entrar a TapptScan</a>
+          <a class="secondary" href="#google-drive">Cómo usamos Google Drive</a>
+        </div>
+      </div>
+      <aside class="drive-card" aria-label="Ejemplo de organización">
+        <strong>Del documento a su lugar</strong>
+        <code>TapptScan / Casa / Servicios / CFE / 2026 / CFE_Agosto_2026_$1,847.pdf</code>
+      </aside>
+    </div>
+  </div>
+
+  <main>
+    <section class="wrap" aria-labelledby="funciona">
+      <h2 id="funciona">Cómo funciona</h2>
+      <p class="section-intro">Puedes enviar una foto o PDF por WhatsApp, o importarlo desde la app. El archivo termina como PDF en tu cuenta de Google Drive.</p>
+      <div class="cards">
+        <article class="card"><span>1</span><h3>Recibe el documento</h3><p>Escanea con la cámara, importa un archivo o reenvíalo por WhatsApp.</p></article>
+        <article class="card"><span>2</span><h3>Lo clasifica</h3><p>TapptScan extrae los datos útiles y propone un nombre y una ruta organizados.</p></article>
+        <article class="card"><span>3</span><h3>Lo guarda en tu Drive</h3><p>Crea la estructura de carpetas y sube el PDF a tu propia cuenta.</p></article>
+      </div>
+    </section>
+
+    <section class="privacy" id="google-drive" aria-labelledby="drive-title">
+      <div class="wrap privacy-grid">
+        <div>
+          <h2 id="drive-title">Acceso limitado a Google Drive</h2>
+          <p class="section-intro">TapptScan solicita únicamente el permiso <code>drive.file</code>. Este permiso permite crear, abrir, modificar, organizar y eliminar los archivos y carpetas que TapptScan crea o que eliges expresamente para usar con la app. No permite leer libremente los demás archivos de tu Drive.</p>
+        </div>
+        <div>
+          <ul>
+            <li>Usamos el acceso para crear la carpeta TapptScan, guardar tus documentos y mostrarte los archivos creados por la app.</li>
+            <li>Guardamos la autorización de Google para mantener conectado el servicio hasta que desconectes Drive o elimines tu cuenta.</li>
+            <li>Los documentos viven en tu Google Drive; no conservamos una copia permanente de los archivos en nuestros servidores.</li>
+            <li>No vendemos tus datos de Google ni los usamos para publicidad.</li>
+          </ul>
+          <p><a href="/privacidad.html">Consulta la Política de privacidad de TapptScan</a> para conocer el tratamiento completo de los datos.</p>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <footer>
+    <div class="wrap">
+      <span>TapptScan es un producto de Nkuvo Labs.</span>
+      <nav aria-label="Legal y acceso">
+        <a href="/privacidad.html">Privacidad</a>
+        <a href="/terminos.html">Términos</a>
+        <a href="/eliminar-cuenta.html">Eliminar cuenta</a>
+        <a href="/app">Entrar</a>
+      </nav>
+    </div>
+  </footer>
+</body>
+</html>

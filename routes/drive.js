@@ -29,13 +29,13 @@ router.get('/callback', async (req, res) => {
     if (error) throw error;
 
     // La web app espejo llega aquí navegando en la misma pestaña (no en un
-    // popup), así que regresa sola a "/" tras un momento — ahí la app
+    // popup), así que regresa sola a "/app" tras un momento — ahí la app
     // recarga y ya encuentra el Drive conectado. La app nativa, que sí usa
     // un WebBrowser en sesión aparte, se queda con el mensaje tal cual.
     res.send(
       '<html><body style="font-family:sans-serif;text-align:center;padding:48px">' +
         '<h2>Listo</h2><p>Tu Google Drive quedó conectado y tus carpetas ya están creadas.<br>Regresando a TapptScan…</p>' +
-        '<script>setTimeout(function () { window.location.href = "/"; }, 1500);</script>' +
+        '<script>setTimeout(function () { window.location.href = "/app"; }, 1500);</script>' +
         '</body></html>'
     );
   } catch (err) {

@@ -24,7 +24,7 @@ fs.writeFileSync(
     {
       name: 'TapptScan',
       short_name: 'TapptScan',
-      start_url: '/',
+      start_url: '/app',
       display: 'standalone',
       background_color: '#0F1720',
       theme_color: '#18B875',

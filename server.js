@@ -29,7 +29,16 @@ app.get('/health', (_req, res) => {
   const estado = scanner.estadoDetector();
   res.json({ ok: true, service: 'tappt-scan', docquad: estado, scanner: estado });
 });
-app.use(express.static(path.join(__dirname, 'public')));
+const publicDir = path.join(__dirname, 'public');
+const appDist = path.join(__dirname, 'app', 'dist');
+
+// Google OAuth exige que la portada describa el producto y el uso de datos
+// sin pedir acceso. La app autenticada vive aparte en /app.
+app.get('/', (req, res, next) => {
+  if (req.query.scannerDebug === '1') return next();
+  res.sendFile(path.join(publicDir, 'inicio.html'));
+});
+app.use(express.static(publicDir));
 app.use('/webhook', webhookRouter);
 app.use('/api/auth', authRouter);
 app.use('/api/cuenta', cuentaRouter);
@@ -39,7 +48,6 @@ app.use('/api/drive', driveRouter);
 app.use('/api/pagos', pagosRouter);
 app.use('/api/firmas', firmasRouter);
 
-const appDist = path.join(__dirname, 'app', 'dist');
 app.get('/', (req, res, next) => {
   if (req.query.scannerDebug !== '1') return next();
   const clave = crypto.randomBytes(18).toString('hex');
@@ -88,6 +96,7 @@ app.get('/', (req, res, next) => {
     res.type('html').send(html.replace('</body>', script + '\n</body>'));
   });
 });
+app.get('/app', (_req, res) => res.sendFile(path.join(appDist, 'index.html')));
 app.use(express.static(appDist));
 app.get('*', (_req, res) => res.sendFile(path.join(appDist, 'index.html')));
 

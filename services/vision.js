@@ -74,6 +74,7 @@ async function classifyAndExtract(imageBuffer, mimeType) {
       ],
     },
     {
+      timeout: 20_000,
       headers: {
         'x-api-key': process.env.ANTHROPIC_API_KEY,
         'anthropic-version': '2023-06-01',

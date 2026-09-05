@@ -8,7 +8,7 @@
     "primaryColor": "#18B875",
     "icon": "./assets/icon.png",
     "splash": {
-      "image": "./assets/icon.png",
+      "image": "./assets/tappt-logo.png",
       "resizeMode": "contain",
       "backgroundColor": "#0F1720"
     },
@@ -21,16 +21,27 @@
       "buildNumber": "1",
       "infoPlist": {
         "ITSAppUsesNonExemptEncryption": false
+      },
+      "runtimeVersion": {
+        "policy": "appVersion"
       }
     },
     "android": {
       "package": "lat.tappt.scan",
-      "versionCode": 3,
+      "versionCode": 5,
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/tappt-logo.png",
+        "backgroundColor": "#0FA477"
+      },
       "permissions": [
         "android.permission.CAMERA",
         "android.permission.READ_EXTERNAL_STORAGE",
+        "android.permission.RECORD_AUDIO",
+        "android.permission.CAMERA",
+        "android.permission.READ_EXTERNAL_STORAGE",
         "android.permission.RECORD_AUDIO"
-      ]
+      ],
+      "runtimeVersion": "1.0.0"
     },
     "plugins": [
       [
@@ -62,6 +73,9 @@
         "projectId": "6bb36fe4-fa13-4386-9fbd-fb9ccc6cb8b0"
       }
     },
-    "owner": "tapptscan-team"
+    "owner": "tapptscan-team",
+    "updates": {
+      "url": "https://u.expo.dev/6bb36fe4-fa13-4386-9fbd-fb9ccc6cb8b0"
+    }
   }
 }

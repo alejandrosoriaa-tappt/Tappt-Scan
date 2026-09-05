@@ -24,6 +24,7 @@ export default function BorradorEscaneoScreen({ navigation }) {
   const [paginaId, setPaginaId] = useState(borrador.paginas[0]?.id || null);
   const [mosaico, setMosaico] = useState(false);
   const [guardando, setGuardando] = useState(false);
+  const [etapaGuardado, setEtapaGuardado] = useState(0);
 
   const indice = Math.max(0, borrador.paginas.findIndex((pagina) => pagina.id === paginaId));
   const pagina = borrador.paginas[indice] || null;
@@ -37,6 +38,17 @@ export default function BorradorEscaneoScreen({ navigation }) {
       setPaginaId(borrador.paginas[Math.min(indice, borrador.paginas.length - 1)].id);
     }
   }, [borrador.paginas, paginaId]);
+
+  useEffect(() => {
+    if (!guardando) {
+      setEtapaGuardado(0);
+      return undefined;
+    }
+    const temporizador = setInterval(() => {
+      setEtapaGuardado((actual) => Math.min(actual + 1, 2));
+    }, 7000);
+    return () => clearInterval(temporizador);
+  }, [guardando]);
 
   const editar = (item = pagina) => {
     if (!item) return;
@@ -66,10 +78,16 @@ export default function BorradorEscaneoScreen({ navigation }) {
   const guardar = async () => {
     setGuardando(true);
     try {
+      const marcoCompleto = [
+        { x: 0, y: 0 }, { x: 1, y: 0 }, { x: 1, y: 1 }, { x: 0, y: 1 },
+      ];
       const documento = await api.escanearLote(borrador.paginas.map((item) => ({
-        imagen: item.imagen,
-        esquinas: item.esquinas,
-        filtro: item.filtro,
+        // La vista aprobada ya tiene perspectiva y filtro. Reutilizarla evita
+        // subir la foto original y repetir todo el procesamiento pesado.
+        imagen: item.vista || item.imagen,
+        procesada: Boolean(item.vista),
+        esquinas: item.vista ? marcoCompleto : item.esquinas,
+        filtro: item.vista ? 'color' : item.filtro,
         formato: item.formato,
       })));
       refrescarCuenta();
@@ -79,7 +97,7 @@ export default function BorradorEscaneoScreen({ navigation }) {
       });
       borrador.iniciar();
     } catch (err) {
-      alertar(t('noSePudo'), err.message);
+      alertar(t('noSePudo'), err.message === 'tiempo_agotado' ? t('guardadoDemasiadoLento') : err.message);
     } finally {
       setGuardando(false);
     }
@@ -124,7 +142,7 @@ export default function BorradorEscaneoScreen({ navigation }) {
       ) : (
         <>
           <View style={estilos.documentoCaja}>
-            {pagina ? <Image source={{ uri: pagina.vista }} style={estilos.documento} resizeMode="contain" /> : null}
+            {pagina ? <VistaDocumento pagina={pagina} /> : null}
           </View>
 
           <View style={estilos.comparador}>
@@ -176,7 +194,11 @@ export default function BorradorEscaneoScreen({ navigation }) {
           <Text style={estilos.continuarAyuda}>{t('firmaDespuesDeGuardar')}</Text>
           <TouchableOpacity style={estilos.botonGuardar} onPress={guardar} disabled={guardando}>
             {guardando ? <ActivityIndicator color="#FFFFFF" /> : <Icono nombre="verificado" tamano={20} color="#FFFFFF" />}
-            <Text style={estilos.botonGuardarTexto}>{t('guardarYContinuar')}</Text>
+            <Text style={estilos.botonGuardarTexto}>
+              {guardando
+                ? t(['preparandoPdf', 'clasificandoDocumento', 'guardandoEnDrive'][etapaGuardado])
+                : t('guardarYContinuar')}
+            </Text>
           </TouchableOpacity>
         </View>
       </View>
@@ -194,6 +216,45 @@ function Boton({ icono, texto, onPress, peligro }) {
   );
 }
 
+function VistaDocumento({ pagina }) {
+  const uri = pagina.vista || pagina.imagen;
+  const [anchoVisor, setAnchoVisor] = useState(0);
+  const [tamano, setTamano] = useState({ ancho: pagina.ancho || 1, alto: pagina.alto || 1 });
+
+  useEffect(() => {
+    let activo = true;
+    Image.getSize(
+      uri,
+      (ancho, alto) => activo && setTamano({ ancho, alto }),
+      () => activo && setTamano({ ancho: pagina.ancho || 1, alto: pagina.alto || 1 })
+    );
+    return () => { activo = false; };
+  }, [pagina.id, uri, pagina.ancho, pagina.alto]);
+
+  const proporcion = tamano.alto / Math.max(tamano.ancho, 1);
+  if (proporcion <= 2) {
+    return <Image source={{ uri }} style={estilos.documento} resizeMode="contain" />;
+  }
+
+  return (
+    <ScrollView
+      style={estilos.documentoScroll}
+      contentContainerStyle={estilos.documentoScrollContenido}
+      showsVerticalScrollIndicator
+      nestedScrollEnabled
+      onLayout={(evento) => setAnchoVisor(evento.nativeEvent.layout.width)}
+    >
+      {anchoVisor > 0 ? (
+        <Image
+          source={{ uri }}
+          style={{ width: anchoVisor, height: anchoVisor * proporcion }}
+          resizeMode="contain"
+        />
+      ) : null}
+    </ScrollView>
+  );
+}
+
 const estilos = StyleSheet.create({
   pantalla: { flex: 1, backgroundColor: '#080D14' },
   encabezado: { height: 64, flexDirection: 'row', alignItems: 'center', paddingHorizontal: espacio.md, borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: '#25303B' },
@@ -204,6 +265,8 @@ const estilos = StyleSheet.create({
   agregar: { color: colores.primario, fontSize: 14, fontWeight: '700' },
   documentoCaja: { flex: 1, margin: espacio.md, borderRadius: 10, backgroundColor: '#111923', overflow: 'hidden' },
   documento: { width: '100%', height: '100%' },
+  documentoScroll: { flex: 1, width: '100%' },
+  documentoScrollContenido: { alignItems: 'center', backgroundColor: '#111923' },
   comparador: { alignSelf: 'center', flexDirection: 'row', alignItems: 'center', gap: espacio.lg, paddingVertical: espacio.xs },
   contador: { color: '#FFFFFF', fontSize: 13, fontWeight: '700' },
   tira: { gap: espacio.sm, paddingHorizontal: espacio.md, paddingVertical: espacio.sm },
