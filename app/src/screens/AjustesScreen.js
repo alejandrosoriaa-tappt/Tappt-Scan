@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import Constants from 'expo-constants';
 import { View, Text, ScrollView, TouchableOpacity, StyleSheet, ActivityIndicator, Platform } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Linking } from 'react-native';
@@ -11,6 +12,7 @@ import { colores, espacio, tipo } from '../theme';
 import { iapDisponible, comprasIAP } from '../lib/compras';
 
 const PLANES = { gratis: 'Gratis', personal: 'Personal', negocio: 'Negocio' };
+const VERSION_INSTALADA = `${Constants.nativeAppVersion || '0.1.0'} (${Constants.nativeBuildVersion || 'web'})`;
 
 function Fila({ etiqueta, valor, estado }) {
   return (
@@ -155,6 +157,7 @@ export default function AjustesScreen() {
 
         <Text style={estilos.nota}>{t('promesa')}</Text>
         <Text style={estilos.creditos}>{t('desarrolladoPor')}</Text>
+        <Text style={estilos.version}>Versión {VERSION_INSTALADA}</Text>
       </ScrollView>
     </SafeAreaView>
   );
@@ -236,5 +239,11 @@ const estilos = StyleSheet.create({
     color: colores.textoTerciario,
     textAlign: 'center',
     marginTop: espacio.sm,
+  },
+  version: {
+    fontSize: 11,
+    color: colores.textoTerciario,
+    textAlign: 'center',
+    marginTop: espacio.xs,
   },
 });
