@@ -1,14 +1,12 @@
 import * as DocumentPicker from 'expo-document-picker';
 import * as ImagePicker from 'expo-image-picker';
-import * as FileSystem from 'expo-file-system';
+import { File } from 'expo-file-system';
 import { api } from './api';
 
 const TIPOS = ['application/pdf', 'image/*'];
 
 async function subir(uri, mimeType, nombre) {
-  const base64 = await FileSystem.readAsStringAsync(uri, {
-    encoding: FileSystem.EncodingType.Base64,
-  });
+  const base64 = await new File(uri).base64();
   return api.importar(base64, mimeType, nombre);
 }
 

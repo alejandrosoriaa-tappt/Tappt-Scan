@@ -1,5 +1,5 @@
 import { Image } from 'react-native';
-import * as FileSystem from 'expo-file-system';
+import { File } from 'expo-file-system';
 import TapptDocumentScanner from '../../modules/tappt-document-scanner';
 
 const MARCO_COMPLETO = [
@@ -27,7 +27,7 @@ export async function escanearDocumentoNativo() {
   const paginas = await Promise.all(resultado.pages.map(async ({ uri }) => {
     const [{ ancho, alto }, imagen] = await Promise.all([
       dimensiones(uri),
-      FileSystem.readAsStringAsync(uri, { encoding: FileSystem.EncodingType.Base64 }),
+      new File(uri).base64(),
     ]);
 
     return {

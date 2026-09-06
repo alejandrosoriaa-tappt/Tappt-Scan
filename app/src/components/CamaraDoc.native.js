@@ -1,6 +1,6 @@
 import React, { useRef, useImperativeHandle, forwardRef } from 'react';
 import { CameraView } from 'expo-camera';
-import * as ImageManipulator from 'expo-image-manipulator';
+import { ImageManipulator, SaveFormat } from 'expo-image-manipulator';
 
 /**
  * Cámara para iOS y Android. En nativo `expo-camera` ya entrega la
@@ -51,11 +51,16 @@ function CamaraDocNativa({ style, onLista, onError }, ref) {
       // Ojo con la escala: `compress` de expo-image-manipulator va de 0 a 1,
       // al revés que `@napi-rs/canvas` en el backend, que la espera de 0 a
       // 100 (ver services/imagen.js).
-      const reducida = await ImageManipulator.manipulateAsync(
-        foto.uri,
-        [{ resize: { width: maxAncho } }],
-        { compress: calidad, format: ImageManipulator.SaveFormat.JPEG, base64: true }
-      );
+      const contexto = ImageManipulator.manipulate(foto.uri);
+      contexto.resize({ width: maxAncho });
+      const imagenReducida = await contexto.renderAsync();
+      const reducida = await imagenReducida.saveAsync({
+        compress: calidad,
+        format: SaveFormat.JPEG,
+        base64: true,
+      });
+      contexto.release();
+      imagenReducida.release();
 
       return { base64: reducida.base64, ancho: reducida.width, alto: reducida.height };
     },
