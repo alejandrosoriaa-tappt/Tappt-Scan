@@ -14,7 +14,9 @@
     "docquad:model": "node scripts/docquad-model.js",
     "docquad:spike": "node scripts/docquad-spike.js",
     "docaligner:fixtures": "node scripts/docaligner-fixtures.js",
-    "scanner:fixtures": "node scripts/scanner-fixtures.js"
+    "scanner:fixtures": "node scripts/scanner-fixtures.js",
+    "verificar:apk": "node scripts/verificar-apk.js",
+    "smoke:android": "./scripts/smoke-android.sh"
   },
   "license": "UNLICENSED",
   "private": true,

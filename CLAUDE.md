@@ -1188,6 +1188,36 @@ opencv: area=<n> <razon> [· marcoCompleto]
 `DETECTOR` mide el frame local; `DETECCIÓN` mide lo que contestó el
 servidor. No confundirlos.
 
+## 🤖 Android: qué se aprendió de v5–v9 (2026-09-07)
+
+Tres fallas seguidas después de la migración a Expo 57 / RN 0.86, cada una
+distinta —no una regresión que volvía—:
+
+1. **v5** metió la migración de SDK **y** el flujo nativo en un solo release,
+   dejando APIs obsoletas de FileSystem/ImageManipulator.
+2. **v6/v7** arreglaron otras cosas; el `readAsStringAsync` obsoleto siguió
+   reventando después de capturar. **v8** lo corrigió.
+3. **v8** agregó `android/` e `ios/` a `app/.gitignore` **sin ancla**, y esos
+   patrones también excluían `app/modules/tappt-document-scanner/android|ios`.
+   El APK salió con el JS del escáner y **sin la clase Kotlin**: cierre al
+   arrancar. **v9** (`5d17ebf`) lo ancló a `/android/` y `/ios/`.
+
+Reglas que quedan de ahí:
+
+- **Compilar no es evidencia.** Lo que se verifica es el artefacto:
+  `npm run verificar:apk -- build.apk --version 0.1.1 --codigo 9` busca la
+  clase nativa dentro del dex, ML Kit, paquete, versión y el backend
+  embebido. `npm run smoke:android -- build.apk` instala, arranca tres veces
+  en frío y revisa el logcat. La matriz manual completa está en
+  **`docs/CHECKLIST-ANDROID.md`** — leerla antes de repartir cualquier APK.
+- **Una migración de SDK es un release propio**, sin funciones nuevas encima.
+- **OTA nunca cruza runtimes.** Desde v9 la política es `appVersion`: si
+  cambia código, dependencia o configuración nativa, sube `expo.version`.
+- **El módulo nativo se carga diferido** (`modules/tappt-document-scanner/
+  src/index.js`). Si falta, falla el escaneo — no la app entera, como en v8.
+- Las páginas del lote se leen a Base64 **de una en una**: 50 páginas en
+  paralelo es un cierre por memoria en gama media, no una lentitud.
+
 ## Posicionamiento (2026-08-13): expo industrial
 
 Se está postulando TapptScan a un encuentro industrial. El encuadre que se

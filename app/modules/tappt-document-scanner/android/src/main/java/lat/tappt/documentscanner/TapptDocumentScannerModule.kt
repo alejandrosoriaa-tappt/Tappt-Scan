@@ -40,6 +40,8 @@ class TapptDocumentScannerModule : Module() {
         .setScannerMode(GmsDocumentScannerOptions.SCANNER_MODE_FULL)
         .build()
 
+      limpiarCacheVieja()
+
       pendingPromise = promise
       GmsDocumentScanning.getClient(scannerOptions)
         .getStartScanIntent(activity)
@@ -87,7 +89,7 @@ class TapptDocumentScannerModule : Module() {
 
   private fun copyToCache(uri: Uri, index: Int): String {
     val context = appContext.reactContext ?: throw IllegalStateException("Contexto no disponible")
-    val folder = File(context.cacheDir, "tapptscan-${UUID.randomUUID()}")
+    val folder = File(context.cacheDir, "$PREFIJO_CACHE${UUID.randomUUID()}")
     if (!folder.exists() && !folder.mkdirs()) throw IllegalStateException("No se pudo crear caché")
     val destination = File(folder, "page-${index + 1}.jpg")
     context.contentResolver.openInputStream(uri).use { input ->
@@ -97,6 +99,20 @@ class TapptDocumentScannerModule : Module() {
     return Uri.fromFile(destination).toString()
   }
 
+  /**
+   * Cada escaneo deja sus JPEG en cacheDir. Se borran los de sesiones
+   * anteriores, no los recientes: las páginas del lote en curso siguen
+   * apuntando a esas rutas para la miniatura, y borrarlas dejaría el
+   * borrador con vistas rotas.
+   */
+  private fun limpiarCacheVieja() {
+    val context = appContext.reactContext ?: return
+    val limite = System.currentTimeMillis() - CACHE_VIGENCIA_MS
+    context.cacheDir.listFiles { archivo -> archivo.isDirectory && archivo.name.startsWith(PREFIJO_CACHE) }
+      ?.filter { it.lastModified() < limite }
+      ?.forEach { it.deleteRecursively() }
+  }
+
   private fun rejectPending(code: String, message: String, cause: Throwable?) {
     pendingPromise?.reject(code, message, cause)
     pendingPromise = null
@@ -104,5 +120,7 @@ class TapptDocumentScannerModule : Module() {
 
   companion object {
     private const val REQUEST_SCAN = 48112
+    private const val PREFIJO_CACHE = "tapptscan-"
+    private const val CACHE_VIGENCIA_MS = 12L * 60 * 60 * 1000
   }
 }

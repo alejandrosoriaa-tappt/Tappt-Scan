@@ -24,13 +24,16 @@ export async function escanearDocumentoNativo() {
   const resultado = await TapptDocumentScanner.scan({ maxPages: 50 });
   if (resultado.cancelled) return null;
 
-  const paginas = await Promise.all(resultado.pages.map(async ({ uri }) => {
-    const [{ ancho, alto }, imagen] = await Promise.all([
-      dimensiones(uri),
-      new File(uri).base64(),
-    ]);
+  // Se leen de una en una, no con Promise.all: Base64 crece ~33% sobre el
+  // JPEG y un lote largo tendría todas las páginas decodificadas a la vez en
+  // memoria. En un teléfono de gama media eso es un cierre por falta de
+  // memoria, no una lentitud.
+  const paginas = [];
+  for (const { uri } of resultado.pages) {
+    const { ancho, alto } = await dimensiones(uri);
+    const imagen = await new File(uri).base64();
 
-    return {
+    paginas.push({
       imagen,
       ancho,
       alto,
@@ -39,8 +42,8 @@ export async function escanearDocumentoNativo() {
       formato: 'auto',
       vista: uri,
       origen: resultado.engine,
-    };
-  }));
+    });
+  }
 
   return paginas;
 }

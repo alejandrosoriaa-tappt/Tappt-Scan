@@ -36,7 +36,10 @@ export default function EscanearScreenNativa({ navigation }) {
       if (agregandoAlLote) navigation.goBack();
       else navigation.replace('Borrador');
     } catch (error) {
-      alertar(t('noSePudo'), error.message);
+      // Si el APK salió sin el código nativo (la falla de v8), el mensaje
+      // técnico no le dice nada al usuario: se le habla del escáner.
+      const mensaje = error.code === 'ERR_MODULO_AUSENTE' ? t('escanerNoDisponible') : error.message;
+      alertar(t('noSePudo'), mensaje);
       lanzado.current = false;
       setProcesando(false);
     }
