@@ -24,7 +24,7 @@ const MENSAJES = {
     // botones de respuesta en 3 —ya ocupados— y no deja mezclarlos con un
     // botón de URL en el mismo mensaje. Como línea queda igual de tocable.
     guardadoDrive: '\n\n📂 Abrir en Drive:\n{driveLink}',
-    guardadoEditar: '\n\n✏️ ¿Quieres editarlo o firmarlo? Entra a la app:\n{appUrl}',
+    guardadoEditar: '\n\n✏️ ¿Quieres editarlo o firmarlo? Abre este documento en TapptScan:\n{appUrl}',
     paginas: ' ({n} páginas)',
     formatoNoSoportado:
       'Por ahora solo puedo con PDF e imágenes. Reenvíame el documento en alguno de esos formatos.',
@@ -43,7 +43,7 @@ const MENSAJES = {
     portalPago: 'Aquí puedes cambiar tu tarjeta o cancelar cuando quieras:\n{link}',
     sinSuscripcion: 'Todavía no tienes un plan de pago activo.',
     verApp:
-      '📂 Tu documento: {driveLink}\n\nPara editarlo o firmarlo, entra a la app:\n{appUrl}',
+      '📂 Tu documento: {driveLink}\n\nPara editarlo o firmarlo, ábrelo en TapptScan:\n{appUrl}',
     gastosEsNegocio:
       'Esa pregunta la contesto con el plan Negocio: llevo tus gastos en una hoja dentro de tu Drive y te respondo aquí mismo. Escríbeme "quiero negocio" y te mando el link.',
     otraCosa: 'Ok, dime qué tipo de documento es o mándame otra foto.',
@@ -69,7 +69,7 @@ const MENSAJES = {
       'You\'ve used your {limite} free scans this month. Upgrade to Personal for unlimited scans — reply "I want personal" and I\'ll send you the link.',
     guardado: 'Done 📄\n\n*{archivo}*{paginas}\n📁 {ruta}{drive}{editar}\n\nAll good?',
     guardadoDrive: '\n\n📂 Open in Drive:\n{driveLink}',
-    guardadoEditar: '\n\n✏️ Want to edit or sign it? Open the app:\n{appUrl}',
+    guardadoEditar: '\n\n✏️ Want to edit or sign it? Open this document in TapptScan:\n{appUrl}',
     paginas: ' ({n} pages)',
     formatoNoSoportado:
       "For now I can only handle PDFs and images. Please forward the document in one of those formats.",
@@ -87,7 +87,7 @@ const MENSAJES = {
       'Your plan ended and you\'re back on free: 5 scans a month. Your documents are untouched in your Drive. Message me "I want personal" to come back.',
     portalPago: 'Here you can change your card or cancel any time:\n{link}',
     sinSuscripcion: "You don't have a paid plan yet.",
-    verApp: '📂 Your document: {driveLink}\n\nTo edit or sign it, open the app:\n{appUrl}',
+    verApp: '📂 Your document: {driveLink}\n\nTo edit or sign it, open it in TapptScan:\n{appUrl}',
     gastosEsNegocio:
       'That one comes with the Business plan: I keep your expenses in a sheet inside your Drive and answer right here. Reply "I want business" and I\'ll send you the link.',
     otraCosa: "Okay — tell me what kind of document it is, or send me another photo.",

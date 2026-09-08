@@ -12,6 +12,7 @@ const driveRouter = require('./routes/drive');
 const pagosRouter = require('./routes/pagos');
 const firmasRouter = require('./routes/firmas');
 const scanner = require('./services/docquad');
+const { idDocumentoValido, paginaAbrirDocumento } = require('./services/deepLinks');
 
 const { WHATSAPP_PHONE_NUMBER_ID, EXPECTED_WHATSAPP_PHONE_NUMBER_ID } = process.env;
 if (EXPECTED_WHATSAPP_PHONE_NUMBER_ID && WHATSAPP_PHONE_NUMBER_ID !== EXPECTED_WHATSAPP_PHONE_NUMBER_ID) {
@@ -37,6 +38,10 @@ const appDist = path.join(__dirname, 'app', 'dist');
 app.get('/', (req, res, next) => {
   if (req.query.scannerDebug === '1') return next();
   res.sendFile(path.join(publicDir, 'inicio.html'));
+});
+app.get('/abrir-documento/:id', (req, res) => {
+  if (!idDocumentoValido(req.params.id)) return res.sendStatus(404);
+  res.type('html').send(paginaAbrirDocumento(req.params.id));
 });
 app.use(express.static(publicDir));
 app.use('/webhook', webhookRouter);

@@ -169,6 +169,7 @@ export const api = {
     request('/api/cuenta/upgrade', { method: 'POST', body: JSON.stringify({ plan }) }),
 
   documentos: (tipo) => request(`/api/documentos${tipo ? `?tipo=${tipo}` : ''}`),
+  documento: (id) => request(`/api/documentos/${encodeURIComponent(id)}`),
   escanear: (imagen, mimeType = 'image/jpeg', esquinas = null, filtro = null, formato = null) =>
     request('/api/documentos/escanear', {
       method: 'POST',

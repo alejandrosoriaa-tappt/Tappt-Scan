@@ -608,6 +608,26 @@ router.get('/gastos', requireAuth, async (req, res) => {
   }
 });
 
+// Abre un documento concreto desde un enlace externo. La identidad del
+// usuario sigue viniendo del token de la app; nunca se puede consultar un
+// documento de otra cuenta sólo por conocer su id.
+router.get('/:id', requireAuth, async (req, res) => {
+  try {
+    const { data, error } = await supabase
+      .from('scan_documents')
+      .select('*')
+      .eq('id', req.params.id)
+      .eq('user_id', req.usuario.id)
+      .maybeSingle();
+    if (error) throw error;
+    if (!data) return res.status(404).json({ error: 'documento_no_encontrado' });
+    res.json(data);
+  } catch (err) {
+    console.error('[documentos] error abriendo documento', err);
+    res.status(500).json({ error: 'error_documento' });
+  }
+});
+
 router.delete('/:id', requireAuth, async (req, res) => {
   try {
     const { error } = await supabase

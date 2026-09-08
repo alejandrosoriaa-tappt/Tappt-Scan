@@ -15,6 +15,7 @@ const naming = require('../services/naming');
 const drive = require('../services/drive');
 const taxonomia = require('../services/taxonomia');
 const whatsappEvento = require('../services/whatsappEvento');
+const { enlaceDocumentoWeb, idBotonDocumento, idDocumentoDesdeBoton } = require('../services/deepLinks');
 const { t, detectarIdioma } = require('../services/i18n');
 
 // Verificación del webhook (Meta llama a esto al configurar la app).
@@ -42,6 +43,10 @@ router.get('/', (req, res) => {
 // el servicio de Railway, no hay URL que mandar.
 function appUrlPublica() {
   return process.env.RAILWAY_PUBLIC_DOMAIN ? `https://${process.env.RAILWAY_PUBLIC_DOMAIN}` : null;
+}
+
+function appUrlDocumento(id) {
+  return enlaceDocumentoWeb(process.env.RAILWAY_PUBLIC_DOMAIN, id);
 }
 
 function firmaValida(req) {
@@ -204,7 +209,7 @@ async function recibirArchivo(from, medio, mimePorDefecto) {
 
   const { documento, nombreArchivo, ruta, paginas } = procesado;
 
-  const appUrl = appUrlPublica();
+  const appUrl = appUrlDocumento(documento?.id);
 
   await whatsapp.sendButtons(
     from,
@@ -223,7 +228,7 @@ async function recibirArchivo(from, medio, mimePorDefecto) {
     }),
     [
       { id: 'ok', title: t(idioma, 'botonGuardar') },
-      { id: 'app', title: t(idioma, 'botonApp') },
+      { id: idBotonDocumento(documento.id), title: t(idioma, 'botonApp') },
       { id: 'otra_cosa', title: t(idioma, 'botonOtra') },
     ]
   );
@@ -447,21 +452,25 @@ async function handleButton(from, interactive) {
   const user = await traerUsuario(from);
   const idioma = await idiomaDe(user);
 
-  if (id === 'app') {
-    // El botón no trae el id del documento (WhatsApp solo manda 'app'),
-    // así que se asume que se refiere al más reciente del usuario — es
-    // el que acaba de llegar en el mensaje anterior. Se manda el link
-    // directo a Drive porque siempre funciona; la app todavía no tiene
-    // una ruta por documento a la que enlazar desde fuera.
-    const { data: reciente } = await supabase
-      .from('scan_documents')
-      .select('drive_link')
-      .eq('user_id', user?.id)
-      .order('created_at', { ascending: false })
-      .limit(1)
-      .maybeSingle();
+  if (id === 'app' || id?.startsWith('app:')) {
+    if (!user) {
+      await whatsapp.sendText(from, t(idioma, 'primeroApp'));
+      return;
+    }
 
-    const appUrl = appUrlPublica();
+    // Los mensajes nuevos transportan el id exacto. `app` sin sufijo queda
+    // sólo como compatibilidad con botones enviados antes de esta versión.
+    const solicitado = idDocumentoDesdeBoton(id);
+    let consulta = supabase
+      .from('scan_documents')
+      .select('id, drive_link')
+      .eq('user_id', user.id);
+    consulta = solicitado
+      ? consulta.eq('id', solicitado)
+      : consulta.order('created_at', { ascending: false }).limit(1);
+    const { data: reciente } = await consulta.maybeSingle();
+
+    const appUrl = appUrlDocumento(reciente?.id);
 
     await whatsapp.sendText(
       from,

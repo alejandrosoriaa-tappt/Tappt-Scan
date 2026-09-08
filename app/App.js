@@ -1,5 +1,4 @@
 import React from 'react';
-import { NavigationContainer } from '@react-navigation/native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
 import { aplicarEstilosWeb } from './src/lib/estilosWeb';
@@ -15,7 +14,7 @@ import { BASE } from './src/lib/api';
 // aparece en nativo, que sí necesita la variable explícita.
 const faltaConfiguracion = !BASE;
 import ConfiguracionScreen from './src/screens/ConfiguracionScreen';
-import RootNavigator from './src/navigation/RootNavigator';
+import DeepLinkNavigation from './src/navigation/DeepLinkNavigation';
 
 // Se aplica antes del primer render para que no haya un parpadeo con los
 // estilos del navegador. En móvil no hace nada.
@@ -40,10 +39,8 @@ export default function App() {
         <IdiomaProvider>
           <SesionProvider>
             <BorradorEscaneoProvider>
-              <NavigationContainer>
-                <StatusBar style="light" />
-                <RootNavigator />
-              </NavigationContainer>
+              <StatusBar style="light" />
+              <DeepLinkNavigation />
             </BorradorEscaneoProvider>
           </SesionProvider>
         </IdiomaProvider>
