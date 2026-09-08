@@ -26,20 +26,20 @@ test('la cámara usa la API contextual vigente de ImageManipulator', () => {
   assert.match(camera, /saveAsync\(/);
 });
 
-test('la configuración Android de v11 aísla el runtime y no duplica permisos', () => {
+test('la configuración Android de v12 aísla el runtime y no duplica permisos', () => {
   const appConfig = JSON.parse(read('app/app.json')).expo;
   const permissions = appConfig.android.permissions;
 
-  assert.equal(appConfig.version, '0.1.3');
-  assert.equal(appConfig.android.versionCode, 11);
-  assert.equal(appConfig.ios.buildNumber, '2');
+  assert.equal(appConfig.version, '0.1.4');
+  assert.equal(appConfig.android.versionCode, 12);
+  assert.equal(appConfig.ios.buildNumber, '3');
   assert.equal(appConfig.scheme, 'tapptscan');
   assert.deepEqual(appConfig.android.runtimeVersion, { policy: 'appVersion' });
   assert.deepEqual(permissions, [...new Set(permissions)]);
   assert.equal(appConfig.android.package, 'lat.tappt.scan');
 });
 
-test('Android v11 conserva ML Kit FULL y retorna mediante Activity Result', () => {
+test('Android v12 conserva ML Kit FULL y retorna mediante Activity Result', () => {
   const module = read('app/modules/tappt-document-scanner/android/src/main/java/lat/tappt/documentscanner/TapptDocumentScannerModule.kt');
   const screen = read('app/src/screens/EscanearScreen.native.js');
 

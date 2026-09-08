@@ -194,13 +194,22 @@ async function aplicarAnotaciones(pdfBuffer, anotaciones = []) {
       const imagen = await incrustarImagen(pdf, anotacion.datos);
       const anchoFinal = (anotacion.ancho || 0.25) * ancho;
       const altoFinal = anchoFinal * (imagen.height / imagen.width);
+      const rotacion = anotacion.rotacion || 0;
+      const radianes = rotacion * Math.PI / 180;
+      // React Native gira el objeto alrededor de su centro. pdf-lib gira
+      // alrededor del origen inferior izquierdo; compensamos el origen para
+      // que la firma conserve exactamente el mismo centro al hornear el PDF.
+      const centroX = x + anchoFinal / 2;
+      const centroY = y - altoFinal / 2;
+      const vectorCentroX = Math.cos(radianes) * anchoFinal / 2 - Math.sin(radianes) * altoFinal / 2;
+      const vectorCentroY = Math.sin(radianes) * anchoFinal / 2 + Math.cos(radianes) * altoFinal / 2;
 
       pagina.drawImage(imagen, {
-        x,
-        y: y - altoFinal,
+        x: centroX - vectorCentroX,
+        y: centroY - vectorCentroY,
         width: anchoFinal,
         height: altoFinal,
-        rotate: degrees(anotacion.rotacion || 0),
+        rotate: degrees(rotacion),
       });
       continue;
     }

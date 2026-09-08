@@ -80,6 +80,165 @@ function AnotacionMovible({ anotacion, indice, lienzo, onMover, onSeleccionar, s
   );
 }
 
+const limitar = (valor, minimo, maximo) => Math.min(maximo, Math.max(minimo, valor));
+
+function contenerFirma(anotacion, lienzo) {
+  const ancho = anotacion.ancho || 0.35;
+  const alto = (ancho * lienzo.ancho / 2) / lienzo.alto;
+  const radianes = (anotacion.rotacion || 0) * Math.PI / 180;
+  const cajaAncho = (
+    Math.abs(Math.cos(radianes)) * ancho * lienzo.ancho
+    + Math.abs(Math.sin(radianes)) * alto * lienzo.alto
+  ) / lienzo.ancho;
+  const cajaAlto = (
+    Math.abs(Math.sin(radianes)) * ancho * lienzo.ancho
+    + Math.abs(Math.cos(radianes)) * alto * lienzo.alto
+  ) / lienzo.alto;
+  const centroX = limitar(anotacion.x + ancho / 2, cajaAncho / 2, 1 - cajaAncho / 2);
+  const centroY = limitar(anotacion.y + alto / 2, cajaAlto / 2, 1 - cajaAlto / 2);
+  return { ...anotacion, x: centroX - ancho / 2, y: centroY - alto / 2 };
+}
+
+// La firma se manipula directamente, como un objeto sobre el papel. El cuerpo
+// la mueve, la esquina inferior derecha cambia su tamaño y el tirador superior
+// derecho la rota. Así la persona no tiene que traducir botones +/− a una
+// transformación espacial que puede hacer con el dedo.
+function FirmaManipulable({ anotacion, indice, lienzo, onCambiar, onSeleccionar, onEliminar, seleccionada, children }) {
+  const anotacionRef = useRef(anotacion);
+  const lienzoRef = useRef(lienzo);
+  const inicioMover = useRef({ x: 0, y: 0 });
+  const inicioEscala = useRef({ ancho: 0.35, x: 0, y: 0, distancia: 1, listo: false });
+  const centroRotacion = useRef({ x: 0, y: 0, angulo: 0, rotacion: 0, listo: false });
+  const contenedorRef = useRef(null);
+  anotacionRef.current = anotacion;
+  lienzoRef.current = lienzo;
+
+  const mover = useRef(PanResponder.create({
+    onStartShouldSetPanResponder: () => true,
+    onMoveShouldSetPanResponder: (_e, gesto) => Math.abs(gesto.dx) + Math.abs(gesto.dy) > 3,
+    onPanResponderGrant: () => {
+      onSeleccionar(indice);
+      inicioMover.current = { x: anotacionRef.current.x, y: anotacionRef.current.y };
+    },
+    onPanResponderMove: (_e, gesto) => {
+      const actual = lienzoRef.current;
+      if (!actual.ancho || !actual.alto) return;
+      onCambiar(indice, contenerFirma({ ...anotacionRef.current,
+        x: inicioMover.current.x + gesto.dx / actual.ancho,
+        y: inicioMover.current.y + gesto.dy / actual.alto,
+      }, actual));
+    },
+  })).current;
+
+  const escalar = useRef(PanResponder.create({
+    onStartShouldSetPanResponder: () => true,
+    onMoveShouldSetPanResponder: () => true,
+    onPanResponderGrant: (evento) => {
+      onSeleccionar(indice);
+      inicioEscala.current.listo = false;
+      contenedorRef.current?.measureInWindow((x, y, ancho, alto) => {
+        const centroX = x + ancho / 2;
+        const centroY = y + alto / 2;
+        inicioEscala.current = {
+          ancho: anotacionRef.current.ancho || 0.35,
+          x: centroX,
+          y: centroY,
+          distancia: Math.max(12, Math.hypot(
+            evento.nativeEvent.pageX - centroX,
+            evento.nativeEvent.pageY - centroY
+          )),
+          listo: true,
+        };
+      });
+    },
+    onPanResponderMove: (evento) => {
+      const actual = lienzoRef.current;
+      const inicio = inicioEscala.current;
+      if (!actual.ancho || !inicio.listo) return;
+      const distancia = Math.hypot(
+        evento.nativeEvent.pageX - inicio.x,
+        evento.nativeEvent.pageY - inicio.y
+      );
+      const ancho = limitar(inicio.ancho * distancia / inicio.distancia, 0.1, 0.8);
+      onCambiar(indice, contenerFirma({ ...anotacionRef.current,
+        ancho,
+      }, actual));
+    },
+  })).current;
+
+  const rotar = useRef(PanResponder.create({
+    onStartShouldSetPanResponder: () => true,
+    onMoveShouldSetPanResponder: () => true,
+    onPanResponderGrant: (evento) => {
+      onSeleccionar(indice);
+      centroRotacion.current.listo = false;
+      contenedorRef.current?.measureInWindow((x, y, ancho, alto) => {
+        const cx = x + ancho / 2;
+        const cy = y + alto / 2;
+        centroRotacion.current = {
+          x: cx,
+          y: cy,
+          angulo: Math.atan2(evento.nativeEvent.pageY - cy, evento.nativeEvent.pageX - cx),
+          rotacion: anotacionRef.current.rotacion || 0,
+          listo: true,
+        };
+      });
+    },
+    onPanResponderMove: (evento) => {
+      const centro = centroRotacion.current;
+      if (!centro.listo) return;
+      const actual = Math.atan2(evento.nativeEvent.pageY - centro.y, evento.nativeEvent.pageX - centro.x);
+      const grados = (actual - centro.angulo) * 180 / Math.PI;
+      const rotacion = centro.rotacion + grados;
+      onCambiar(indice, contenerFirma({ ...anotacionRef.current, rotacion }, lienzoRef.current));
+    },
+  })).current;
+
+  return (
+    <View
+      ref={contenedorRef}
+      {...mover.panHandlers}
+      style={[
+        estilos.firmaManipulable,
+        {
+          left: anotacion.x * lienzo.ancho,
+          top: anotacion.y * lienzo.alto,
+          width: (anotacion.ancho || 0.35) * lienzo.ancho,
+          transform: [{ rotate: `${anotacion.rotacion || 0}deg` }],
+        },
+        seleccionada && estilos.anotacionSeleccionada,
+      ]}
+    >
+      {children}
+      {seleccionada ? (
+        <>
+          <TouchableOpacity
+            accessibilityLabel="Eliminar firma"
+            style={[estilos.tiradorFirma, estilos.tiradorEliminar]}
+            onPress={() => onEliminar(indice)}
+          >
+            <Text style={estilos.tiradorEliminarTexto}>×</Text>
+          </TouchableOpacity>
+          <View
+            accessibilityLabel="Rotar firma"
+            style={[estilos.tiradorFirma, estilos.tiradorRotar]}
+            {...rotar.panHandlers}
+          >
+            <Text style={estilos.tiradorRotarTexto}>↻</Text>
+          </View>
+          <View
+            accessibilityLabel="Cambiar tamaño de firma"
+            style={[estilos.tiradorFirma, estilos.tiradorEscala]}
+            {...escalar.panHandlers}
+          >
+            <Text style={estilos.tiradorEscalaTexto}>↘</Text>
+          </View>
+        </>
+      ) : null}
+    </View>
+  );
+}
+
 export default function EditorScreen({ route, navigation }) {
   const { documento, paginaInicial } = route.params;
 
@@ -89,6 +248,12 @@ export default function EditorScreen({ route, navigation }) {
   const [lienzo, setLienzo] = useState({ ancho: 1, alto: 1 });
   const [guardando, setGuardando] = useState(false);
   const [seleccionada, setSeleccionada] = useState(null);
+  const permitirSalidaRef = useRef(false);
+  const montadoRef = useRef(true);
+
+  useEffect(() => () => {
+    montadoRef.current = false;
+  }, []);
 
   // Las páginas se piden al backend una por una: si el original es PDF las
   // rasteriza, si es imagen la manda tal cual.
@@ -114,6 +279,28 @@ export default function EditorScreen({ route, navigation }) {
   }, [pagina]);
 
   const totalPaginas = vista?.paginas || documento.paginas || 1;
+
+  useEffect(() => navigation.addListener('beforeRemove', (evento) => {
+    if (permitirSalidaRef.current) return;
+    if (guardando) {
+      evento.preventDefault();
+      alertar(t('guardadoEnCurso'), t('guardadoEnCursoDetalle'));
+      return;
+    }
+    if (!anotaciones.length) return;
+    evento.preventDefault();
+    alertarConBotones(t('cambiosSinGuardar'), t('cambiosSinGuardarDetalle'), [
+      {
+        text: t('descartarCambios'),
+        style: 'destructive',
+        onPress: () => {
+          permitirSalidaRef.current = true;
+          navigation.dispatch(evento.data.action);
+        },
+      },
+      { text: t('seguirEditando'), style: 'cancel' },
+    ]);
+  }), [anotaciones.length, guardando, navigation, t]);
 
   const [firmaAbierta, setFirmaAbierta] = useState(false);
   const [firmasAbierta, setFirmasAbierta] = useState(false);
@@ -141,6 +328,16 @@ export default function EditorScreen({ route, navigation }) {
     setAnotaciones((previas) =>
       previas.map((anotacion, i) => (i === indice ? { ...anotacion, ...posicion } : anotacion))
     );
+  };
+  const cambiarAnotacion = (indice, cambios) => {
+    setAnotaciones((previas) =>
+      previas.map((anotacion, i) => (i === indice ? { ...anotacion, ...cambios } : anotacion))
+    );
+  };
+
+  const eliminarAnotacion = (indice) => {
+    setAnotaciones((previas) => previas.filter((_, i) => i !== indice));
+    setSeleccionada(null);
   };
 
   const ajustarSeleccionada = (cambios) => {
@@ -203,8 +400,21 @@ export default function EditorScreen({ route, navigation }) {
 
   // Usada tanto por "Dibujar" (después de FirmaPad) como por "Importar" de
   // la biblioteca — cualquier firma nueva se guarda sola para la próxima.
+  const crearFirmaEnPosicion = (datos, posicion) => {
+    const ancho = 0.35;
+    const altoNormalizado = (ancho * lienzo.ancho / 2) / lienzo.alto;
+    return {
+      tipo: 'firma',
+      ...posicion,
+      x: limitar(posicion.x - ancho / 2, 0, 1 - ancho),
+      y: limitar(posicion.y - altoNormalizado / 2, 0, 1 - altoNormalizado),
+      ancho,
+      datos,
+    };
+  };
+
   const guardarYColocarFirma = (datos, posicion, color) => {
-    agregar({ tipo: 'firma', ...posicion, ancho: 0.35, datos });
+    agregar(crearFirmaEnPosicion(datos, posicion));
     api.guardarFirma(datos, color).then(() => firmas.recargar()).catch(() => {});
   };
 
@@ -258,18 +468,27 @@ export default function EditorScreen({ route, navigation }) {
     try {
       const { nombre, driveLink, omitidas } = await api.editar(documento.id, anotaciones);
 
+      if (!montadoRef.current) return;
+      permitirSalidaRef.current = true;
+
       const aviso = omitidas?.length
         ? `\n\n${t('avisoOmitidas', { n: omitidas.length })}`
         : '';
 
       alertarConBotones(t('guardado'), `${nombre}${aviso}`, [
         { text: t('abrirEnDrive'), onPress: () => Linking.openURL(driveLink) },
-        { text: t('listo'), onPress: () => navigation.goBack() },
+        {
+          text: t('listo'),
+          onPress: () => {
+            permitirSalidaRef.current = true;
+            navigation.goBack();
+          },
+        },
       ]);
     } catch (err) {
-      alertar(t('noSePudo'), err.message);
+      if (montadoRef.current) alertar(t('noSePudo'), err.message);
     } finally {
-      setGuardando(false);
+      if (montadoRef.current) setGuardando(false);
     }
   };
 
@@ -343,6 +562,27 @@ export default function EditorScreen({ route, navigation }) {
                 );
               }
 
+              if (anotacion.tipo === 'firma') {
+                return (
+                  <FirmaManipulable
+                    key={indice}
+                    anotacion={anotacion}
+                    indice={indice}
+                    lienzo={lienzo}
+                    onCambiar={cambiarAnotacion}
+                    onSeleccionar={setSeleccionada}
+                    onEliminar={eliminarAnotacion}
+                    seleccionada={seleccionada === indice}
+                  >
+                    <Image
+                      source={{ uri: anotacion.datos }}
+                      style={estilos.imagenPuesta}
+                      resizeMode="contain"
+                    />
+                  </FirmaManipulable>
+                );
+              }
+
               return (
                 <AnotacionMovible
                   key={indice}
@@ -368,7 +608,7 @@ export default function EditorScreen({ route, navigation }) {
           </View>
         </TouchableWithoutFeedback>
 
-        {seleccionada !== null && anotaciones[seleccionada] ? (
+        {seleccionada !== null && anotaciones[seleccionada] && anotaciones[seleccionada].tipo !== 'firma' ? (
           <View style={estilos.controlesAnotacion}>
             <Text style={estilos.controlTitulo}>{t(anotaciones[seleccionada].tipo)}</Text>
             <TouchableOpacity style={estilos.controlBoton} onPress={() => cambiarTamano(0.82)}>
@@ -489,7 +729,7 @@ export default function EditorScreen({ route, navigation }) {
         cargando={firmas.cargando}
         onCerrar={() => setFirmasAbierta(false)}
         onElegir={(firma) => {
-          agregar({ tipo: 'firma', ...posicionPendiente, ancho: 0.35, datos: firma.datos });
+          agregar(crearFirmaEnPosicion(firma.datos, posicionPendiente));
           setFirmasAbierta(false);
         }}
         onDibujar={() => {
@@ -607,6 +847,11 @@ const estilos = StyleSheet.create({
   },
   imagen: { width: '100%', height: '100%' },
   anotacionMovible: { position: 'absolute', zIndex: 3 },
+  firmaManipulable: {
+    position: 'absolute',
+    zIndex: 4,
+    minHeight: 38,
+  },
   textoPuesto: { fontSize: 16, color: '#0F172A', fontWeight: '500' },
   anotacionSeleccionada: {
     borderWidth: 2,
@@ -614,6 +859,22 @@ const estilos = StyleSheet.create({
     borderStyle: 'dashed',
   },
   imagenPuesta: { width: '100%', aspectRatio: 2 },
+  tiradorFirma: {
+    position: 'absolute',
+    width: 30,
+    height: 30,
+    borderRadius: 15,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 2,
+    borderColor: '#FFFFFF',
+  },
+  tiradorEliminar: { left: -16, top: -16, backgroundColor: colores.peligro },
+  tiradorRotar: { right: -16, top: -16, backgroundColor: colores.primario },
+  tiradorEscala: { right: -16, bottom: -16, backgroundColor: colores.primario },
+  tiradorEliminarTexto: { color: '#FFFFFF', fontSize: 24, lineHeight: 25, fontWeight: '700' },
+  tiradorRotarTexto: { color: '#FFFFFF', fontSize: 18, lineHeight: 20, fontWeight: '700' },
+  tiradorEscalaTexto: { color: '#FFFFFF', fontSize: 16, lineHeight: 18, fontWeight: '700' },
   controlesAnotacion: {
     minHeight: 48,
     flexDirection: 'row',

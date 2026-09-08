@@ -168,6 +168,12 @@ export const TEXTOS = {
     importarFirma: 'Importar de foto',
     sinCambios: 'Sin cambios',
     sinCambiosDetalle: 'Agrega algo al documento antes de guardar.',
+    cambiosSinGuardar: '¿Salir sin guardar?',
+    cambiosSinGuardarDetalle: 'Los cambios que hiciste en este documento se perderán.',
+    descartarCambios: 'Descartar cambios',
+    seguirEditando: 'Seguir editando',
+    guardadoEnCurso: 'Guardando el PDF',
+    guardadoEnCursoDetalle: 'Espera a que termine para no perder los cambios.',
     guardado: 'Guardado',
 
     // Ajustes
@@ -480,6 +486,12 @@ export const TEXTOS = {
     importarFirma: 'Import from photo',
     sinCambios: 'No changes',
     sinCambiosDetalle: 'Add something to the document before saving.',
+    cambiosSinGuardar: 'Leave without saving?',
+    cambiosSinGuardarDetalle: 'The changes you made to this document will be lost.',
+    descartarCambios: 'Discard changes',
+    seguirEditando: 'Keep editing',
+    guardadoEnCurso: 'Saving the PDF',
+    guardadoEnCursoDetalle: 'Wait until it finishes so your changes are not lost.',
     guardado: 'Saved',
 
     ajustes: 'Settings',
