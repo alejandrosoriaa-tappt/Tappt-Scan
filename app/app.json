@@ -2,7 +2,7 @@
   "expo": {
     "name": "TapptScan",
     "slug": "tappt-scan",
-    "version": "0.1.1",
+    "version": "0.1.2",
     "orientation": "portrait",
     "userInterfaceStyle": "dark",
     "primaryColor": "#18B875",
@@ -28,7 +28,7 @@
     },
     "android": {
       "package": "lat.tappt.scan",
-      "versionCode": 9,
+      "versionCode": 10,
       "adaptiveIcon": {
         "foregroundImage": "./assets/tappt-logo.png",
         "backgroundColor": "#0FA477"

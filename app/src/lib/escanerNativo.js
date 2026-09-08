@@ -21,16 +21,17 @@ function dimensiones(uri) {
  * volver a detectar bordes aquí podría recortar dos veces una página buena.
  */
 export async function escanearDocumentoNativo() {
-  const resultado = await TapptDocumentScanner.scan({ maxPages: 50 });
+  const resultado = await TapptDocumentScanner.scan({ maxPages: 30 });
   if (resultado.cancelled) return null;
 
-  const paginas = await Promise.all(resultado.pages.map(async ({ uri }) => {
-    const [{ ancho, alto }, imagen] = await Promise.all([
-      dimensiones(uri),
-      new File(uri).base64(),
-    ]);
+  const paginas = [];
+  // Cada JPEG puede ocupar varios MB. Prepararlos uno por uno evita mantener
+  // múltiples copias Base64 simultáneas y reduce cierres por falta de memoria.
+  for (const { uri } of resultado.pages) {
+    const { ancho, alto } = await dimensiones(uri);
+    const imagen = await new File(uri).base64();
 
-    return {
+    paginas.push({
       imagen,
       ancho,
       alto,
@@ -39,8 +40,12 @@ export async function escanearDocumentoNativo() {
       formato: 'auto',
       vista: uri,
       origen: resultado.engine,
-    };
-  }));
+    });
+  }
 
   return paginas;
+}
+
+export function cancelarEscaneoNativo() {
+  return TapptDocumentScanner.cancel();
 }

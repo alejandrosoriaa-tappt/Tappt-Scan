@@ -26,15 +26,30 @@ test('la cámara usa la API contextual vigente de ImageManipulator', () => {
   assert.match(camera, /saveAsync\(/);
 });
 
-test('la configuración Android de v9 aísla el runtime y no duplica permisos', () => {
+test('la configuración Android de v10 aísla el runtime y no duplica permisos', () => {
   const appConfig = JSON.parse(read('app/app.json')).expo;
   const permissions = appConfig.android.permissions;
 
-  assert.equal(appConfig.version, '0.1.1');
-  assert.equal(appConfig.android.versionCode, 9);
+  assert.equal(appConfig.version, '0.1.2');
+  assert.equal(appConfig.android.versionCode, 10);
   assert.deepEqual(appConfig.android.runtimeVersion, { policy: 'appVersion' });
   assert.deepEqual(permissions, [...new Set(permissions)]);
   assert.equal(appConfig.android.package, 'lat.tappt.scan');
+});
+
+test('Android v10 conserva ML Kit FULL y retorna mediante Activity Result', () => {
+  const module = read('app/modules/tappt-document-scanner/android/src/main/java/lat/tappt/documentscanner/TapptDocumentScannerModule.kt');
+  const screen = read('app/src/screens/EscanearScreen.native.js');
+
+  assert.match(module, /SCANNER_MODE_FULL/);
+  assert.match(module, /RegisterActivityContracts/);
+  assert.match(module, /StartIntentSenderForResult/);
+  assert.doesNotMatch(module, /\.startIntentSenderForResult\(/);
+  assert.match(module, /AsyncFunction\("cancel"\)/);
+  assert.match(module, /recoveredActivityResult/);
+  assert.match(module, /activityResult\.scanId != activeScanId/);
+  assert.match(screen, /navigation\.replace\('BorradorEscaneo'\)/);
+  assert.doesNotMatch(screen, /navigation\.replace\('Borrador'\)/);
 });
 
 test('EAS conserva el código nativo local del escáner', () => {

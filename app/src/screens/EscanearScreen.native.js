@@ -4,7 +4,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useBorradorEscaneo } from '../context/BorradorEscaneoContext';
 import { useIdioma } from '../i18n';
 import { alertar } from '../lib/alerta';
-import { escanearDocumentoNativo } from '../lib/escanerNativo';
+import { cancelarEscaneoNativo, escanearDocumentoNativo } from '../lib/escanerNativo';
 import { colores, espacio } from '../theme';
 
 /**
@@ -34,7 +34,7 @@ export default function EscanearScreenNativa({ navigation }) {
 
       borrador.agregarPaginas(paginas);
       if (agregandoAlLote) navigation.goBack();
-      else navigation.replace('Borrador');
+      else navigation.replace('BorradorEscaneo');
     } catch (error) {
       alertar(t('noSePudo'), error.message);
       lanzado.current = false;
@@ -45,6 +45,14 @@ export default function EscanearScreenNativa({ navigation }) {
   useEffect(() => {
     abrirEscaner();
   }, [abrirEscaner]);
+
+  const cancelar = async () => {
+    try {
+      await cancelarEscaneoNativo();
+    } catch (_) {
+      navigation.goBack();
+    }
+  };
 
   return (
     <SafeAreaView style={estilos.pantalla}>
@@ -59,7 +67,7 @@ export default function EscanearScreenNativa({ navigation }) {
             <Text style={estilos.botonTexto}>{t('intentarDeNuevo')}</Text>
           </TouchableOpacity>
         ) : null}
-        <TouchableOpacity style={estilos.cancelar} onPress={() => navigation.goBack()}>
+        <TouchableOpacity style={estilos.cancelar} onPress={cancelar}>
           <Text style={estilos.cancelarTexto}>{t('cancelar')}</Text>
         </TouchableOpacity>
       </View>

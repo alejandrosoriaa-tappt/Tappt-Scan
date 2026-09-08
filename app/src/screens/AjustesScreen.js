@@ -12,7 +12,13 @@ import { colores, espacio, tipo } from '../theme';
 import { iapDisponible, comprasIAP } from '../lib/compras';
 
 const PLANES = { gratis: 'Gratis', personal: 'Personal', negocio: 'Negocio' };
-const VERSION_INSTALADA = `${Constants.nativeAppVersion || '0.1.0'} (${Constants.nativeBuildVersion || 'web'})`;
+const VERSION_APP = Constants.expoConfig?.version || '0.1.0';
+const VERSION_BUILD = Platform.select({
+  android: Constants.platform?.android?.versionCode,
+  ios: Constants.platform?.ios?.buildNumber,
+  default: 'web',
+});
+const VERSION_INSTALADA = `${VERSION_APP} (${VERSION_BUILD || 'web'})`;
 
 function Fila({ etiqueta, valor, estado }) {
   return (
