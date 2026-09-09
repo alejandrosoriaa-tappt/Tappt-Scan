@@ -176,6 +176,7 @@ export default function RecorteScreen({ route, navigation }) {
     modoLote = false,
     paginaId = null,
     filtroInicial = 'mejorar',
+    documentoExistente = null,
   } = route.params;
   const { refrescarCuenta } = useSesion();
   const borrador = useBorradorEscaneo();
@@ -307,6 +308,19 @@ export default function RecorteScreen({ route, navigation }) {
 
     setGuardando(true);
     try {
+      if (documentoExistente) {
+        const resultado = await api.mejorar(
+          documentoExistente.id,
+          fotoBase64,
+          esquinas,
+          filtro,
+          'auto'
+        );
+        alertar(t('versionMejoradaGuardada'), resultado.nombre);
+        navigation.goBack();
+        return;
+      }
+
       const documento = await api.escanear(fotoBase64, 'image/jpeg', esquinas, filtro, 'auto');
       refrescarCuenta();
       navigation.replace('Documento', { documento });
@@ -468,7 +482,9 @@ export default function RecorteScreen({ route, navigation }) {
         >
           <Text style={estilos.botonPrimarioTexto}>
             {vistaEnderezada
-              ? (modoLote ? (paginaId ? t('guardarCambios') : t('agregarAlLote')) : t('guardarPdf'))
+              ? (documentoExistente
+                ? t('guardarVersionMejorada')
+                : (modoLote ? (paginaId ? t('guardarCambios') : t('agregarAlLote')) : t('guardarPdf')))
               : t('enderezarGuardar')}
           </Text>
         </TouchableOpacity>

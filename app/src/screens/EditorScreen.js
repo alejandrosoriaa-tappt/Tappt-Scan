@@ -31,7 +31,8 @@ const EMOJIS = ['✅', '❌', '⭐', '🔴', '➡️', '📌', '✍️', '⚠️
 // Los sellos de EMOJIS se estampan en el PDF; estos son la interfaz.
 const HERRAMIENTAS = [
   { id: 'texto', icono: 'documento' },
-  { id: 'firma', icono: 'etiqueta' },
+  // Firma queda deliberadamente fuera de la interfaz mientras evaluamos
+  // un flujo profesional. El código se conserva para retomarlo después.
   { id: 'emoji', icono: 'estrella' },
   { id: 'imagen', icono: 'camara' },
   { id: 'tapar', icono: 'recibo' },

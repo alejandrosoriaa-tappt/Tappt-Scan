@@ -216,6 +216,12 @@ export const api = {
     }),
   miniatura: (id) => request(`/api/documentos/${id}/miniatura`),
   pagina: (id, n = 0) => request(`/api/documentos/${id}/pagina/${n}`),
+  mejorar: (id, imagen, esquinas, filtro, formato = 'auto') =>
+    request(`/api/documentos/${id}/mejorar`, {
+      method: 'POST',
+      body: JSON.stringify({ imagen, esquinas, filtro, formato }),
+      timeoutMs: 75_000,
+    }),
   editar: (id, anotaciones) =>
     request(`/api/documentos/${id}/editar`, {
       method: 'POST',

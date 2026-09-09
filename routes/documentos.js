@@ -302,6 +302,54 @@ router.put('/:id/favorito', requireAuth, async (req, res) => {
   }
 });
 
+// Una foto recibida por WhatsApp se conserva completa al archivarla. Esta
+// ruta permite corregirla después con el mismo motor de perspectiva y
+// filtros del escáner, sin reclasificarla ni modificar el original.
+router.post('/:id/mejorar', requireAuth, async (req, res) => {
+  try {
+    const documento = await traerDocumento(req);
+    if (!documento) return res.status(404).json({ error: 'documento_no_encontrado' });
+
+    const { imagen, esquinas, filtro, formato } = req.body;
+    if (!imagen || esquinas?.length !== 4) {
+      return res.status(400).json({ error: 'falta_imagen_o_esquinas' });
+    }
+
+    let mejorada = Buffer.from(imagen.replace(/^data:[^;]+;base64,/, ''), 'base64');
+    mejorada = await imagenServicio.corregirPerspectiva(mejorada, esquinas, formato);
+    if (filtro && filtro !== 'color') {
+      mejorada = await imagenServicio.aplicarFiltro(mejorada, filtro);
+    }
+
+    const pdfFinal = await pdf.desdeImagen(mejorada, 'image/jpeg');
+    const carpetaId =
+      documento.carpeta_id || (await drive.ensureRuta(req.usuario.drive_tokens, []));
+    const nombre =
+      (documento.nombre_archivo || 'documento').replace(/\.\w+$/, '') + '_mejorado.pdf';
+    const subido = await drive.uploadFile(req.usuario.drive_tokens, {
+      folderId: carpetaId,
+      name: nombre,
+      mimeType: 'application/pdf',
+      buffer: pdfFinal,
+    });
+
+    const { error } = await supabase.from('scan_versiones').insert({
+      documento_id: documento.id,
+      user_id: req.usuario.id,
+      nombre_archivo: nombre,
+      drive_file_id: subido.id,
+      drive_link: subido.webViewLink,
+    });
+    if (error) console.error('[documentos] no se pudo registrar la versión mejorada', error);
+
+    res.json({ nombre, driveLink: subido.webViewLink });
+  } catch (err) {
+    console.error('[documentos] error mejorando documento', err);
+    const estado = err.message === 'recorte_demasiado_chico' ? 422 : 500;
+    res.status(estado).json({ error: err.message || 'error_mejorar_documento' });
+  }
+});
+
 // Hornea las anotaciones (texto, firma, imágenes, emojis, tapados) sobre la
 // imagen del documento y sube el PDF resultante al Drive del usuario.
 router.post('/:id/editar', requireAuth, async (req, res) => {

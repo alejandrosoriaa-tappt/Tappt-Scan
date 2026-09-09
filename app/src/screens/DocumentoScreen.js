@@ -63,13 +63,14 @@ export default function DocumentoScreen({ route, navigation }) {
   const { documento } = route.params;
   const meta = porTipo[documento.tipo] || porTipo.otro;
   const [abriendo, setAbriendo] = useState(false);
+  const [abriendoRecorte, setAbriendoRecorte] = useState(false);
   const [favorito, setFavorito] = useState(Boolean(documento.favorito));
   const [masAbierto, setMasAbierto] = useState(false);
   const [borrando, setBorrando] = useState(false);
   const { t, idioma } = useIdioma();
   const versiones = useCargar(() => api.versiones(documento.id).catch(() => []), [documento.id]);
 
-  // Al volver del editor (guardaste una firma/edición) ya hay una versión
+  // Al volver del editor o del recorte ya hay una versión
   // nueva — se refresca sola en vez de dejar la lista desactualizada.
   useFocusEffect(
     useCallback(() => {
@@ -89,6 +90,25 @@ export default function DocumentoScreen({ route, navigation }) {
       alertar(t('noSePudo'), err.message);
     } finally {
       setAbriendo(false);
+    }
+  };
+
+  // Las fotos que llegan por WhatsApp se conservan completas para no
+  // destruir contenido automáticamente. Desde aquí se usa el mismo
+  // recorte, corrección de perspectiva y filtros de la cámara.
+  const abrirRecorte = async () => {
+    setAbriendoRecorte(true);
+    try {
+      const paginaInicial = await api.pagina(documento.id, 0);
+      navigation.navigate('Recorte', {
+        fotoBase64: paginaInicial.imagen,
+        documentoExistente: documento,
+        filtroInicial: 'mejorar',
+      });
+    } catch (err) {
+      alertar(t('noSePudo'), err.message);
+    } finally {
+      setAbriendoRecorte(false);
     }
   };
 
@@ -174,6 +194,19 @@ export default function DocumentoScreen({ route, navigation }) {
         <Icono nombre="nube" tamano={19} color="#FFFFFF" />
         <Text style={[estilos.botonTexto, estilos.botonTextoPrimario]}>{t('abrirEnDrive')}</Text>
       </TouchableOpacity>
+
+      {documento.mime_type !== 'application/pdf' ? (
+        <TouchableOpacity
+          style={[estilos.boton, estilos.mejorarPrincipal]}
+          onPress={abrirRecorte}
+          disabled={abriendoRecorte}
+        >
+          <Icono nombre="filtro" tamano={19} color={colores.primarioClaro} />
+          <Text style={estilos.botonTexto}>
+            {abriendoRecorte ? t('abriendo') : t('recortarMejorar')}
+          </Text>
+        </TouchableOpacity>
+      ) : null}
 
       <Text style={estilos.tituloSeccion}>{t('datosExtraidos')}</Text>
       <View style={estilos.tarjeta}>
@@ -396,6 +429,7 @@ const estilos = StyleSheet.create({
   },
   botonPrimario: { backgroundColor: colores.primario, borderColor: colores.primario },
   abrirDrivePrincipal: { marginTop: espacio.md, flexDirection: 'row', gap: espacio.sm },
+  mejorarPrincipal: { marginTop: espacio.sm, flexDirection: 'row', gap: espacio.sm },
   botonTexto: { fontSize: 15, fontWeight: '600', color: colores.texto },
   botonTextoPrimario: { color: '#FFFFFF' },
   nota: {
