@@ -15,6 +15,11 @@ test('la firma se manipula desde su marco y no desde los botones inferiores', ()
   assert.match(editor, /accessibilityLabel="Rotar firma"/);
   assert.match(editor, /accessibilityLabel="Cambiar tamaño de firma"/);
   assert.match(editor, /anotaciones\[seleccionada\]\.tipo !== 'firma'/);
+  assert.match(editor, /firmaSeleccionada: \{/);
+  assert.match(editor, /firmaSeleccionada:[\s\S]*borderWidth: 3/);
+  assert.match(editor, /firmaSeleccionada:[\s\S]*borderStyle: 'solid'/);
+  assert.match(editor, /width: 40/);
+  assert.match(editor, /height: 40/);
 });
 
 test('mover, escalar y rotar conservan el contrato normalizado del PDF', () => {
@@ -26,6 +31,8 @@ test('mover, escalar y rotar conservan el contrato normalizado del PDF', () => {
   assert.match(editor, /function contenerFirma/);
   assert.match(editor, /cajaAncho/);
   assert.match(editor, /cajaAlto/);
+  assert.match(editor, /const margenX = 22 \/ lienzo\.ancho/);
+  assert.match(editor, /const margenY = 22 \/ lienzo\.alto/);
 });
 
 test('el editor advierte antes de abandonar cambios sin guardar', () => {

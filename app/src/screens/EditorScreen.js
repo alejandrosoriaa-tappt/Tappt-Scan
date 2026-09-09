@@ -94,8 +94,18 @@ function contenerFirma(anotacion, lienzo) {
     Math.abs(Math.sin(radianes)) * ancho * lienzo.ancho
     + Math.abs(Math.cos(radianes)) * alto * lienzo.alto
   ) / lienzo.alto;
-  const centroX = limitar(anotacion.x + ancho / 2, cajaAncho / 2, 1 - cajaAncho / 2);
-  const centroY = limitar(anotacion.y + alto / 2, cajaAlto / 2, 1 - cajaAlto / 2);
+  const margenX = 22 / lienzo.ancho;
+  const margenY = 22 / lienzo.alto;
+  const centroX = limitar(
+    anotacion.x + ancho / 2,
+    cajaAncho / 2 + margenX,
+    1 - cajaAncho / 2 - margenX
+  );
+  const centroY = limitar(
+    anotacion.y + alto / 2,
+    cajaAlto / 2 + margenY,
+    1 - cajaAlto / 2 - margenY
+  );
   return { ...anotacion, x: centroX - ancho / 2, y: centroY - alto / 2 };
 }
 
@@ -206,7 +216,7 @@ function FirmaManipulable({ anotacion, indice, lienzo, onCambiar, onSeleccionar,
           width: (anotacion.ancho || 0.35) * lienzo.ancho,
           transform: [{ rotate: `${anotacion.rotacion || 0}deg` }],
         },
-        seleccionada && estilos.anotacionSeleccionada,
+        seleccionada && estilos.firmaSeleccionada,
       ]}
     >
       {children}
@@ -858,23 +868,33 @@ const estilos = StyleSheet.create({
     borderColor: colores.primario,
     borderStyle: 'dashed',
   },
+  firmaSeleccionada: {
+    borderWidth: 3,
+    borderColor: colores.primario,
+    borderStyle: 'solid',
+  },
   imagenPuesta: { width: '100%', aspectRatio: 2 },
   tiradorFirma: {
     position: 'absolute',
-    width: 30,
-    height: 30,
-    borderRadius: 15,
+    width: 40,
+    height: 40,
+    borderRadius: 20,
     alignItems: 'center',
     justifyContent: 'center',
-    borderWidth: 2,
+    borderWidth: 3,
     borderColor: '#FFFFFF',
+    elevation: 6,
+    shadowColor: '#000000',
+    shadowOpacity: 0.32,
+    shadowRadius: 4,
+    shadowOffset: { width: 0, height: 2 },
   },
-  tiradorEliminar: { left: -16, top: -16, backgroundColor: colores.peligro },
-  tiradorRotar: { right: -16, top: -16, backgroundColor: colores.primario },
-  tiradorEscala: { right: -16, bottom: -16, backgroundColor: colores.primario },
-  tiradorEliminarTexto: { color: '#FFFFFF', fontSize: 24, lineHeight: 25, fontWeight: '700' },
-  tiradorRotarTexto: { color: '#FFFFFF', fontSize: 18, lineHeight: 20, fontWeight: '700' },
-  tiradorEscalaTexto: { color: '#FFFFFF', fontSize: 16, lineHeight: 18, fontWeight: '700' },
+  tiradorEliminar: { left: -21, top: -21, backgroundColor: colores.peligro },
+  tiradorRotar: { right: -21, top: -21, backgroundColor: colores.primario },
+  tiradorEscala: { right: -21, bottom: -21, backgroundColor: colores.primario },
+  tiradorEliminarTexto: { color: '#FFFFFF', fontSize: 30, lineHeight: 31, fontWeight: '800' },
+  tiradorRotarTexto: { color: '#FFFFFF', fontSize: 24, lineHeight: 26, fontWeight: '800' },
+  tiradorEscalaTexto: { color: '#FFFFFF', fontSize: 21, lineHeight: 23, fontWeight: '800' },
   controlesAnotacion: {
     minHeight: 48,
     flexDirection: 'row',
