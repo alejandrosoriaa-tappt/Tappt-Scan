@@ -1218,6 +1218,86 @@ Reglas que quedan de ahí:
 - Las páginas del lote se leen a Base64 **de una en una**: 50 páginas en
   paralelo es un cierre por memoria en gama media, no una lentitud.
 
+## 📮 Recado de Claude para Codex — 9 de septiembre de 2026
+
+Sesión de Claude del 7 y 9 de sep. **Codex tuvo una caída la tarde del 9**, así
+que esto no está coordinado con él: son hallazgos que dejo por escrito para que
+los revise antes de retomar. Nada de esto tumba lo que ya está en `main`.
+
+**Dónde vive:** rama `claude/tappt-scan-android-audit-bdnf6b`, dos commits
+(`833c2b5`, `e703e81`), base `5d17ebf` (v9). **Va 5 commits atrás de `main`**,
+que ya está en `0.1.6 (14)`. Sin PR abierto. Para que esto llegue a `main` hay
+que fusionarla (merge, no rebase) y resolver el traslape del escáner a favor de
+lo que hizo Codex en `c9f3670`.
+
+### 1. Traslape que ya ocurrió, para no repetirlo
+
+`c9f3670 fix(android): stabilize scanner return in v10` y mi commit `833c2b5`
+hicieron **el mismo cambio** por separado: leer las páginas a Base64 una por una
+en vez de `Promise.all`. Codex además bajó `maxPages` a 30 y agregó `cancel()`
+nativo — su versión es la buena. Perdimos trabajo duplicado porque los dos
+atacamos la auditoría de Android sin avisarnos. Sugerencia concreta: quien tome
+un frente de esta lista lo anota aquí antes de empezar.
+
+### 2. Herramienta nueva que sí conviene usar (está en la rama)
+
+- `npm run verificar:apk -- build.apk --version 0.1.6 --codigo 14` — abre el
+  APK/AAB y busca **dentro del dex** la clase Kotlin del escáner y ML Kit, más
+  paquete, versión, permisos del manifiesto y el backend embebido. Es la
+  comprobación que habría cachado v8 sin encender el teléfono. Sale con código 1
+  si falla algo duro.
+- `npm run smoke:android -- build.apk` — instalación limpia, tres arranques en
+  frío y logcat sin `FATAL EXCEPTION`.
+- `docs/CHECKLIST-ANDROID.md` — matriz manual y go/no-go. **Ojo:** el doc y el
+  verificador citan `0.1.1 (9)` como ejemplo; hay que actualizarlos a la versión
+  vigente al fusionar.
+- `test/artefacto-android.test.js` — 5 pruebas que arman APKs sintéticos,
+  incluida la falla exacta de v8.
+
+### 3. Lo que sigue abierto en `main` (de la auditoría v5–v9)
+
+- `app/.gitignore` trae una **línea suelta `Select`** commiteada en v9.
+- `modules/tappt-document-scanner/src/index.js` resuelve `requireNativeModule`
+  **al importar**: si el módulo falta, se cae la app entera (login, documentos,
+  ajustes), no solo el escáner. En la rama está la versión con carga diferida.
+- `app.json` declara `RECORD_AUDIO` y `READ_EXTERNAL_STORAGE` sin ningún uso en
+  `app/src`.
+- La caché nativa (`cacheDir/tapptscan-*`) no se limpia nunca.
+
+### 4. Comparativa contra CamScanner (mismo documento, medida)
+
+`docs/COMPARATIVA-CAMSCANNER-2026-09-09.md`, con métricas por página en
+`scanner/fixtures/comparativas/`. Tres cosas que cambian prioridades:
+
+1. **Empate en nitidez** (3293 vs 3317, normalizando ambas a 1000 px de ancho).
+   Con 2.7× más píxeles entregamos el mismo detalle percibido. La regresión de
+   nitidez abierta desde el 20 de agosto es de la cámara **web**
+   (`CamaraDoc.web.js` / `getUserMedia`); el APK usa ML Kit y no pasa por ahí.
+   **Dejar de tratar los dos caminos como uno.**
+2. **La brecha real es encuadre y enderezado.** Nuestra página 1 conserva fondo
+   e inclinación; la 2 trae el reverso de la hoja con la página vecina y el
+   engargolado. 21 páginas entregadas contra 17 reales. `escanerNativo.js` manda
+   `esquinas: MARCO_COMPLETO` y no vuelve a mirar la página — decisión
+   deliberada, pero deja pasar torcidas sin ninguna red.
+3. **Pesamos el doble** (10.0 vs 4.7 MB) sin ganar detalle. Bajar a ~1.5–2 MP
+   alivia de paso el riesgo de memoria/payload de los lotes largos.
+
+Y un bug colateral: `pdf-lib` escribe cada página a 72 dpi con el tamaño en
+píxeles, así que una hoja carta queda declarada como **~19×35 pulgadas**. Se ve
+bien en pantalla y se imprime mal.
+
+### 5. Lo que propongo discutir mañana
+
+- ¿Fusionamos la rama a `main` o solo rescatamos las piezas que faltan?
+- **Control de calidad por página antes de guardar** (torcida, casi vacía, con
+  fondo de sobra) — es el siguiente paso natural de la comparativa y lo que
+  habría atajado las cuatro páginas de más.
+- Validar el APK de `0.1.6 (14)` con el verificador: hasta hoy nadie ha
+  inspeccionado un artefacto, y esa fue la causa raíz de v8.
+
+**Los PDF de la comparativa NO están en el repo** a propósito: son escrituras
+reales con datos de terceros. Solo se versionó el JSON de métricas.
+
 ## Posicionamiento (2026-08-13): expo industrial
 
 Se está postulando TapptScan a un encuentro industrial. El encuadre que se
