@@ -1,5 +1,26 @@
 const axios = require('axios');
+const { AsyncLocalStorage } = require('async_hooks');
 const GRAPH_BASE = 'https://graph.facebook.com/v19.0';
+const AGENDA_INTERNAL_BASE = 'https://tappt-backend-production.up.railway.app/internal/scan/whatsapp';
+const transportContext = new AsyncLocalStorage();
+
+function currentTransport() {
+  return transportContext.getStore() || { proxy: false };
+}
+
+function withTransport(transport, work) {
+  return transportContext.run(transport, work);
+}
+
+async function postMessage(payload) {
+  if (currentTransport().proxy) {
+    return axios.post(`${AGENDA_INTERNAL_BASE}/messages`, payload, {
+      headers: { 'x-tappt-router-secret': process.env.TAPPT_ROUTER_SECRET },
+      timeout: 30000,
+    });
+  }
+  return client().post('/messages', payload);
+}
 function client() {
   return axios.create({
     baseURL: `${GRAPH_BASE}/${process.env.WHATSAPP_PHONE_NUMBER_ID}`,
@@ -7,7 +28,7 @@ function client() {
   });
 }
 async function sendText(to, body) {
-  return client().post('/messages', {
+  return postMessage({
     messaging_product: 'whatsapp',
     to,
     type: 'text',
@@ -16,7 +37,7 @@ async function sendText(to, body) {
 }
 async function sendButtons(to, bodyText, buttons) {
   try {
-    return await client().post('/messages', {
+    return await postMessage({
       messaging_product: 'whatsapp',
       to,
       type: 'interactive',
@@ -56,20 +77,30 @@ async function markAsRead(messageId, showTyping = false) {
   if (showTyping) {
     payload.typing_indicator = { type: 'text' };
   }
-  return client().post('/messages', payload);
+  return postMessage(payload);
 }
 
 async function getMediaUrl(mediaId) {
+  if (currentTransport().proxy) return `tappt-internal-media:${mediaId}`;
   const { data } = await axios.get(`${GRAPH_BASE}/${mediaId}`, {
     headers: { Authorization: `Bearer ${process.env.WHATSAPP_TOKEN}` },
   });
   return data.url;
 }
 async function downloadMedia(mediaUrl) {
+  if (currentTransport().proxy && mediaUrl.startsWith('tappt-internal-media:')) {
+    const mediaId = mediaUrl.slice('tappt-internal-media:'.length);
+    const { data } = await axios.get(`${AGENDA_INTERNAL_BASE}/media/${encodeURIComponent(mediaId)}`, {
+      headers: { 'x-tappt-router-secret': process.env.TAPPT_ROUTER_SECRET },
+      responseType: 'arraybuffer',
+      timeout: 30000,
+    });
+    return data;
+  }
   const { data } = await axios.get(mediaUrl, {
     headers: { Authorization: `Bearer ${process.env.WHATSAPP_TOKEN}` },
     responseType: 'arraybuffer',
   });
   return data;
 }
-module.exports = { sendText, sendButtons, markAsRead, getMediaUrl, downloadMedia };
+module.exports = { withTransport, sendText, sendButtons, markAsRead, getMediaUrl, downloadMedia };
