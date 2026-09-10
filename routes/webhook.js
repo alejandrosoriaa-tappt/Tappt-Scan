@@ -49,7 +49,18 @@ function appUrlDocumento(id) {
   return enlaceDocumentoWeb(process.env.RAILWAY_PUBLIC_DOMAIN, id);
 }
 
+function reenvioInternoValido(req) {
+  const secretoRouter = process.env.TAPPT_ROUTER_SECRET;
+  const recibidoRouter = req.headers['x-tappt-router-secret'];
+  if (!secretoRouter || !recibidoRouter) return false;
+  const a = Buffer.from(String(recibidoRouter));
+  const b = Buffer.from(secretoRouter);
+  return a.length === b.length && crypto.timingSafeEqual(a, b);
+}
+
 function firmaValida(req) {
+  if (reenvioInternoValido(req)) return true;
+
   const secreto = process.env.WHATSAPP_APP_SECRET;
   if (!secreto) return true; // sin secreto configurado no se puede verificar
 
@@ -71,9 +82,13 @@ router.post('/', async (req, res) => {
     return res.sendStatus(403);
   }
 
-  res.sendStatus(200); // ack inmediato, Meta reintenta si tardamos
+  const esReenvioInterno = reenvioInternoValido(req);
+  // Meta necesita un ack inmediato. En cambio, Agenda espera el resultado
+  // real del procesamiento interno para poder avisar al usuario si Scan falla.
+  if (!esReenvioInterno) res.sendStatus(200);
 
   let msg, from;
+  let transport = { proxy: false };
   try {
     // El cuerpo llega crudo (Buffer) porque la firma se calcula sobre él.
     const cuerpo = JSON.parse(req.body.toString('utf8'));
@@ -81,20 +96,26 @@ router.post('/', async (req, res) => {
     const change = entry?.changes?.[0];
     const value = change?.value;
     msg = value?.messages?.[0];
-    if (!msg) return;
+    if (!msg) {
+      if (esReenvioInterno && !res.headersSent) res.sendStatus(200);
+      return;
+    }
+
+    transport = { proxy: esReenvioInterno };
 
     // Una app/WABA de Meta puede entregar al mismo webhook eventos de varios
     // números. Nunca procesamos ni contestamos mensajes dirigidos a Tappt
     // Agenda (u otro servicio): este backend solo representa a TapptScan.
     // La comparación ocurre antes de marcar como leído para no usar nuestro
     // Phone Number ID con el message_id de otro número.
-    if (!whatsappEvento.perteneceAlNumero(value, process.env.WHATSAPP_PHONE_NUMBER_ID)) {
+    if (!esReenvioInterno && !whatsappEvento.perteneceAlNumero(value, process.env.WHATSAPP_PHONE_NUMBER_ID)) {
       console.warn('[webhook] mensaje ignorado: phone_number_id ajeno o ausente');
       return;
     }
 
     from = msg.from;
 
+    await whatsapp.withTransport(transport, async () => {
     // Palomita azul + "escribiendo..." mientras procesamos. Esto es
     // cosmético — si Meta lo rechaza (p. ej. la cuenta aún no tiene
     // habilitado typing_indicator) NO debe tumbar el procesamiento del
@@ -118,6 +139,8 @@ router.post('/', async (req, res) => {
     } else if (msg.type === 'interactive') {
       await handleButton(from, msg.interactive);
     }
+    });
+    if (esReenvioInterno && !res.headersSent) res.sendStatus(200);
   } catch (err) {
     // Antes esto solo se logueaba y el usuario se quedaba sin ninguna
     // respuesta — ni confirmación ni error — sin forma de saber que su
@@ -131,11 +154,14 @@ router.post('/', async (req, res) => {
 
     if (from) {
       try {
-        await whatsapp.sendText(from, 'No pude procesar tu archivo 😕 Inténtalo nuevamente en un momento.');
+        await whatsapp.withTransport(transport, () =>
+          whatsapp.sendText(from, 'No pude procesar tu archivo 😕 Inténtalo nuevamente en un momento.')
+        );
       } catch (_) {
         // si ni el aviso de error se pudo mandar, no hay más que hacer aquí
       }
     }
+    if (esReenvioInterno && !res.headersSent) res.sendStatus(502);
   }
 });
 
