@@ -11,7 +11,7 @@ test('WhatsApp hace una sola pregunta y no promete firma oculta', () => {
   assert.match(mensajes, /¿Qué deseas hacer\?/);
 });
 
-test('el mensaje guardado no duplica el acceso a la app con un reply button', () => {
+test('el mensaje guardado usa botones URL y no duplica el acceso con un reply button', () => {
   const bloque = webhook.slice(
     webhook.indexOf("t(idioma, 'guardado'"),
     webhook.indexOf('const handleImage')
