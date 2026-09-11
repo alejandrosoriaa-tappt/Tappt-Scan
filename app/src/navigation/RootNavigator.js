@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import Svg, { Defs, LinearGradient, Stop, Rect } from 'react-native-svg';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 
@@ -62,11 +63,20 @@ function BarraInferior({ state, navigation, onCapturar }) {
         onPress={() => navigation.navigate(ruta.name)}
       >
         <View style={[estilos.tabIcono, activo && estilos.tabIconoActivo]}>
+          <Svg style={StyleSheet.absoluteFill} width="100%" height="100%" viewBox="0 0 42 42">
+            <Defs>
+              <LinearGradient id="fondoTab" x1="0" y1="0" x2="1" y2="1">
+                <Stop offset="0" stopColor={activo ? '#21E88B' : '#119B60'} />
+                <Stop offset="1" stopColor={activo ? '#078C55' : '#075A3A'} />
+              </LinearGradient>
+            </Defs>
+            <Rect x="0.75" y="0.75" width="40.5" height="40.5" rx="12.5" fill="url(#fondoTab)" />
+          </Svg>
           <Icono
             nombre={ICONOS[ruta.name]}
             tamano={24}
-            color={activo ? '#23F59A' : '#74A897'}
-            grosor={activo ? 2.35 : 2}
+            color="#FFFFFF"
+            grosor={activo ? 2.45 : 2.2}
           />
         </View>
         <Text
@@ -205,13 +215,12 @@ const estilos = StyleSheet.create({
     borderRadius: 13,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#101816',
+    overflow: 'hidden',
     borderWidth: 1,
-    borderColor: '#263B35',
+    borderColor: 'rgba(255,255,255,0.18)',
   },
   tabIconoActivo: {
-    backgroundColor: '#12241E',
-    borderColor: '#23F59A',
+    borderColor: '#6DFFC0',
     shadowColor: '#23F59A',
     shadowOpacity: 0.22,
     shadowRadius: 7,
