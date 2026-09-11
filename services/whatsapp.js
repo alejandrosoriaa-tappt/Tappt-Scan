@@ -65,6 +65,30 @@ async function sendButtons(to, bodyText, buttons) {
   }
 }
 
+async function sendUrlButton(to, bodyText, buttonText, url) {
+  try {
+    return await postMessage({
+      messaging_product: 'whatsapp',
+      to,
+      type: 'interactive',
+      interactive: {
+        type: 'cta_url',
+        body: { text: bodyText },
+        action: {
+          name: 'cta_url',
+          parameters: { display_text: buttonText, url },
+        },
+      },
+    });
+  } catch (err) {
+    console.warn('[whatsapp] botón URL rechazado; fallback a enlace', {
+      status: err.response?.status,
+      data: err.response?.data,
+    });
+    return sendText(to, `${bodyText}\n${url}`);
+  }
+}
+
 // Marca un mensaje entrante como leído (palomitas azules).
 // Si showTyping = true, además activa el indicador de "escribiendo..."
 // por hasta 25s o hasta que mandes la siguiente respuesta, lo que ocurra primero.
@@ -103,4 +127,4 @@ async function downloadMedia(mediaUrl) {
   });
   return data;
 }
-module.exports = { withTransport, sendText, sendButtons, markAsRead, getMediaUrl, downloadMedia };
+module.exports = { withTransport, sendText, sendButtons, sendUrlButton, markAsRead, getMediaUrl, downloadMedia };
