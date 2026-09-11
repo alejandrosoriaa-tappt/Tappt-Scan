@@ -43,3 +43,12 @@ test('el editor advierte antes de abandonar cambios sin guardar', () => {
   assert.match(editor, /if \(guardando\)/);
   assert.match(editor, /if \(!montadoRef\.current\) return/);
 });
+
+
+test('Tapar ofrece Listo para terminar la herramienta sin guardar todo el PDF', () => {
+  assert.match(editor, /anotaciones\[seleccionada\]\.tipo === 'tapar'/);
+  assert.match(editor, /accessibilityLabel=\{t\('listo'\)\}/);
+  assert.match(editor, /setSeleccionada\(null\)/);
+  assert.match(editor, /setHerramienta\(null\)/);
+  assert.match(editor, /controlListo/);
+});
