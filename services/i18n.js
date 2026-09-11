@@ -19,7 +19,7 @@ const MENSAJES = {
       'Tu conexión con Google Drive venció o fue revocada. Vuelve a conectarla aquí y después mándame la foto otra vez:\n{appUrl}',
     limite:
       'Ya usaste tus {limite} escaneos gratis de este mes. Pásate al plan Personal y escanea sin límite — escríbeme "quiero personal" y te mando el link.',
-    guardado: 'Listo 📄\\n\\n*{archivo}*{paginas}\\n📁 {ruta}',
+    guardado: 'Listo 📄\n\n*{archivo}*{paginas}\n📁 {ruta}',
     // El link a Drive va en el CUERPO, no como cuarto botón: Meta topa los
     // botones de respuesta en 3 —ya ocupados— y no deja mezclarlos con un
     // botón de URL en el mismo mensaje. Como línea queda igual de tocable.
@@ -70,7 +70,7 @@ const MENSAJES = {
       'Your Google Drive connection expired or was revoked. Reconnect it here, then send me the photo again:\n{appUrl}',
     limite:
       'You\'ve used your {limite} free scans this month. Upgrade to Personal for unlimited scans — reply "I want personal" and I\'ll send you the link.',
-    guardado: 'Done 📄\\n\\n*{archivo}*{paginas}\\n📁 {ruta}',
+    guardado: 'Done 📄\n\n*{archivo}*{paginas}\n📁 {ruta}',
     guardadoDrive: 'Your file is safe in Google Drive.',
     botonDrive: 'Open in Drive',
     guardadoEditar: 'You can also open this document directly in TapptScan.',
