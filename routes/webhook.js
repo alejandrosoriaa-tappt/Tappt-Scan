@@ -254,7 +254,6 @@ async function recibirArchivo(from, medio, mimePorDefecto) {
     }),
     [
       { id: 'ok', title: t(idioma, 'botonGuardar') },
-      { id: idBotonDocumento(documento.id), title: t(idioma, 'botonApp') },
       { id: 'otra_cosa', title: t(idioma, 'botonOtra') },
     ]
   );
