@@ -645,6 +645,19 @@ export default function EditorScreen({ route, navigation }) {
                 ))}
               </>
             ) : null}
+            {anotaciones[seleccionada].tipo === 'tapar' ? (
+              <TouchableOpacity
+                accessibilityRole="button"
+                accessibilityLabel={t('listo')}
+                style={estilos.controlListo}
+                onPress={() => {
+                  setSeleccionada(null);
+                  setHerramienta(null);
+                }}
+              >
+                <Text style={estilos.controlListoTexto}>{t('listo')}</Text>
+              </TouchableOpacity>
+            ) : null}
             <TouchableOpacity style={[estilos.controlBoton, estilos.controlEliminar]} onPress={eliminarSeleccionada}>
               <Text style={estilos.controlEliminarTexto}>×</Text>
             </TouchableOpacity>
@@ -918,6 +931,16 @@ const estilos = StyleSheet.create({
   },
   controlTexto: { color: colores.primario, fontSize: 22, fontWeight: '700' },
   controlColor: { width: 26, height: 26, borderRadius: 13, borderWidth: 1, borderColor: colores.divisor },
+  controlListo: {
+    minWidth: 64,
+    height: 36,
+    paddingHorizontal: espacio.sm,
+    borderRadius: 18,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: colores.primario,
+  },
+  controlListoTexto: { color: '#FFFFFF', fontSize: 13, fontWeight: '700' },
   controlEliminar: { backgroundColor: '#3A2024' },
   controlEliminarTexto: { color: colores.peligro, fontSize: 24, lineHeight: 26 },
   pista: {
