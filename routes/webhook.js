@@ -237,21 +237,30 @@ async function recibirArchivo(from, medio, mimePorDefecto) {
 
   const appUrl = appUrlDocumento(documento?.id);
 
+  const resumen = t(idioma, 'guardado', {
+    archivo: nombreArchivo,
+    ruta,
+    paginas: paginas > 1 ? t(idioma, 'paginas', { n: paginas }) : '',
+  });
+
+  if (documento?.drive_link) {
+    await whatsapp.sendUrlButton(from, resumen, t(idioma, 'botonDrive'), documento.drive_link);
+  } else {
+    await whatsapp.sendText(from, resumen);
+  }
+
+  if (appUrl) {
+    await whatsapp.sendUrlButton(
+      from,
+      t(idioma, 'guardadoEditar'),
+      t(idioma, 'botonAbrirApp'),
+      appUrl
+    );
+  }
+
   await whatsapp.sendButtons(
     from,
-    t(idioma, 'guardado', {
-      archivo: nombreArchivo,
-      ruta,
-      paginas: paginas > 1 ? t(idioma, 'paginas', { n: paginas }) : '',
-      // Igual que con la app: sin link no se manda la línea vacía. Drive
-      // devuelve webViewLink al subir, pero no se da por hecho.
-      drive: documento?.drive_link
-        ? t(idioma, 'guardadoDrive', { driveLink: documento.drive_link })
-        : '',
-      // Si no hay dominio público configurado en Railway, no se inventa un
-      // link roto — se omite la línea completa en vez de mandarla vacía.
-      editar: appUrl ? t(idioma, 'guardadoEditar', { appUrl }) : '',
-    }),
+    t(idioma, 'decisionDocumento'),
     [
       { id: 'ok', title: t(idioma, 'botonGuardar') },
       { id: 'otra_cosa', title: t(idioma, 'botonOtra') },
