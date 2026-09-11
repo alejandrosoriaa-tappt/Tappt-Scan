@@ -61,12 +61,12 @@ function BarraInferior({ state, navigation, onCapturar }) {
         accessibilityState={{ selected: activo }}
         onPress={() => navigation.navigate(ruta.name)}
       >
-        <View style={estilos.tabIcono}>
+        <View style={[estilos.tabIcono, activo && estilos.tabIconoActivo]}>
           <Icono
             nombre={ICONOS[ruta.name]}
-            tamano={22}
-            color={activo ? colores.primario : colores.textoTerciario}
-            grosor={activo ? 2.1 : 1.8}
+            tamano={24}
+            color={activo ? '#23F59A' : '#74A897'}
+            grosor={activo ? 2.35 : 2}
           />
         </View>
         <Text
@@ -199,7 +199,25 @@ const estilos = StyleSheet.create({
   },
   barra: { flexDirection: 'row', alignItems: 'center', height: 60 },
   tab: { flex: 1, minWidth: 0, alignItems: 'center', justifyContent: 'center', height: '100%' },
-  tabIcono: { width: 24, height: 25, alignItems: 'center', justifyContent: 'center' },
+  tabIcono: {
+    width: 42,
+    height: 42,
+    borderRadius: 13,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#101816',
+    borderWidth: 1,
+    borderColor: '#263B35',
+  },
+  tabIconoActivo: {
+    backgroundColor: '#12241E',
+    borderColor: '#23F59A',
+    shadowColor: '#23F59A',
+    shadowOpacity: 0.22,
+    shadowRadius: 7,
+    shadowOffset: { width: 0, height: 2 },
+    elevation: 4,
+  },
   tabTexto: {
     width: '100%',
     height: 15,
