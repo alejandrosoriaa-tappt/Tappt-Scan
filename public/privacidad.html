@@ -1,71 +1,49 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-<meta charset="utf-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>Política de privacidad — TapptScan</title>
-<style>
-  body { font-family: -apple-system, system-ui, sans-serif; max-width: 640px; margin: 0 auto; padding: 32px 20px 80px; line-height: 1.6; color: #0D1B2A; }
-  h1 { font-size: 24px; }
-  h2 { font-size: 17px; margin-top: 32px; }
-  p, li { color: #073B4C; }
-  .fecha { color: #667587; font-size: 13px; }
-</style>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Política de privacidad — Tappt</title>
+  <style>
+    body { font-family: -apple-system, system-ui, sans-serif; max-width: 640px; margin: 0 auto; padding: 32px 20px 80px; line-height: 1.6; color: #0D1B2A; }
+    h1 { font-size: 24px; }
+    h2 { font-size: 17px; margin-top: 32px; }
+    p, li { color: #073B4C; }
+    .fecha { color: #667587; font-size: 13px; }
+  </style>
 </head>
 <body>
-  <h1>Política de privacidad de TapptScan</h1>
-  <p class="fecha">Última actualización: 10 de agosto de 2026</p>
+  <h1>Política de privacidad de Tappt</h1>
+  <p class="fecha">Última actualización: 14 de septiembre de 2026</p>
 
-  <p>TapptScan es un servicio de Nkuvo Labs que escanea, clasifica y archiva
-  documentos que tú mismo envías, guardándolos directamente en tu propia
-  cuenta de Google Drive.</p>
+  <p>Tappt es un servicio de Nkuvo Labs que escanea, clasifica y archiva los documentos que tú mismo envías, guardándolos directamente en tu propia cuenta de Google Drive.</p>
 
   <h2>Qué datos usamos</h2>
   <ul>
-    <li><strong>Tu número de WhatsApp.</strong> Es tu identidad en el
-    servicio — no usamos correo ni contraseña.</li>
-    <li><strong>Las fotos y documentos que nos envías.</strong> Se procesan
-    para extraer datos (tipo de documento, emisor, fecha, monto) y se suben
-    a tu propio Google Drive. No los conservamos en nuestros servidores una
-    vez subidos.</li>
-    <li><strong>Metadata del documento</strong> (nombre de archivo, ruta,
-    fecha, monto) para que puedas buscarlo y hacer preguntas sobre tus
-    gastos por WhatsApp.</li>
+    <li><strong>Tu número de WhatsApp.</strong> Lo usamos para identificarte y atender los documentos y solicitudes que envías mediante WhatsApp.</li>
+    <li><strong>Tu cuenta de Google.</strong> Cuando conectas Google Drive, recibimos los datos básicos de cuenta necesarios para vincular el servicio y conservamos los tokens de autorización mientras mantengas la conexión. No recibimos ni almacenamos tu contraseña de Google.</li>
+    <li><strong>Las fotos y documentos que nos envías.</strong> Se procesan para extraer datos como tipo de documento, emisor, fecha y monto, y se suben a tu propio Google Drive. No conservamos una copia permanente de los documentos en nuestros servidores una vez completado el proceso.</li>
+    <li><strong>Metadatos del documento.</strong> Conservamos datos como nombre de archivo, ruta, fecha, tipo, emisor y monto para organizar, buscar y consultar tus documentos.</li>
   </ul>
 
   <h2>Con quién se comparte</h2>
   <ul>
-    <li><strong>Google Drive</strong> — únicamente los archivos que tú nos
-    envías, con el permiso más limitado que ofrece Google (<code>drive.file</code>):
-    solo podemos ver o modificar lo que esta app creó, nada más de tu Drive.</li>
-    <li><strong>Anthropic (Claude)</strong> — procesa la imagen del
-    documento para clasificarlo y extraer los datos.</li>
-    <li><strong>Stripe</strong> — procesa el cobro si contratas un plan de
-    pago. No almacenamos los datos de tu tarjeta.</li>
+    <li><strong>Google Drive</strong> — recibe únicamente los archivos que tú envías o eliges usar con Tappt. Utilizamos el permiso <code>drive.file</code>, que limita el acceso a los archivos creados por la app o seleccionados expresamente por ti.</li>
+    <li><strong>Anthropic (Claude)</strong> — procesa el contenido de los documentos para clasificarlos y extraer los datos necesarios para prestar el servicio.</li>
+    <li><strong>Meta (WhatsApp)</strong> — transporta los mensajes, imágenes y documentos que decides enviar a Tappt mediante WhatsApp.</li>
   </ul>
-  <p>No vendemos tus datos ni los usamos para publicidad.</p>
+
+  <p>No vendemos tus datos ni los utilizamos para publicidad.</p>
 
   <h2>Cómo usamos los datos de Google</h2>
-  <p>TapptScan solicita únicamente el permiso <code>drive.file</code>. Lo
-  usamos para crear la carpeta de TapptScan; crear, abrir, modificar,
-  organizar y eliminar los archivos que la app crea o que tú eliges
-  expresamente para usar con ella; y mostrarte esos archivos dentro de la
-  app. Este permiso no nos permite leer libremente los demás archivos de tu
-  Google Drive.</p>
-  <p>Conservamos los tokens de autorización de Google mientras mantengas tu
-  Drive conectado, para prestar estas funciones. No transferimos datos
-  obtenidos de las APIs de Google para publicidad, venta de datos ni
-  evaluación crediticia. El uso de información recibida de las APIs de
-  Google cumple la Política de datos de usuario de los servicios de API de
-  Google, incluidos sus requisitos de Uso Limitado.</p>
+  <p>Tappt solicita únicamente el permiso <code>drive.file</code>. Lo usamos para crear y administrar una carpeta de la app; crear, abrir, modificar, organizar y eliminar los archivos que Tappt crea o que tú eliges expresamente para usar con ella; y mostrarte esos archivos dentro de la aplicación. Este permiso no nos permite leer libremente los demás archivos de tu Google Drive.</p>
+
+  <p>Conservamos los tokens de autorización de Google mientras mantengas tu Drive conectado para prestar estas funciones. No transferimos datos obtenidos de las APIs de Google para publicidad, venta de datos ni evaluación crediticia. El uso de información recibida de las APIs de Google cumple la Política de datos de usuario de los servicios de API de Google, incluidos sus requisitos de Uso Limitado.</p>
 
   <h2>Cómo eliminar tu información</h2>
-  <p>Escríbenos por WhatsApp al número de TapptScan y solicita la
-  eliminación de tu cuenta. Borramos tu registro de nuestra base de datos;
-  los archivos que ya viven en tu Google Drive son tuyos y quedan bajo tu
-  control — puedes borrarlos ahí directamente cuando quieras.</p>
+  <p>Puedes solicitar la eliminación de tu cuenta desde Tappt o escribiéndonos mediante el canal oficial de WhatsApp. Eliminaremos el registro y los datos asociados que conservemos en nuestra base de datos. Los archivos que ya se encuentren en tu Google Drive permanecen bajo tu control y puedes eliminarlos directamente desde Drive.</p>
 
   <h2>Contacto</h2>
-  <p>alex.soria1@gmail.com</p>
+  <p><a href="mailto:asoria@tappt.lat">asoria@tappt.lat</a></p>
 </body>
 </html>
