@@ -1,9 +1,9 @@
 {
   "expo": {
-    "name": "TapptScan",
+    "name": "Tappt",
     "slug": "tappt-scan",
     "scheme": "tapptscan",
-    "version": "0.1.6",
+    "version": "0.1.7",
     "orientation": "portrait",
     "userInterfaceStyle": "dark",
     "primaryColor": "#18B875",
@@ -13,23 +13,17 @@
       "resizeMode": "contain",
       "backgroundColor": "#0F1720"
     },
-    "assetBundlePatterns": [
-      "**/*"
-    ],
+    "assetBundlePatterns": ["**/*"],
     "ios": {
       "supportsTablet": false,
       "bundleIdentifier": "lat.tappt.scan",
       "buildNumber": "5",
-      "infoPlist": {
-        "ITSAppUsesNonExemptEncryption": false
-      },
-      "runtimeVersion": {
-        "policy": "appVersion"
-      }
+      "infoPlist": {"ITSAppUsesNonExemptEncryption": false},
+      "runtimeVersion": {"policy": "appVersion"}
     },
     "android": {
       "package": "lat.tappt.scan",
-      "versionCode": 14,
+      "versionCode": 17,
       "adaptiveIcon": {
         "foregroundImage": "./assets/tappt-logo.png",
         "backgroundColor": "#0FA477"
@@ -39,43 +33,25 @@
         "android.permission.READ_EXTERNAL_STORAGE",
         "android.permission.RECORD_AUDIO"
       ],
-      "runtimeVersion": {
-        "policy": "appVersion"
-      }
+      "runtimeVersion": {"policy": "appVersion"}
     },
     "plugins": [
-      [
-        "expo-camera",
-        {
-          "cameraPermission": "TapptScan usa la cámara para escanear tus documentos."
-        }
-      ],
-      [
-        "expo-image-picker",
-        {
-          "photosPermission": "TapptScan accede a tus fotos para que puedas importar documentos que ya tienes."
-        }
-      ],
+      ["expo-camera", {"cameraPermission": "Tappt usa la cámara para escanear tus documentos."}],
+      ["expo-image-picker", {"photosPermission": "Tappt accede a tus fotos para que puedas importar documentos que ya tienes."}],
       "expo-document-picker",
       "expo-localization"
     ],
     "web": {
       "bundler": "metro",
-      "name": "TapptScan",
-      "shortName": "TapptScan",
+      "name": "Tappt",
+      "shortName": "Tappt",
       "themeColor": "#18B875",
       "backgroundColor": "#0F1720",
       "display": "standalone",
       "favicon": "./assets/favicon.png"
     },
-    "extra": {
-      "eas": {
-        "projectId": "6bb36fe4-fa13-4386-9fbd-fb9ccc6cb8b0"
-      }
-    },
+    "extra": {"eas": {"projectId": "6bb36fe4-fa13-4386-9fbd-fb9ccc6cb8b0"}},
     "owner": "tapptscan-team",
-    "updates": {
-      "url": "https://u.expo.dev/6bb36fe4-fa13-4386-9fbd-fb9ccc6cb8b0"
-    }
+    "updates": {"url": "https://u.expo.dev/6bb36fe4-fa13-4386-9fbd-fb9ccc6cb8b0"}
   }
 }
