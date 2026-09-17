@@ -9,6 +9,7 @@ const supabase = require('./supabase');
 const taxonomia = require('./taxonomia');
 const sheets = require('./sheets');
 const planes = require('./planes');
+const telemetria = require('./telemetria');
 
 /**
  * Tubería compartida por los tres caminos de entrada: webhook de WhatsApp
@@ -22,7 +23,8 @@ const planes = require('./planes');
  * Todo termina en PDF —también las fotos— para que el archivo se abra
  * igual en cualquier lado y el editor tenga un solo formato que manejar.
  */
-async function procesarArchivo(usuario, buffer, mimeType = 'image/jpeg', nombreOriginal = null) {
+async function procesarArchivoBase(usuario, buffer, mimeType = 'image/jpeg', nombreOriginal = null) {
+  const metricas = {};
   const entradaEsPdf = pdf.esPdf(buffer) || mimeType === 'application/pdf';
 
   // Enderezado automático para fotos de WhatsApp/importación.
@@ -86,12 +88,15 @@ async function procesarArchivo(usuario, buffer, mimeType = 'image/jpeg', nombreO
   }
 
   let extraido;
+  const inicioIa = Date.now();
   try {
     extraido = await vision.classifyAndExtract(paraVision, mimeVision);
+    metricas.claude = { ok: true, durationMs: Date.now() - inicioIa };
   } catch (err) {
     // La clasificación mejora la ruta, pero jamás debe impedir que el usuario
     // guarde su PDF. Si la IA tarda o falla, continúa en Por revisar.
     console.warn('[procesarDocumento] clasificación no disponible; guardando por revisar', err.message);
+    metricas.claude = { ok: false, durationMs: Date.now() - inicioIa };
     extraido = { tipo: 'otro', seccion: null, subcarpeta: null };
   }
 
@@ -102,13 +107,23 @@ async function procesarArchivo(usuario, buffer, mimeType = 'image/jpeg', nombreO
   const tramos = naming.rutaPara(extraido);
   const nombreArchivo = naming.nombreArchivo(extraido, idioma, 'pdf');
 
-  const carpetaId = await drive.ensureRuta(usuario.drive_tokens, tramos);
-  const subido = await drive.uploadFile(usuario.drive_tokens, {
-    folderId: carpetaId,
-    name: nombreArchivo,
-    mimeType: 'application/pdf',
-    buffer: archivo,
-  });
+  const inicioDrive = Date.now();
+  let carpetaId;
+  let subido;
+  try {
+    carpetaId = await drive.ensureRuta(usuario.drive_tokens, tramos);
+    subido = await drive.uploadFile(usuario.drive_tokens, {
+      folderId: carpetaId,
+      name: nombreArchivo,
+      mimeType: 'application/pdf',
+      buffer: archivo,
+    });
+    metricas.googleDrive = { ok: true, durationMs: Date.now() - inicioDrive };
+  } catch (error) {
+    metricas.googleDrive = { ok: false, durationMs: Date.now() - inicioDrive };
+    error.tapptMetricas = metricas;
+    throw error;
+  }
 
   const registro = {
     user_id: usuario.id,
@@ -133,6 +148,7 @@ async function procesarArchivo(usuario, buffer, mimeType = 'image/jpeg', nombreO
     drive_link: subido.webViewLink,
   };
 
+  const inicioSupabase = Date.now();
   let { data: documento, error } = await supabase
     .from('scan_documents')
     .insert(registro)
@@ -155,7 +171,12 @@ async function procesarArchivo(usuario, buffer, mimeType = 'image/jpeg', nombreO
       .select()
       .single());
   }
-  if (error) throw error;
+  if (error) {
+    metricas.supabase = { ok: false, durationMs: Date.now() - inicioSupabase };
+    error.tapptMetricas = metricas;
+    throw error;
+  }
+  metricas.supabase = { ok: true, durationMs: Date.now() - inicioSupabase };
 
   // El control de gastos es del plan Negocio. Se lanza sin await: si la
   // hoja falla, el documento ya quedó guardado igual.
@@ -169,7 +190,41 @@ async function procesarArchivo(usuario, buffer, mimeType = 'image/jpeg', nombreO
     nombreArchivo,
     ruta: naming.rutaLegible(tramos),
     paginas,
+    metricas,
   };
+}
+
+async function procesarArchivo(usuario, buffer, mimeType = 'image/jpeg', nombreOriginal = null, opciones = {}) {
+  const inicio = Date.now();
+  try {
+    const resultado = await procesarArchivoBase(usuario, buffer, mimeType, nombreOriginal);
+    telemetria.registrarEnSegundoPlano({
+      eventType: 'document_processed',
+      status: 'ok',
+      origin: opciones.origin || 'unknown',
+      usuario,
+      documentId: resultado.documento?.id,
+      pages: resultado.paginas,
+      durationMs: Date.now() - inicio,
+      aiCalls: 1,
+      appVersion: opciones.appVersion,
+      metadata: { apis: resultado.metricas },
+    });
+    return resultado;
+  } catch (error) {
+    telemetria.registrarEnSegundoPlano({
+      eventType: 'document_processed',
+      status: 'error',
+      origin: opciones.origin || 'unknown',
+      usuario,
+      durationMs: Date.now() - inicio,
+      aiCalls: 1,
+      error,
+      appVersion: opciones.appVersion,
+      metadata: { apis: error.tapptMetricas || {} },
+    });
+    throw error;
+  }
 }
 
 module.exports = { procesarArchivo, procesarImagen: procesarArchivo };

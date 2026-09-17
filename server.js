@@ -11,6 +11,7 @@ const documentosRouter = require('./routes/documentos');
 const driveRouter = require('./routes/drive');
 const pagosRouter = require('./routes/pagos');
 const firmasRouter = require('./routes/firmas');
+const adminRouter = require('./routes/admin');
 const scanner = require('./services/docquad');
 const { idDocumentoValido, paginaAbrirDocumento } = require('./services/deepLinks');
 
@@ -52,6 +53,7 @@ app.use('/api/documentos', documentosRouter);
 app.use('/api/drive', driveRouter);
 app.use('/api/pagos', pagosRouter);
 app.use('/api/firmas', firmasRouter);
+app.use('/operaciones', adminRouter);
 
 app.get('/', (req, res, next) => {
   if (req.query.scannerDebug !== '1') return next();

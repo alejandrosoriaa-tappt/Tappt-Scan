@@ -99,7 +99,7 @@ router.post('/firma-desde-foto', requireAuth, async (req, res) => {
 
 // Entrada desde la app: cámara (`/escanear`) o importación de un archivo
 // del dispositivo (`/importar`). Ambas comparten validaciones y tubería.
-async function recibirDesdeApp(req, res, mimePorDefecto) {
+async function recibirDesdeApp(req, res, mimePorDefecto, origin) {
   if (!req.usuario.drive_tokens) return res.status(409).json({ error: 'drive_sin_conectar' });
 
   const cupo = await planes.puedeEscanear(req.usuario);
@@ -131,7 +131,8 @@ async function recibirDesdeApp(req, res, mimePorDefecto) {
     req.usuario,
     buffer,
     mime,
-    nombre || null
+    nombre || null,
+    { origin, appVersion: req.headers['x-tappt-app-version'] }
   );
 
   res.json(documento);
@@ -139,7 +140,7 @@ async function recibirDesdeApp(req, res, mimePorDefecto) {
 
 router.post('/escanear', requireAuth, async (req, res) => {
   try {
-    await recibirDesdeApp(req, res, 'image/jpeg');
+    await recibirDesdeApp(req, res, 'image/jpeg', 'app_camera');
   } catch (err) {
     console.error('[documentos] error escaneando', err);
     res.status(500).json({ error: 'error_escaneo' });
@@ -183,7 +184,8 @@ router.post('/escanear-lote', requireAuth, async (req, res) => {
       req.usuario,
       archivo,
       'application/pdf',
-      null
+      null,
+      { origin: 'app_batch', appVersion: req.headers['x-tappt-app-version'] }
     );
     res.json(documento);
   } catch (err) {
@@ -197,7 +199,7 @@ router.post('/escanear-lote', requireAuth, async (req, res) => {
 // (galería, Archivos, iCloud, Drive…). Acepta PDF e imágenes.
 router.post('/importar', requireAuth, async (req, res) => {
   try {
-    await recibirDesdeApp(req, res, 'application/pdf');
+    await recibirDesdeApp(req, res, 'application/pdf', 'app_import');
   } catch (err) {
     console.error('[documentos] error importando', err);
     res.status(500).json({ error: 'error_importacion' });

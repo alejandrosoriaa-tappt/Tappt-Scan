@@ -212,7 +212,8 @@ async function recibirArchivo(from, medio, mimePorDefecto) {
       user,
       buffer,
       medio.mime_type || mimePorDefecto,
-      medio.filename || null
+      medio.filename || null,
+      { origin: 'whatsapp' }
     );
   } catch (err) {
     if (!googleOAuth.esTokenInvalido(err)) throw err;

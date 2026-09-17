@@ -7,6 +7,11 @@ const supabase = require('../services/supabase');
 const whatsapp = require('../services/whatsapp');
 const { t } = require('../services/i18n');
 const { requireAuth } = require('../services/auth');
+const { registrarEnSegundoPlano } = require('../services/telemetria');
+
+function eventoNegocio(eventType, usuario, metadata = {}, status = 'ok', error = null) {
+  registrarEnSegundoPlano({ eventType, usuario, origin: metadata.fuente || 'payments', status, error, metadata });
+}
 
 /**
  * Webhook de Stripe.
@@ -92,6 +97,7 @@ async function primeraCompra(sesion) {
     .eq('id', registro.user_id);
 
   const usuario = await traerUsuario('id', registro.user_id);
+  eventoNegocio('subscription_started', usuario, { fuente: 'stripe', plan: registro.plan });
   await avisar(usuario, 'planActivo', { plan: registro.plan });
 }
 
@@ -108,6 +114,7 @@ async function renovacion(factura) {
     .update({ plan_vence: await vigenciaDe(factura.subscription) })
     .eq('id', usuario.id);
 
+  eventoNegocio('subscription_renewed', usuario, { fuente: 'stripe', plan: usuario.plan });
   await avisar(usuario, 'planRenovado', { plan: usuario.plan });
 }
 
@@ -121,6 +128,7 @@ async function cobroFallido(factura) {
   const usuario = await traerUsuario('stripe_customer_id', factura.customer);
   if (!usuario) return;
 
+  eventoNegocio('payment_failed', usuario, { fuente: 'stripe', plan: usuario.plan }, 'error', new Error('stripe_payment_failed'));
   await avisar(usuario, 'cobroFallido');
 }
 
@@ -133,6 +141,7 @@ async function cancelacion(suscripcion) {
     .update({ plan: 'gratis', plan_vence: null, stripe_subscription_id: null })
     .eq('id', usuario.id);
 
+  eventoNegocio('subscription_cancelled', usuario, { fuente: 'stripe', planAnterior: usuario.plan });
   await avisar(usuario, 'planTerminado');
 }
 
@@ -179,9 +188,12 @@ router.post('/iap/verificar', requireAuth, async (req, res) => {
       fuente: plataforma,
     });
 
+    eventoNegocio('subscription_started', req.usuario, { fuente: plataforma, plan: resultado.plan, productoId });
+
     res.json({ plan: resultado.plan, planVence: resultado.expiraEn });
   } catch (err) {
     console.error('[pagos] error verificando compra IAP', err);
+    eventoNegocio('payment_failed', req.usuario, { fuente: plataforma || 'iap', productoId }, 'error', err);
     res.status(400).json({ error: err.message });
   }
 });
