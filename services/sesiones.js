@@ -68,7 +68,7 @@ async function iniciar() {
   if (error) throw error;
 
   const numero = (process.env.WHATSAPP_NUMERO || '').replace(/\D/g, '');
-  const mensaje = encodeURIComponent(`Hola, quiero entrar a TapptScan. Código: ${codigo}`);
+  const mensaje = encodeURIComponent(`Hola, quiero entrar a Tappt. Código: ${codigo}`);
 
   return {
     codigo,

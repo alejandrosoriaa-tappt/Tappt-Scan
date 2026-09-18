@@ -149,7 +149,11 @@ function Tabs({ navigation }) {
         onImportarFoto={() => importar(importarDeGaleria)}
       />
 
-      <HojaLimite visible={limite} onCerrar={() => setLimite(false)} />
+      <HojaLimite
+        visible={limite}
+        onCerrar={() => setLimite(false)}
+        onVerPlanes={() => navigation.navigate('Ajustes')}
+      />
     </>
   );
 }

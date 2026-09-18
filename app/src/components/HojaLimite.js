@@ -1,8 +1,7 @@
 import React from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, Modal, Linking } from 'react-native';
+import { View, Text, TouchableOpacity, StyleSheet, Modal } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Icono, { IconoChip } from './Icono';
-import { useSesion } from '../context/SesionContext';
 import { useIdioma } from '../i18n';
 import { colores, espacio, radio, tipo } from '../theme';
 
@@ -12,24 +11,17 @@ import { colores, espacio, radio, tipo } from '../theme';
  * Aparece justo cuando ya tomó la foto y quiere guardarla: es el momento de
  * mayor intención, así que un cuadro de error sería tirar la conversión.
  *
- * **No menciona precios ni lleva a una pantalla de pago.** La guía 3.1.1 de
- * Apple prohíbe dirigir a comprar fuera de su sistema, y un botón con precio
- * dentro de la app es justo lo que buscan los revisores. Aquí solo se abre
- * la conversación de WhatsApp; el precio y el cobro viven allá, donde Apple
- * no tiene jurisdicción.
+ * No menciona precios. Lleva a Ajustes, donde Android presenta únicamente
+ * las opciones de compra administradas por Google Play.
  *
  * La foto NO se pierde: la hoja se cierra y la pantalla de recorte sigue
  * detrás con el documento listo para reintentar.
  */
-export default function HojaLimite({ visible, onCerrar }) {
+export default function HojaLimite({ visible, onCerrar, onVerPlanes }) {
   const { t } = useIdioma();
-  const { cuenta } = useSesion();
-
-  const abrirWhatsapp = () => {
-    const numero = cuenta?.numeroTapptScan || '';
-    const mensaje = encodeURIComponent(t('mensajeQuieroMas'));
+  const abrirPlanes = () => {
     onCerrar();
-    Linking.openURL(`https://wa.me/${numero}?text=${mensaje}`);
+    onVerPlanes?.();
   };
 
   const ventajas = [
@@ -67,9 +59,9 @@ export default function HojaLimite({ visible, onCerrar }) {
               ))}
             </View>
 
-            <TouchableOpacity style={estilos.boton} onPress={abrirWhatsapp} activeOpacity={0.85}>
-              <Icono nombre="whatsapp" tamano={20} color={colores.blanco} />
-              <Text style={estilos.botonTexto}>{t('continuarEnWhatsapp')}</Text>
+            <TouchableOpacity style={estilos.boton} onPress={abrirPlanes} activeOpacity={0.85}>
+              <Icono nombre="estrella" tamano={20} color={colores.blanco} />
+              <Text style={estilos.botonTexto}>{t('verPlanes')}</Text>
             </TouchableOpacity>
 
             <Text style={estilos.nota}>{t('limiteNota')}</Text>

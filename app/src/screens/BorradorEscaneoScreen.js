@@ -168,18 +168,25 @@ export default function BorradorEscaneoScreen({ navigation }) {
             </TouchableOpacity>
           </View>
 
-          <ScrollView horizontal contentContainerStyle={estilos.tira} showsHorizontalScrollIndicator={false}>
-            {borrador.paginas.map((item, posicion) => (
-              <TouchableOpacity key={item.id} onPress={() => setPaginaId(item.id)}>
-                <Image
-                  source={{ uri: item.vista }}
-                  style={[estilos.miniatura, item.id === paginaId && estilos.miniaturaActiva]}
-                  resizeMode="cover"
-                />
-                <Text style={estilos.miniaturaNumero}>{posicion + 1}</Text>
-              </TouchableOpacity>
-            ))}
-          </ScrollView>
+          {borrador.paginas.length > 1 ? (
+            <ScrollView
+              horizontal
+              style={estilos.tiraScroll}
+              contentContainerStyle={estilos.tira}
+              showsHorizontalScrollIndicator={false}
+            >
+              {borrador.paginas.map((item, posicion) => (
+                <TouchableOpacity key={item.id} onPress={() => setPaginaId(item.id)}>
+                  <Image
+                    source={{ uri: item.vista }}
+                    style={[estilos.miniatura, item.id === paginaId && estilos.miniaturaActiva]}
+                    resizeMode="cover"
+                  />
+                  <Text style={estilos.miniaturaNumero}>{posicion + 1}</Text>
+                </TouchableOpacity>
+              ))}
+            </ScrollView>
+          ) : null}
 
           <View style={estilos.herramientas}>
             <Boton icono="mosaico" texto={t('mosaico')} onPress={() => setMosaico(true)} />
@@ -270,13 +277,26 @@ const estilos = StyleSheet.create({
   titulo: { color: '#FFFFFF', fontSize: 15, fontWeight: '700' },
   subtitulo: { color: '#8E9BA6', fontSize: 11, marginTop: 2 },
   agregar: { color: colores.primario, fontSize: 14, fontWeight: '700' },
-  documentoCaja: { flex: 1, margin: espacio.md, borderRadius: 10, backgroundColor: '#111923', overflow: 'hidden' },
+  documentoCaja: {
+    flex: 1,
+    minHeight: 0,
+    marginHorizontal: espacio.sm,
+    marginTop: espacio.sm,
+    marginBottom: espacio.xs,
+    borderRadius: 10,
+    backgroundColor: '#111923',
+    overflow: 'hidden',
+  },
   documento: { width: '100%', height: '100%' },
   documentoScroll: { flex: 1, width: '100%' },
   documentoScrollContenido: { alignItems: 'center', backgroundColor: '#111923' },
   comparador: { alignSelf: 'center', flexDirection: 'row', alignItems: 'center', gap: espacio.lg, paddingVertical: espacio.xs },
   contador: { color: '#FFFFFF', fontSize: 13, fontWeight: '700' },
-  tira: { gap: espacio.sm, paddingHorizontal: espacio.md, paddingVertical: espacio.sm },
+  // Un ScrollView horizontal sin altura acotada puede crecer sobre el eje
+  // vertical y comprimir la vista principal. La tira es navegación, no el
+  // contenido: reservamos sólo lo que miden sus miniaturas.
+  tiraScroll: { flexGrow: 0, height: 82 },
+  tira: { gap: espacio.sm, paddingHorizontal: espacio.md, paddingVertical: espacio.xs },
   miniatura: { width: 50, height: 66, borderRadius: 5, borderWidth: 2, borderColor: 'transparent', backgroundColor: '#FFFFFF' },
   miniaturaActiva: { borderColor: colores.primario },
   miniaturaNumero: { color: '#AAB5BE', fontSize: 10, textAlign: 'center', marginTop: 2 },

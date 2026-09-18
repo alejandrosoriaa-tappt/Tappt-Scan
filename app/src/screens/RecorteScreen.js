@@ -490,7 +490,11 @@ export default function RecorteScreen({ route, navigation }) {
         </TouchableOpacity>
       </View>
 
-      <HojaLimite visible={limite} onCerrar={() => setLimite(false)} />
+      <HojaLimite
+        visible={limite}
+        onCerrar={() => setLimite(false)}
+        onVerPlanes={() => navigation.navigate('Ajustes')}
+      />
     </SafeAreaView>
   );
 }

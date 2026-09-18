@@ -34,7 +34,7 @@ router.get('/callback', async (req, res) => {
     // un WebBrowser en sesión aparte, se queda con el mensaje tal cual.
     res.send(
       '<html><body style="font-family:sans-serif;text-align:center;padding:48px">' +
-        '<h2>Listo</h2><p>Tu Google Drive quedó conectado y tus carpetas ya están creadas.<br>Regresando a TapptScan…</p>' +
+        '<h2>Listo</h2><p>Tu Google Drive quedó conectado y tus carpetas ya están creadas.<br>Regresando a Tappt…</p>' +
         '<script>setTimeout(function () { window.location.href = "/app"; }, 1500);</script>' +
         '</body></html>'
     );

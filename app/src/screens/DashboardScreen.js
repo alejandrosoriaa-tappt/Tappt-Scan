@@ -8,6 +8,7 @@ import {
   ActivityIndicator,
   RefreshControl,
   Linking,
+  Image,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import useCargar from '../hooks/useCargar';
@@ -125,9 +126,15 @@ export default function DashboardScreen({ navigation }) {
         }
       >
         <View style={estilos.marca}>
-          <Text style={estilos.marcaTexto}>
-            Tappt<Text style={estilos.marcaAcento}>Scan</Text>
-          </Text>
+          <View style={estilos.marcaIdentidad}>
+            <Image
+              source={require('../../assets/tappt-logo.png')}
+              style={estilos.marcaLogo}
+              resizeMode="contain"
+              accessibilityLabel="Logotipo de Tappt"
+            />
+            <Text style={estilos.marcaTexto}>Tappt</Text>
+          </View>
           <TouchableOpacity onPress={() => navigation.navigate('Ajustes')} hitSlop={10}>
             <Icono nombre="ajustes" tamano={21} color={colores.textoSuave} />
           </TouchableOpacity>
@@ -265,8 +272,9 @@ const estilos = StyleSheet.create({
     paddingVertical: espacio.sm,
     marginBottom: espacio.sm,
   },
+  marcaIdentidad: { flexDirection: 'row', alignItems: 'center', gap: espacio.sm },
+  marcaLogo: { width: 38, height: 38, borderRadius: 10 },
   marcaTexto: { ...tipo.tituloChico, color: colores.texto },
-  marcaAcento: { color: colores.primario },
 
   buscador: {
     flexDirection: 'row',

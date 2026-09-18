@@ -10,7 +10,7 @@ export const TEXTOS = {
 
     // Login
     promesa: 'Tus documentos no se guardan en nuestros servidores — viven en tu Google Drive.',
-    desarrolladoPor: 'TapptScan · un desarrollo de Nkuvo Labs',
+    desarrolladoPor: 'Tappt · un desarrollo de Nkuvo Labs',
     correo: 'Correo',
     contrasena: 'Contraseña',
     entrar: 'Entrar',
@@ -31,7 +31,7 @@ export const TEXTOS = {
     conectaDrive: 'Conecta tu Google Drive',
     generarCodigo: 'Generar código',
     codigoInstrucciones:
-      'Manda este código por WhatsApp a TapptScan desde el número que quieres conectar. Vence en 15 minutos.',
+      'Manda este código por WhatsApp a Tappt desde el número que quieres conectar. Vence en 15 minutos.',
     yaLoMande: 'Ya lo mandé, verificar',
     conectado: 'Conectado: {valor}',
     driveListo: 'Listo. Creamos la carpeta TapptScan con sus subcarpetas.',
@@ -70,7 +70,7 @@ export const TEXTOS = {
     abriendoEscaner: 'Abriendo escáner…',
     escanerNoDisponible: 'No se pudo abrir el escáner',
     escanerNativoDetalle:
-      'Detecta bordes, endereza y permite capturar varias páginas antes de regresar a TapptScan.',
+      'Detecta bordes, endereza y permite capturar varias páginas antes de regresar a Tappt.',
     intentarDeNuevo: 'Intentar de nuevo',
     tambienWhatsapp: 'También puedes mandarnos la foto por WhatsApp y la guardamos igual.',
     buscandoDocumento: 'Buscando el documento…',
@@ -119,7 +119,7 @@ export const TEXTOS = {
     eliminar: 'Eliminar',
     eliminarDocumento: '¿Eliminar este documento?',
     eliminarDocumentoDetalle:
-      'Deja de aparecer en TapptScan, pero el archivo sigue intacto en tu Google Drive — ahí es donde de verdad vive.',
+      'Deja de aparecer en Tappt, pero el archivo sigue intacto en tu Google Drive — ahí es donde de verdad vive.',
     versiones: 'Versiones',
     ultimaVersion: 'Última versión',
     notaPrivacidad:
@@ -293,8 +293,9 @@ export const TEXTOS = {
     ventajaIlimitado: 'Escaneos ilimitados, todos los meses.',
     ventajaFirmas: 'Edición de PDF.',
     ventajaGastos: 'Control de gastos automático (plan Negocio).',
+    verPlanes: 'Ver opciones en Google Play',
     continuarEnWhatsapp: 'Continuar en WhatsApp',
-    limiteNota: 'Te atiendo por WhatsApp, como todo lo demás. Tu documento sigue aquí esperando.',
+    limiteNota: 'La compra se completa de forma segura mediante Google Play. Tu documento sigue aquí esperando.',
     ahoraNo: 'Ahora no',
     mensajeQuieroMas: 'Quiero el plan Personal',
 
@@ -336,7 +337,7 @@ export const TEXTOS = {
     nombreIdioma: 'English',
 
     promesa: "Your documents aren't stored on our servers — they live in your Google Drive.",
-    desarrolladoPor: 'TapptScan · a Nkuvo Labs development',
+    desarrolladoPor: 'Tappt · a Nkuvo Labs development',
     correo: 'Email',
     contrasena: 'Password',
     entrar: 'Sign in',
@@ -356,7 +357,7 @@ export const TEXTOS = {
     conectaDrive: 'Connect your Google Drive',
     generarCodigo: 'Generate code',
     codigoInstrucciones:
-      'Send this code over WhatsApp to TapptScan from the number you want to connect. It expires in 15 minutes.',
+      'Send this code over WhatsApp to Tappt from the number you want to connect. It expires in 15 minutes.',
     yaLoMande: "I sent it — check now",
     conectado: 'Connected: {valor}',
     driveListo: 'Done. We created the TapptScan folder with its subfolders.',
@@ -392,7 +393,7 @@ export const TEXTOS = {
     abriendoEscaner: 'Opening scanner…',
     escanerNoDisponible: 'Could not open the scanner',
     escanerNativoDetalle:
-      'It detects edges, straightens pages, and captures multiple pages before returning to TapptScan.',
+      'It detects edges, straightens pages, and captures multiple pages before returning to Tappt.',
     intentarDeNuevo: 'Try again',
     tambienWhatsapp: "You can also send us the photo on WhatsApp and we'll save it the same.",
     buscandoDocumento: 'Finding the document…',
@@ -440,7 +441,7 @@ export const TEXTOS = {
     eliminar: 'Delete',
     eliminarDocumento: 'Delete this document?',
     eliminarDocumentoDetalle:
-      "It disappears from TapptScan, but the file stays untouched in your Google Drive — that's where it really lives.",
+      "It disappears from Tappt, but the file stays untouched in your Google Drive — that's where it really lives.",
     versiones: 'Versions',
     ultimaVersion: 'Latest version',
     notaPrivacidad:
@@ -607,8 +608,9 @@ export const TEXTOS = {
     ventajaIlimitado: 'Unlimited scans, every month.',
     ventajaFirmas: 'PDF editing.',
     ventajaGastos: 'Automatic expense tracking (Business plan).',
+    verPlanes: 'View options in Google Play',
     continuarEnWhatsapp: 'Continue on WhatsApp',
-    limiteNota: "I'll take it from WhatsApp, like everything else. Your document is still here waiting.",
+    limiteNota: 'Your purchase is completed securely through Google Play. Your document is still here waiting.',
     ahoraNo: 'Not now',
     mensajeQuieroMas: 'I want the Personal plan',
 

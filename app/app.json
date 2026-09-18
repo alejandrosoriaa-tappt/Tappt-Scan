@@ -3,7 +3,7 @@
     "name": "Tappt",
     "slug": "tappt-scan",
     "scheme": "tapptscan",
-    "version": "0.1.7",
+    "version": "0.1.8",
     "orientation": "portrait",
     "userInterfaceStyle": "dark",
     "primaryColor": "#18B875",
@@ -17,13 +17,13 @@
     "ios": {
       "supportsTablet": false,
       "bundleIdentifier": "lat.tappt.scan",
-      "buildNumber": "5",
+      "buildNumber": "6",
       "infoPlist": {"ITSAppUsesNonExemptEncryption": false},
       "runtimeVersion": {"policy": "appVersion"}
     },
     "android": {
       "package": "lat.tappt.scan",
-      "versionCode": 17,
+      "versionCode": 18,
       "adaptiveIcon": {
         "foregroundImage": "./assets/tappt-logo.png",
         "backgroundColor": "#0FA477"
