@@ -3,6 +3,7 @@ import { View, Text, TouchableOpacity, StyleSheet, Modal } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Icono, { IconoChip } from './Icono';
 import { useIdioma } from '../i18n';
+import { useSesion } from '../context/SesionContext';
 import { colores, espacio, radio, tipo } from '../theme';
 
 /**
@@ -19,6 +20,7 @@ import { colores, espacio, radio, tipo } from '../theme';
  */
 export default function HojaLimite({ visible, onCerrar, onVerPlanes }) {
   const { t } = useIdioma();
+  const { cuenta } = useSesion();
   const abrirPlanes = () => {
     onCerrar();
     onVerPlanes?.();
