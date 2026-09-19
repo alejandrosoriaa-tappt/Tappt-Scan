@@ -190,6 +190,19 @@ async function moverArchivo(tokens, { fileId, carpetaDestinoId, nuevoNombre, car
   return data;
 }
 
+// Cambia únicamente el nombre de un archivo que Tappt creó o administra.
+// `drive.file` permite esta operación sin dar acceso al resto del Drive.
+async function renombrarArchivo(tokens, fileId, nuevoNombre) {
+  const auth = oauthClient(tokens);
+  const drive = google.drive({ version: 'v3', auth });
+  const { data } = await drive.files.update({
+    fileId,
+    resource: { name: nuevoNombre },
+    fields: 'id, name, webViewLink',
+  });
+  return data;
+}
+
 async function downloadFile(tokens, fileId) {
   const auth = oauthClient(tokens);
   const drive = google.drive({ version: 'v3', auth });
@@ -211,6 +224,7 @@ module.exports = {
   usoDeAlmacenamiento,
   uploadFile,
   moverArchivo,
+  renombrarArchivo,
   downloadFile,
   ROOT_FOLDER_NAME,
 };

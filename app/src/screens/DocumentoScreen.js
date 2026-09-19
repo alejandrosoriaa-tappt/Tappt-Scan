@@ -1,5 +1,17 @@
 import React, { useState, useCallback } from 'react';
-import { View, Text, ScrollView, TouchableOpacity, StyleSheet, Linking, Platform, Share } from 'react-native';
+import {
+  View,
+  Text,
+  ScrollView,
+  TouchableOpacity,
+  StyleSheet,
+  Linking,
+  Platform,
+  Share,
+  Modal,
+  TextInput,
+  ActivityIndicator,
+} from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
 import { api } from '../lib/api';
 import { alertar, alertarConBotones } from '../lib/alerta';
@@ -67,6 +79,9 @@ export default function DocumentoScreen({ route, navigation }) {
   const [favorito, setFavorito] = useState(Boolean(documento.favorito));
   const [masAbierto, setMasAbierto] = useState(false);
   const [borrando, setBorrando] = useState(false);
+  const [renombrando, setRenombrando] = useState(false);
+  const [guardandoNombre, setGuardandoNombre] = useState(false);
+  const [nombreNuevo, setNombreNuevo] = useState('');
   const { t, idioma } = useIdioma();
   const versiones = useCargar(() => api.versiones(documento.id).catch(() => []), [documento.id]);
 
@@ -143,6 +158,30 @@ export default function DocumentoScreen({ route, navigation }) {
       },
       { text: t('cancelar') },
     ]);
+  };
+
+  const abrirRenombrar = () => {
+    setMasAbierto(false);
+    setNombreNuevo((documento.nombre_archivo || '').replace(/\.[a-z0-9]{1,8}$/i, ''));
+    setRenombrando(true);
+  };
+
+  const guardarNombre = async () => {
+    const limpio = nombreNuevo.trim();
+    if (!limpio) {
+      alertar(t('nombreInvalido'));
+      return;
+    }
+    setGuardandoNombre(true);
+    try {
+      const actualizado = await api.renombrarDocumento(documento.id, limpio);
+      navigation.setParams({ documento: { ...documento, ...actualizado } });
+      setRenombrando(false);
+    } catch (err) {
+      alertar(t('noSePudo'), err.message);
+    } finally {
+      setGuardandoNombre(false);
+    }
   };
 
   return (
@@ -278,13 +317,16 @@ export default function DocumentoScreen({ route, navigation }) {
         visible={masAbierto}
         titulo={documento.nombre_archivo}
         acciones={[
+          { id: 'renombrar', icono: 'lapiz', texto: t('renombrar') },
           { id: 'compartir', icono: 'subir', texto: t('compartir') },
           { id: 'drive', icono: 'nube', texto: t('abrirEnDrive') },
           { id: 'eliminar', icono: 'cerrar', texto: t('eliminar'), destructiva: true },
         ]}
         onCerrar={() => setMasAbierto(false)}
         onElegir={(id) => {
-          if (id === 'compartir') {
+          if (id === 'renombrar') {
+            abrirRenombrar();
+          } else if (id === 'compartir') {
             setMasAbierto(false);
             compartir(documento, t);
           } else if (id === 'drive') {
@@ -295,6 +337,56 @@ export default function DocumentoScreen({ route, navigation }) {
           }
         }}
       />
+
+      <Modal
+        visible={renombrando}
+        transparent
+        animationType="fade"
+        onRequestClose={() => !guardandoNombre && setRenombrando(false)}
+      >
+        <View style={estilos.modalFondo}>
+          <View style={estilos.modalTarjeta}>
+            <Text style={estilos.modalTitulo}>{t('renombrarDocumento')}</Text>
+            <Text style={estilos.modalEtiqueta}>{t('nombreDocumento')}</Text>
+            <View style={estilos.nombreEntradaFila}>
+              <TextInput
+                autoFocus
+                value={nombreNuevo}
+                onChangeText={setNombreNuevo}
+                editable={!guardandoNombre}
+                maxLength={120}
+                selectTextOnFocus
+                returnKeyType="done"
+                onSubmitEditing={guardarNombre}
+                style={estilos.nombreEntrada}
+              />
+              <Text style={estilos.extensionNombre}>
+                {(documento.nombre_archivo || '').match(/\.[a-z0-9]{1,8}$/i)?.[0] || ''}
+              </Text>
+            </View>
+            <View style={estilos.modalAcciones}>
+              <TouchableOpacity
+                style={estilos.modalBotonSecundario}
+                disabled={guardandoNombre}
+                onPress={() => setRenombrando(false)}
+              >
+                <Text style={estilos.modalBotonSecundarioTexto}>{t('cancelar')}</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={estilos.modalBotonPrimario}
+                disabled={guardandoNombre}
+                onPress={guardarNombre}
+              >
+                {guardandoNombre ? (
+                  <ActivityIndicator color="#FFFFFF" />
+                ) : (
+                  <Text style={estilos.modalBotonPrimarioTexto}>{t('guardarNombre')}</Text>
+                )}
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
     </ScrollView>
   );
 }
@@ -439,4 +531,42 @@ const estilos = StyleSheet.create({
     marginTop: espacio.lg,
     textAlign: 'center',
   },
+  modalFondo: {
+    flex: 1,
+    justifyContent: 'center',
+    padding: espacio.lg,
+    backgroundColor: 'rgba(0,0,0,0.7)',
+  },
+  modalTarjeta: {
+    borderRadius: 18,
+    padding: espacio.lg,
+    backgroundColor: colores.superficie,
+    borderWidth: 1,
+    borderColor: colores.divisor,
+  },
+  modalTitulo: { color: colores.texto, fontSize: 20, fontWeight: '800', marginBottom: espacio.lg },
+  modalEtiqueta: { color: colores.textoSuave, fontSize: 13, marginBottom: espacio.xs },
+  nombreEntradaFila: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: colores.primario,
+    borderRadius: 12,
+    backgroundColor: colores.fondo,
+  },
+  nombreEntrada: { flex: 1, minHeight: 50, paddingHorizontal: espacio.md, color: colores.texto, fontSize: 16 },
+  extensionNombre: { color: colores.textoSuave, fontSize: 16, paddingRight: espacio.md },
+  modalAcciones: { flexDirection: 'row', justifyContent: 'flex-end', gap: espacio.sm, marginTop: espacio.lg },
+  modalBotonSecundario: { paddingHorizontal: espacio.md, minHeight: 46, justifyContent: 'center' },
+  modalBotonSecundarioTexto: { color: colores.textoSuave, fontSize: 15, fontWeight: '600' },
+  modalBotonPrimario: {
+    minWidth: 130,
+    minHeight: 46,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderRadius: 12,
+    paddingHorizontal: espacio.md,
+    backgroundColor: colores.primario,
+  },
+  modalBotonPrimarioTexto: { color: '#FFFFFF', fontSize: 15, fontWeight: '700' },
 });

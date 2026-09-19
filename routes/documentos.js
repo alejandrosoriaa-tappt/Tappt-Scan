@@ -304,6 +304,45 @@ router.put('/:id/favorito', requireAuth, async (req, res) => {
   }
 });
 
+// El clasificador propone un nombre, pero la última palabra siempre la
+// tiene el usuario. Se conserva la extensión original y se actualizan tanto
+// el archivo real de Drive como el índice de Tappt.
+router.put('/:id/nombre', requireAuth, async (req, res) => {
+  try {
+    const documento = await traerDocumento(req);
+    if (!documento) return res.status(404).json({ error: 'documento_no_encontrado' });
+    if (!req.usuario.drive_tokens) return res.status(409).json({ error: 'drive_sin_conectar' });
+
+    const solicitado = String(req.body?.nombre || '')
+      .replace(/[\\/\0]/g, ' ')
+      .replace(/\s+/g, ' ')
+      .trim()
+      .slice(0, 120);
+    if (!solicitado) return res.status(400).json({ error: 'nombre_invalido' });
+
+    const extension = (documento.nombre_archivo || '').match(/\.[a-z0-9]{1,8}$/i)?.[0]
+      || (documento.mime_type === 'application/pdf' ? '.pdf' : '');
+    const base = solicitado.replace(/\.[a-z0-9]{1,8}$/i, '').trim();
+    if (!base) return res.status(400).json({ error: 'nombre_invalido' });
+    const nombreArchivo = `${base}${extension}`;
+
+    await drive.renombrarArchivo(req.usuario.drive_tokens, documento.drive_file_id, nombreArchivo);
+    const { data, error } = await supabase
+      .from('scan_documents')
+      .update({ nombre_archivo: nombreArchivo })
+      .eq('id', documento.id)
+      .eq('user_id', req.usuario.id)
+      .select()
+      .maybeSingle();
+    if (error) throw error;
+
+    res.json(data);
+  } catch (err) {
+    console.error('[documentos] error renombrando', err);
+    res.status(500).json({ error: 'error_renombrar' });
+  }
+});
+
 // Una foto recibida por WhatsApp se conserva completa al archivarla. Esta
 // ruta permite corregirla después con el mismo motor de perspectiva y
 // filtros del escáner, sin reclasificarla ni modificar el original.

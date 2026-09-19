@@ -1,8 +1,9 @@
 import ExpoModulesCore
 import VisionKit
 
-public final class TapptDocumentScannerModule: Module, VNDocumentCameraViewControllerDelegate {
+public final class TapptDocumentScannerModule: Module {
   private var pendingPromise: Promise?
+  private var scannerDelegate: TapptDocumentScannerDelegate?
 
   public func definition() -> ModuleDefinition {
     Name("TapptDocumentScanner")
@@ -23,17 +24,20 @@ public final class TapptDocumentScannerModule: Module, VNDocumentCameraViewContr
 
       self.pendingPromise = promise
       let controller = VNDocumentCameraViewController()
-      controller.delegate = self
+      let scannerDelegate = TapptDocumentScannerDelegate(owner: self)
+      self.scannerDelegate = scannerDelegate
+      controller.delegate = scannerDelegate
       presenter.present(controller, animated: true)
     }.runOnQueue(.main)
 
     OnDestroy {
       self.pendingPromise?.reject("ERR_SCANNER_DESTROYED", "El escáner se cerró antes de terminar")
       self.pendingPromise = nil
+      self.scannerDelegate = nil
     }
   }
 
-  public func documentCameraViewController(
+  fileprivate func documentCameraViewController(
     _ controller: VNDocumentCameraViewController,
     didFinishWith scan: VNDocumentCameraScan
   ) {
@@ -62,13 +66,14 @@ public final class TapptDocumentScannerModule: Module, VNDocumentCameraViewContr
           "pages": pages
         ])
         self.pendingPromise = nil
+        self.scannerDelegate = nil
       }
     } catch {
       finishWithError(controller, code: "ERR_SAVE_SCAN", message: error.localizedDescription)
     }
   }
 
-  public func documentCameraViewControllerDidCancel(_ controller: VNDocumentCameraViewController) {
+  fileprivate func documentCameraViewControllerDidCancel(_ controller: VNDocumentCameraViewController) {
     controller.dismiss(animated: true) {
       self.pendingPromise?.resolve([
         "cancelled": true,
@@ -76,10 +81,11 @@ public final class TapptDocumentScannerModule: Module, VNDocumentCameraViewContr
         "pages": []
       ])
       self.pendingPromise = nil
+      self.scannerDelegate = nil
     }
   }
 
-  public func documentCameraViewController(
+  fileprivate func documentCameraViewController(
     _ controller: VNDocumentCameraViewController,
     didFailWithError error: Error
   ) {
@@ -94,6 +100,33 @@ public final class TapptDocumentScannerModule: Module, VNDocumentCameraViewContr
     controller.dismiss(animated: true) {
       self.pendingPromise?.reject(code, message)
       self.pendingPromise = nil
+      self.scannerDelegate = nil
     }
+  }
+}
+
+private final class TapptDocumentScannerDelegate: NSObject, VNDocumentCameraViewControllerDelegate {
+  private weak var owner: TapptDocumentScannerModule?
+
+  init(owner: TapptDocumentScannerModule) {
+    self.owner = owner
+  }
+
+  func documentCameraViewController(
+    _ controller: VNDocumentCameraViewController,
+    didFinishWith scan: VNDocumentCameraScan
+  ) {
+    owner?.documentCameraViewController(controller, didFinishWith: scan)
+  }
+
+  func documentCameraViewControllerDidCancel(_ controller: VNDocumentCameraViewController) {
+    owner?.documentCameraViewControllerDidCancel(controller)
+  }
+
+  func documentCameraViewController(
+    _ controller: VNDocumentCameraViewController,
+    didFailWithError error: Error
+  ) {
+    owner?.documentCameraViewController(controller, didFailWithError: error)
   }
 }

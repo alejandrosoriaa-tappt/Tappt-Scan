@@ -90,6 +90,12 @@ const FORMAS = {
   derecha: (p) => <Polyline points="9,5 16,12 9,19" {...p} />,
   izquierda: (p) => <Polyline points="15,5 8,12 15,19" {...p} />,
   cerrar: (p) => <Path d="M6 6l12 12M18 6 6 18" {...p} />,
+  lapiz: (p) => (
+    <>
+      <Path d="M4 20l4.2-1 10.6-10.6a2 2 0 0 0-2.8-2.8L5.4 16.2z" {...p} />
+      <Path d="M14.7 6.9l2.8 2.8M4 20l1.4-3.8 2.8 2.8z" {...p} />
+    </>
+  ),
   ajustes: (p) => (
     <>
       <Circle cx="12" cy="12" r="3" {...p} />

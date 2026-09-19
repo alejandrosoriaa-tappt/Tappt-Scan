@@ -214,6 +214,11 @@ export const api = {
       method: 'PUT',
       body: JSON.stringify({ favorito }),
     }),
+  renombrarDocumento: (id, nombre) =>
+    request(`/api/documentos/${id}/nombre`, {
+      method: 'PUT',
+      body: JSON.stringify({ nombre }),
+    }),
   miniatura: (id) => request(`/api/documentos/${id}/miniatura`),
   pagina: (id, n = 0) => request(`/api/documentos/${id}/pagina/${n}`),
   mejorar: (id, imagen, esquinas, filtro, formato = 'auto') =>
