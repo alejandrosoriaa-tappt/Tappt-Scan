@@ -35,7 +35,8 @@ async function compartirLink(nombre, driveLink) {
     return;
   }
   try {
-    await Share.share({ message: nombre, url: driveLink });
+    const message = Platform.OS === 'android' ? `${nombre}\n${driveLink}` : nombre;
+    await Share.share({ message, url: driveLink });
   } catch {
     // Canceló — no es un error.
   }

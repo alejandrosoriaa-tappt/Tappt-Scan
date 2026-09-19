@@ -56,7 +56,13 @@ async function compartir(documento, t) {
     return;
   }
   try {
-    await Share.share({ message: documento.nombre_archivo, url: documento.drive_link });
+    // Android ignora el campo `url` de Share.share. La liga debe formar
+    // parte de `message`; en iOS conservamos `url`, que produce la tarjeta
+    // nativa sin repetir el enlace en el texto.
+    const message = Platform.OS === 'android'
+      ? `${documento.nombre_archivo}\n${documento.drive_link}`
+      : documento.nombre_archivo;
+    await Share.share({ message, url: documento.drive_link });
   } catch (err) {
     alertar(t('noSePudo'), err.message);
   }
