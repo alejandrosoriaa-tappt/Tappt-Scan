@@ -1,5 +1,6 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Svg, { Defs, LinearGradient, Stop, Rect } from 'react-native-svg';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
@@ -17,6 +18,7 @@ import RecorteScreen from '../screens/RecorteScreen';
 import BorradorEscaneoScreen from '../screens/BorradorEscaneoScreen';
 import LoginScreen from '../screens/LoginScreen';
 import OnboardingScreen from '../screens/OnboardingScreen';
+import BienvenidaScreen from '../screens/BienvenidaScreen';
 
 import Icono from '../components/Icono';
 import HojaCaptura from '../components/HojaCaptura';
@@ -31,6 +33,7 @@ import { colores, espacio, tipo, sombra } from '../theme';
 
 const Tab = createBottomTabNavigator();
 const Stack = createNativeStackNavigator();
+const CLAVE_BIENVENIDA = 'tappt.bienvenida.v1';
 
 const ICONOS = {
   Inicio: 'inicio',
@@ -161,9 +164,29 @@ function Tabs({ navigation }) {
 export default function RootNavigator() {
   const { sesion, cuenta, cargando } = useSesion();
   const { t } = useIdioma();
+  const [bienvenidaVista, setBienvenidaVista] = useState(null);
 
-  if (cargando) {
+  useEffect(() => {
+    AsyncStorage.getItem(CLAVE_BIENVENIDA)
+      .then((valor) => setBienvenidaVista(valor === 'vista'))
+      .catch(() => setBienvenidaVista(false));
+  }, []);
+
+  const continuarBienvenida = async () => {
+    setBienvenidaVista(true);
+    try {
+      await AsyncStorage.setItem(CLAVE_BIENVENIDA, 'vista');
+    } catch {
+      // La bienvenida no debe bloquear el acceso si el almacenamiento falla.
+    }
+  };
+
+  if (cargando || bienvenidaVista === null) {
     return <Splash />;
+  }
+
+  if (!sesion && !bienvenidaVista) {
+    return <BienvenidaScreen onContinuar={continuarBienvenida} />;
   }
 
   // Tres puertas: sin sesión → Login; con sesión pero sin Drive → Onboarding;

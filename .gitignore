@@ -4,3 +4,5 @@ node_modules/
 .DS_Store
 .cache/
 app/dist/
+app/modules/*/android/build/
+outputs/
