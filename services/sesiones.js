@@ -1,6 +1,7 @@
 const crypto = require('crypto');
 const jwt = require('jsonwebtoken');
 const supabase = require('./supabase');
+const { numeroAccesoTappt } = require('./whatsappAccess');
 
 /**
  * Sesiones propias, sin correo ni contraseña.
@@ -67,7 +68,7 @@ async function iniciar() {
     .insert({ codigo, estado: 'pendiente', expires_at: expira });
   if (error) throw error;
 
-  const numero = (process.env.WHATSAPP_NUMERO || '').replace(/\D/g, '');
+  const numero = numeroAccesoTappt();
   const mensaje = encodeURIComponent(`Hola, quiero entrar a Tappt. Código: ${codigo}`);
 
   return {

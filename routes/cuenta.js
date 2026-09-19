@@ -7,6 +7,7 @@ const stripe = require('../services/stripe');
 const whatsapp = require('../services/whatsapp');
 const supabase = require('../services/supabase');
 const { t, IDIOMAS } = require('../services/i18n');
+const { numeroAccesoTappt } = require('../services/whatsappAccess');
 
 // Perfil + estado de conexiones y consumo de la prueba gratuita.
 router.get('/', requireAuth, async (req, res) => {
@@ -28,7 +29,7 @@ router.get('/', requireAuth, async (req, res) => {
       escaneosLimite: limite === Infinity ? null : limite,
       // La app lo necesita para armar los enlaces wa.me; sin esto los
       // botones de WhatsApp abren la app sin destinatario.
-      numeroTapptScan: (process.env.WHATSAPP_NUMERO || '').replace(/\D/g, ''),
+      numeroTapptScan: numeroAccesoTappt(),
     });
   } catch (err) {
     console.error('[cuenta] error', err);
