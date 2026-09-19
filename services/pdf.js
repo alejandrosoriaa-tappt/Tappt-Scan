@@ -149,6 +149,54 @@ async function desdeImagenes(buffers) {
 }
 
 /**
+ * Añade una franja promocional discreta a cada página de los documentos
+ * gratuitos. La marca viaja dentro del PDF: también la ve quien lo recibe
+ * por WhatsApp, correo o cualquier otro medio. Los planes de pago nunca
+ * pasan por esta función.
+ */
+async function agregarMarcaTappt(pdfBuffer, idioma = 'es') {
+  const documento = await PDFDocument.load(pdfBuffer);
+  const fuente = await documento.embedFont(StandardFonts.HelveticaBold);
+  const texto = idioma === 'en'
+    ? 'Scanned and organized with Tappt | WhatsApp to Google Drive'
+    : 'Escaneado y organizado con Tappt | WhatsApp a Google Drive';
+
+  for (const pagina of documento.getPages()) {
+    const { width, height } = pagina.getSize();
+    const tamano = Math.max(9, Math.min(15, width / 55));
+    const altoFranja = Math.max(26, tamano + 13);
+    const anchoTexto = fuente.widthOfTextAtSize(texto, tamano);
+
+    pagina.drawRectangle({
+      x: 0,
+      y: 0,
+      width,
+      height: altoFranja,
+      color: rgb(1, 1, 1),
+      opacity: 0.86,
+    });
+    pagina.drawRectangle({
+      x: 0,
+      y: altoFranja - 1.5,
+      width,
+      height: 1.5,
+      color: rgb(0.094, 0.722, 0.459),
+      opacity: 0.9,
+    });
+    pagina.drawText(texto, {
+      x: Math.max(8, (width - anchoTexto) / 2),
+      y: Math.max(6, (altoFranja - tamano) / 2),
+      size: tamano,
+      font: fuente,
+      color: rgb(0.08, 0.12, 0.16),
+      opacity: 0.92,
+    });
+  }
+
+  return Buffer.from(await documento.save());
+}
+
+/**
  * Aplica anotaciones sobre un PDF existente.
  *
  * Coordenadas en fracciones (0-1) del ancho/alto de página, con origen
@@ -255,6 +303,7 @@ async function copiarPaginas(pdfBuffer, indices) {
 module.exports = {
   desdeImagen,
   desdeImagenes,
+  agregarMarcaTappt,
   aplicarAnotaciones,
   copiarPaginas,
   esPdf,

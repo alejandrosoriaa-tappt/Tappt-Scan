@@ -100,10 +100,14 @@ async function procesarArchivoBase(usuario, buffer, mimeType = 'image/jpeg', nom
     extraido = { tipo: 'otro', seccion: null, subcarpeta: null };
   }
 
-  // Las fotos se envuelven en un PDF; los PDF se conservan intactos.
-  const archivo = entradaEsPdf ? buffer : await pdf.desdeImagen(buffer, mimeType);
-
   const idioma = usuario.idioma || 'es';
+  // Las fotos se envuelven en un PDF. En el plan gratuito se integra una
+  // firma promocional discreta en todas las páginas; al pagar, desaparece.
+  let archivo = entradaEsPdf ? buffer : await pdf.desdeImagen(buffer, mimeType);
+  if (planes.planVigente(usuario) === 'gratis') {
+    archivo = await pdf.agregarMarcaTappt(archivo, idioma);
+  }
+
   const tramos = naming.rutaPara(extraido);
   const nombreArchivo = naming.nombreArchivo(extraido, idioma, 'pdf');
 

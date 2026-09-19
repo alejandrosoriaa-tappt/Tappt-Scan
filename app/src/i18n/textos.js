@@ -69,7 +69,7 @@ export const TEXTOS = {
     subiendo: 'Subiendo…',
     sinDocumentos:
       'Todavía no tienes documentos. Mándanos una foto por WhatsApp o usa la cámara.',
-    escaneosRestantes: 'Te {verbo} {n} escaneos este mes',
+    escaneosRestantes: 'Te {verbo} {n} documentos gratis',
     queda: 'queda',
     quedan: 'quedan',
     upsell: 'Pásate a Personal para escaneos ilimitados y edición de PDF.',
@@ -310,8 +310,8 @@ export const TEXTOS = {
 
 
     // Límite alcanzado
-    limiteTitulo: 'Llegaste a tu límite del mes',
-    limiteDetalle: 'Ya usaste tus {limite} escaneos gratis. Sigue guardando sin límite con el plan Personal.',
+    limiteTitulo: 'Terminaste tus documentos gratis',
+    limiteDetalle: 'Ya usaste tus {limite} documentos de prueba. Sigue guardando sin límite con el plan Personal.',
     ventajaIlimitado: 'Escaneos ilimitados, todos los meses.',
     ventajaFirmas: 'Edición de PDF.',
     ventajaGastos: 'Control de gastos automático (plan Negocio).',
@@ -331,7 +331,7 @@ export const TEXTOS = {
 
     // Errores
     noSePudo: 'No se pudo',
-    limiteAlcanzado: 'Ya usaste tus escaneos gratis del mes.',
+    limiteAlcanzado: 'Ya usaste tus documentos gratuitos.',
     driveSinConectar: 'Conecta tu Google Drive para poder guardar documentos.',
     recorteChico: 'El recorte quedó muy chico. Agranda el marco.',
     errorGenerico: 'Algo salió mal. Inténtalo de nuevo.',
@@ -414,7 +414,7 @@ export const TEXTOS = {
     desdeGaleria: 'From photos',
     subiendo: 'Uploading…',
     sinDocumentos: "No documents yet. Send us a photo on WhatsApp or use the camera.",
-    escaneosRestantes: 'You have {n} {verbo} left this month',
+    escaneosRestantes: 'You have {n} free {verbo} left',
     queda: 'scan',
     quedan: 'scans',
     upsell: 'Upgrade to Personal for unlimited scans and PDF editing.',
@@ -646,8 +646,8 @@ export const TEXTOS = {
     ventajaTuyo: 'If you ever leave, your documents stay with you.',
 
 
-    limiteTitulo: "You've hit this month's limit",
-    limiteDetalle: "You've used your {limite} free scans. Keep saving without limits on the Personal plan.",
+    limiteTitulo: "You've used your free documents",
+    limiteDetalle: "You've used your {limite} trial documents. Keep saving without limits on the Personal plan.",
     ventajaIlimitado: 'Unlimited scans, every month.',
     ventajaFirmas: 'PDF editing.',
     ventajaGastos: 'Automatic expense tracking (Business plan).',
@@ -666,7 +666,7 @@ export const TEXTOS = {
     seRenueva: 'Renews on {fecha}',
 
     noSePudo: "Couldn't do that",
-    limiteAlcanzado: "You've used your free scans for this month.",
+    limiteAlcanzado: "You've used your free documents.",
     driveSinConectar: 'Connect your Google Drive to save documents.',
     recorteChico: 'The crop came out too small. Widen the frame.',
     errorGenerico: 'Something went wrong. Please try again.',

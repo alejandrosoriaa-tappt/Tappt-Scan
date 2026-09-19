@@ -46,7 +46,7 @@ export default function HojaLimite({ visible, onCerrar, onVerPlanes }) {
               />
               <Text style={estilos.titulo}>{t('limiteTitulo')}</Text>
               <Text style={estilos.detalle}>
-                {t('limiteDetalle', { limite: cuenta?.escaneosLimite ?? 5 })}
+                {t('limiteDetalle', { limite: cuenta?.escaneosLimite ?? 15 })}
               </Text>
             </View>
 

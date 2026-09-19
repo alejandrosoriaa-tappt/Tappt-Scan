@@ -18,6 +18,28 @@ test('rasteriza en PNG un PDF con imagen sin depender de node-canvas', async () 
   assert.ok(pagina.length > 100);
 });
 
+test('integra la marca de Tappt en el borde inferior del PDF gratuito', async () => {
+  const canvas = createCanvas(600, 800);
+  const contexto = canvas.getContext('2d');
+  contexto.fillStyle = '#fff';
+  contexto.fillRect(0, 0, 600, 800);
+
+  const original = await pdf.desdeImagen(canvas.toBuffer('image/png'), 'image/png');
+  const marcado = await pdf.agregarMarcaTappt(original, 'es');
+  const png = await pdf.renderizarPagina(marcado, 0, 1);
+  const imagen = await loadImage(png);
+  const salida = createCanvas(600, 800);
+  const salidaContexto = salida.getContext('2d');
+  salidaContexto.drawImage(imagen, 0, 0, 600, 800);
+
+  const franja = salidaContexto.getImageData(0, 770, 600, 30).data;
+  let pixelesNoBlancos = 0;
+  for (let i = 0; i < franja.length; i += 4) {
+    if (franja[i] < 245 || franja[i + 1] < 245 || franja[i + 2] < 245) pixelesNoBlancos += 1;
+  }
+  assert.ok(pixelesNoBlancos > 300, 'la franja y el texto deben quedar horneados en el PDF');
+});
+
 test('tapar censura con un rectángulo negro por defecto', async () => {
   const canvas = createCanvas(120, 80);
   const contexto = canvas.getContext('2d');

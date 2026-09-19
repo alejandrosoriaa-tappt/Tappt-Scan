@@ -8,10 +8,10 @@ const whatsapp = require('../services/whatsapp');
 const supabase = require('../services/supabase');
 const { t, IDIOMAS } = require('../services/i18n');
 
-// Perfil + estado de conexiones y consumo del mes.
+// Perfil + estado de conexiones y consumo de la prueba gratuita.
 router.get('/', requireAuth, async (req, res) => {
   try {
-    const usados = await planes.escaneosDelMes(req.usuario.id);
+    const usados = await planes.escaneosGratisUsados(req.usuario.id);
     const vigente = planes.planVigente(req.usuario);
     const limite = planes.limiteDe(vigente);
 

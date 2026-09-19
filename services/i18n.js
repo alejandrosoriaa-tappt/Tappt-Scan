@@ -18,7 +18,7 @@ const MENSAJES = {
     driveExpirado:
       'Tu conexión con Google Drive venció o fue revocada. Vuelve a conectarla aquí y después mándame la foto otra vez:\n{appUrl}',
     limite:
-      'Ya usaste tus {limite} escaneos gratis de este mes. Pásate al plan Personal y escanea sin límite — escríbeme "quiero personal" y te mando el link.',
+      'Ya usaste tus {limite} documentos gratis. Pásate al plan Personal y sigue sin límite — escríbeme "quiero personal" y te mando el link.',
     guardado: 'Listo 📄\n\n*{archivo}*{paginas}\n📁 {ruta}',
     // El link a Drive va en el CUERPO, no como cuarto botón: Meta topa los
     // botones de respuesta en 3 —ya ocupados— y no deja mezclarlos con un
@@ -42,7 +42,7 @@ const MENSAJES = {
     cobroFallido:
       'No pude cobrar tu renovación — parece que la tarjeta falló. Lo intento otra vez en unos días. Si quieres cambiarla, escríbeme "mi suscripción".',
     planTerminado:
-      'Tu plan terminó y volviste al gratis: 5 escaneos al mes. Tus documentos siguen intactos en tu Drive. Cuando quieras volver, escríbeme "quiero personal".',
+      'Tu plan terminó. Tus documentos siguen intactos en tu Drive; para procesar más, escríbeme "quiero personal".',
     portalPago: 'Aquí puedes cambiar tu tarjeta o cancelar cuando quieras:\n{link}',
     sinSuscripcion: 'Todavía no tienes un plan de pago activo.',
     verApp:
@@ -69,7 +69,7 @@ const MENSAJES = {
     driveExpirado:
       'Your Google Drive connection expired or was revoked. Reconnect it here, then send me the photo again:\n{appUrl}',
     limite:
-      'You\'ve used your {limite} free scans this month. Upgrade to Personal for unlimited scans — reply "I want personal" and I\'ll send you the link.',
+      'You\'ve used your {limite} free documents. Upgrade to Personal to keep going without limits — reply "I want personal" and I\'ll send you the link.',
     guardado: 'Done 📄\n\n*{archivo}*{paginas}\n📁 {ruta}',
     guardadoDrive: 'Your file is safe in Google Drive.',
     botonDrive: 'Open in Drive',
@@ -90,7 +90,7 @@ const MENSAJES = {
     cobroFallido:
       "I couldn't charge your renewal — looks like the card failed. I'll retry in a few days. To update it, message me \"my subscription\".",
     planTerminado:
-      'Your plan ended and you\'re back on free: 5 scans a month. Your documents are untouched in your Drive. Message me "I want personal" to come back.',
+      'Your plan ended. Your documents remain untouched in Drive; to process more, message me "I want personal".',
     portalPago: 'Here you can change your card or cancel any time:\n{link}',
     sinSuscripcion: "You don't have a paid plan yet.",
     verApp: '📂 Your document: {driveLink}\n\nTo edit it, open it in Tappt:\n{appUrl}',
