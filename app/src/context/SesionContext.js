@@ -10,6 +10,7 @@ export function SesionProvider({ children }) {
   const [token, setToken] = useState(null);
   const [cuenta, setCuenta] = useState(null);
   const [cargando, setCargando] = useState(true);
+  const [cuentaConsultada, setCuentaConsultada] = useState(false);
   const { idioma } = useIdioma();
 
   const refrescarCuenta = useCallback(async () => {
@@ -23,6 +24,11 @@ export function SesionProvider({ children }) {
         setToken(null);
         setCuenta(null);
       }
+    } finally {
+      // No se decide entre Inicio y Conectar Drive hasta tener la respuesta
+      // del backend. Evita mostrar el dashboard durante un frame al volver
+      // de WhatsApp con un token recién emitido.
+      setCuentaConsultada(true);
     }
   }, []);
 
@@ -65,6 +71,8 @@ export function SesionProvider({ children }) {
 
   const entrarConToken = useCallback(async (nuevo) => {
     await guardarToken(nuevo);
+    setCuenta(null);
+    setCuentaConsultada(false);
     setToken(nuevo);
   }, []);
 
@@ -72,11 +80,19 @@ export function SesionProvider({ children }) {
     await borrarToken();
     setToken(null);
     setCuenta(null);
+    setCuentaConsultada(false);
   }, []);
 
   return (
     <SesionContext.Provider
-      value={{ sesion: token, cuenta, cargando, refrescarCuenta, entrarConToken, cerrarSesion }}
+      value={{
+        sesion: token,
+        cuenta,
+        cargando: cargando || Boolean(token && !cuentaConsultada),
+        refrescarCuenta,
+        entrarConToken,
+        cerrarSesion,
+      }}
     >
       {children}
     </SesionContext.Provider>
