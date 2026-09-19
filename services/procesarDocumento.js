@@ -182,7 +182,7 @@ async function procesarArchivoBase(usuario, buffer, mimeType = 'image/jpeg', nom
   }
   metricas.supabase = { ok: true, durationMs: Date.now() - inicioSupabase };
 
-  // El control de gastos es del plan Negocio. Se lanza sin await: si la
+  // El control de gastos es de Tappt Pro. Se lanza sin await: si la
   // hoja falla, el documento ya quedó guardado igual.
   if (planes.tieneControlDeGastos(usuario)) {
     sheets.registrarGasto(usuario, documento).catch(() => {});

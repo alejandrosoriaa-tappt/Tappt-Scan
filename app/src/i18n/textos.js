@@ -72,7 +72,7 @@ export const TEXTOS = {
     escaneosRestantes: 'Te {verbo} {n} documentos gratis',
     queda: 'queda',
     quedan: 'quedan',
-    upsell: 'Pásate a Personal para escaneos ilimitados y edición de PDF.',
+    upsell: 'Pásate a Tappt Pro para uso ilimitado y sin marca de agua.',
 
     // Cámara y recorte
     permisoCamara: 'Necesitamos la cámara',
@@ -214,7 +214,7 @@ export const TEXTOS = {
     idioma: 'Idioma',
     verBienvenida: 'Ver bienvenida de Tappt',
     verBienvenidaDetalle: 'Revisa el flujo de WhatsApp, inteligencia artificial y Google Drive.',
-    mejorarPersonal: 'Mejorar a Personal',
+    mejorarPersonal: 'Mejorar a Tappt Pro',
     linkEnviado: 'Link enviado',
     linkEnviadoDetalle: 'Te mandamos el link de pago por WhatsApp para completar la compra.',
     conectaWhatsappParaPago: 'Conecta tu WhatsApp para recibir el link de pago.',
@@ -276,7 +276,7 @@ export const TEXTOS = {
     porCategoria: 'Por categoría',
     sinGastos: 'Todavía no hay gastos registrados este mes.',
     promoNegocioTitulo: 'Control de gastos automático',
-    promoNegocioTexto: 'Con el plan Negocio llevo tus gastos en una hoja dentro de tu Drive y respondo tus preguntas por WhatsApp.',
+    promoNegocioTexto: 'Con Tappt Pro llevo tus gastos en una hoja dentro de tu Drive y respondo tus preguntas por WhatsApp.',
     gasto_supermercado: 'Supermercado',
     gasto_restaurantes: 'Restaurantes',
     gasto_gasolina: 'Gasolina',
@@ -312,19 +312,19 @@ export const TEXTOS = {
 
 
     // Límite alcanzado
-    limiteTitulo: 'Terminaste tus documentos gratis',
-    limiteDetalle: 'Ya usaste tus {limite} documentos de prueba. Sigue guardando sin límite con el plan Personal.',
+    limiteTitulo: 'Usaste tus documentos gratis de este periodo',
+    limiteDetalle: 'Tus {limite} documentos gratuitos se renuevan cada 30 días. Con Tappt Pro puedes seguir ahora sin límite ni marca de agua.',
     ventajaIlimitado: 'Escaneos ilimitados, todos los meses.',
     ventajaFirmas: 'Edición de PDF.',
-    ventajaGastos: 'Control de gastos automático (plan Negocio).',
-    verPlanes: 'Ver opciones en Google Play',
+    ventajaGastos: 'Control de gastos automático.',
+    verPlanes: 'Activar Tappt Pro en Google Play',
     continuarEnWhatsapp: 'Continuar en WhatsApp',
     limiteNota: 'La compra se completa de forma segura mediante Google Play. Tu documento sigue aquí esperando.',
     ahoraNo: 'Ahora no',
-    mensajeQuieroMas: 'Quiero el plan Personal',
+    mensajeQuieroMas: 'Quiero Tappt Pro',
 
 
-    hablarDePlanes: 'Hablar de planes por WhatsApp',
+    hablarDePlanes: 'Conocer Tappt Pro por WhatsApp',
     gestionarSuscripcion: 'Gestionar mi suscripción',
     suscribirseA: 'Suscribirse a {plan}',
     mensajeMiSuscripcion: 'Mi suscripción',
@@ -419,7 +419,7 @@ export const TEXTOS = {
     escaneosRestantes: 'You have {n} free {verbo} left',
     queda: 'scan',
     quedan: 'scans',
-    upsell: 'Upgrade to Personal for unlimited scans and PDF editing.',
+    upsell: 'Upgrade to Tappt Pro for unlimited, watermark-free use.',
 
     permisoCamara: 'We need the camera',
     permisoCamaraDetalle:
@@ -558,7 +558,7 @@ export const TEXTOS = {
     idioma: 'Language',
     verBienvenida: 'View the Tappt welcome',
     verBienvenidaDetalle: 'Review the WhatsApp, artificial intelligence and Google Drive flow.',
-    mejorarPersonal: 'Upgrade to Personal',
+    mejorarPersonal: 'Upgrade to Tappt Pro',
     linkEnviado: 'Link sent',
     linkEnviadoDetalle: 'We sent the payment link over WhatsApp to complete your purchase.',
     conectaWhatsappParaPago: 'Connect your WhatsApp to receive the payment link.',
@@ -616,7 +616,7 @@ export const TEXTOS = {
     porCategoria: 'By category',
     sinGastos: 'No expenses recorded this month yet.',
     promoNegocioTitulo: 'Automatic expense tracking',
-    promoNegocioTexto: 'With the Business plan I keep your expenses in a sheet inside your Drive and answer your questions on WhatsApp.',
+    promoNegocioTexto: 'With Tappt Pro I keep your expenses in a sheet inside your Drive and answer your questions on WhatsApp.',
     gasto_supermercado: 'Groceries',
     gasto_restaurantes: 'Restaurants',
     gasto_gasolina: 'Fuel',
@@ -650,19 +650,19 @@ export const TEXTOS = {
     ventajaTuyo: 'If you ever leave, your documents stay with you.',
 
 
-    limiteTitulo: "You've used your free documents",
-    limiteDetalle: "You've used your {limite} trial documents. Keep saving without limits on the Personal plan.",
+    limiteTitulo: "You've used your free documents for this period",
+    limiteDetalle: 'Your {limite} free documents renew every 30 days. Tappt Pro lets you continue now with unlimited, watermark-free use.',
     ventajaIlimitado: 'Unlimited scans, every month.',
     ventajaFirmas: 'PDF editing.',
-    ventajaGastos: 'Automatic expense tracking (Business plan).',
-    verPlanes: 'View options in Google Play',
+    ventajaGastos: 'Automatic expense tracking.',
+    verPlanes: 'Activate Tappt Pro in Google Play',
     continuarEnWhatsapp: 'Continue on WhatsApp',
     limiteNota: 'Your purchase is completed securely through Google Play. Your document is still here waiting.',
     ahoraNo: 'Not now',
-    mensajeQuieroMas: 'I want the Personal plan',
+    mensajeQuieroMas: 'I want Tappt Pro',
 
 
-    hablarDePlanes: 'Talk plans on WhatsApp',
+    hablarDePlanes: 'Learn about Tappt Pro on WhatsApp',
     gestionarSuscripcion: 'Manage my subscription',
     suscribirseA: 'Subscribe to {plan}',
     mensajeMiSuscripcion: 'My subscription',

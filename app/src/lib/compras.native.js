@@ -14,8 +14,7 @@ import { api } from './api';
 // coincidir EXACTO con los productos dados de alta en App Store Connect
 // y Play Console, o la compra no aparece ahí para comprarse.
 export const PRODUCTOS_IAP = {
-  personal: 'lat.tappt.scan.personal.anual',
-  negocio: 'lat.tappt.scan.negocio.anual',
+  pro: 'lat.tappt.scan.pro.anual',
 };
 
 // Segundo canal de cobro (docs/DIRECCION-DISENO.md, decisión 2026-08-12):

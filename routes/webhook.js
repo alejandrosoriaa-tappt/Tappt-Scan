@@ -308,7 +308,7 @@ function tomarPendiente(from) {
 }
 
 // Intención de compra, en español o inglés.
-const QUIERE_PLAN = /(quiero|dame|activar|i want|upgrade to|get)\s+(el\s+)?(plan\s+)?(personal|negocio|business)/i;
+const QUIERE_PLAN = /(quiero|dame|activar|i want|upgrade to|get)\s+(el\s+)?(plan\s+)?(pro|personal|negocio|business)/i;
 
 // Cancelar, cambiar tarjeta o ver la facturación.
 const QUIERE_SUSCRIPCION =
@@ -444,7 +444,7 @@ async function handleText(from, text) {
   }
 
   if (QUIERE_PLAN.test(limpio)) {
-    const plan = /negocio|business/i.test(limpio) ? 'negocio' : 'personal';
+    const plan = 'pro';
 
     if (!user) {
       await whatsapp.sendText(from, t(idioma, 'primeroApp'));

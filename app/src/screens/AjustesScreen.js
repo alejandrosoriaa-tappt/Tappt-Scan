@@ -11,7 +11,7 @@ import { TEXTOS } from '../i18n/textos';
 import { colores, espacio, tipo } from '../theme';
 import { iapDisponible, comprasIAP } from '../lib/compras';
 
-const PLANES = { gratis: 'Gratis', personal: 'Personal', negocio: 'Negocio' };
+const PLANES = { gratis: 'Gratis', pro: 'Tappt Pro', personal: 'Tappt Pro', negocio: 'Tappt Pro' };
 const VERSION_APP = Constants.expoConfig?.version || '0.1.0';
 const VERSION_BUILD = Platform.select({
   android: Constants.platform?.android?.versionCode,
@@ -35,7 +35,7 @@ function Fila({ etiqueta, valor, estado }) {
 export default function AjustesScreen({ navigation }) {
   const { cuenta, cerrarSesion, refrescarCuenta } = useSesion();
   const { t, idioma, setIdioma, idiomas } = useIdioma();
-  const [comprando, setComprando] = useState(null); // 'personal' | 'negocio' | null
+  const [comprando, setComprando] = useState(null);
 
   /**
    * Dos canales de cobro (docs/DIRECCION-DISENO.md, decisión 2026-08-12):
@@ -141,7 +141,7 @@ export default function AjustesScreen({ navigation }) {
 
         {iapDisponible && cuenta.plan === 'gratis' ? (
           <View style={estilos.planesIAP}>
-            {['personal', 'negocio'].map((plan) => (
+            {['pro'].map((plan) => (
               <TouchableOpacity
                 key={plan}
                 style={estilos.botonPlanIAP}

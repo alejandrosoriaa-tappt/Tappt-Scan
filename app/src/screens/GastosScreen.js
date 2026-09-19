@@ -68,7 +68,7 @@ export default function GastosScreen({ navigation }) {
   const gastos = useCargar(() => api.gastos(mes), [mes]);
   const datos = gastos.datos;
 
-  const esNegocio = cuenta?.plan === 'negocio';
+  const esNegocio = cuenta?.plan != null && cuenta.plan !== 'gratis';
   const nombreMes = () => {
     const [anio, m] = mes.split('-').map(Number);
     return `${(MESES[idioma] || MESES.es)[m - 1]} ${anio}`;

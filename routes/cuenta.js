@@ -69,7 +69,7 @@ router.put('/preferencias', requireAuth, async (req, res) => {
 router.post('/upgrade', requireAuth, async (req, res) => {
   try {
     const { plan, moneda } = req.body;
-    if (!['personal', 'negocio'].includes(plan)) {
+    if (plan !== 'pro') {
       return res.status(400).json({ error: 'plan_invalido' });
     }
 

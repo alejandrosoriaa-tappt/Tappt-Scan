@@ -18,7 +18,7 @@ const MENSAJES = {
     driveExpirado:
       'Tu conexión con Google Drive venció o fue revocada. Vuelve a conectarla aquí y después mándame la foto otra vez:\n{appUrl}',
     limite:
-      'Ya usaste tus {limite} documentos gratis. Pásate al plan Personal y sigue sin límite — escríbeme "quiero personal" y te mando el link.',
+      'Ya usaste tus {limite} documentos gratuitos de este periodo. Se renuevan cada 30 días, o activa Tappt Pro para seguir sin límite y sin marca de agua — escríbeme "quiero pro".',
     guardado: 'Listo 📄\n\n*{archivo}*{paginas}\n📁 {ruta}',
     // El link a Drive va en el CUERPO, no como cuarto botón: Meta topa los
     // botones de respuesta en 3 —ya ocupados— y no deja mezclarlos con un
@@ -42,13 +42,13 @@ const MENSAJES = {
     cobroFallido:
       'No pude cobrar tu renovación — parece que la tarjeta falló. Lo intento otra vez en unos días. Si quieres cambiarla, escríbeme "mi suscripción".',
     planTerminado:
-      'Tu plan terminó. Tus documentos siguen intactos en tu Drive; para procesar más, escríbeme "quiero personal".',
+      'Tu plan terminó. Tus documentos siguen intactos en tu Drive; para procesar sin límite, escríbeme "quiero pro".',
     portalPago: 'Aquí puedes cambiar tu tarjeta o cancelar cuando quieras:\n{link}',
     sinSuscripcion: 'Todavía no tienes un plan de pago activo.',
     verApp:
       '📂 Tu documento: {driveLink}\n\nPara editarlo, ábrelo en Tappt:\n{appUrl}',
     gastosEsNegocio:
-      'Esa pregunta la contesto con el plan Negocio: llevo tus gastos en una hoja dentro de tu Drive y te respondo aquí mismo. Escríbeme "quiero negocio" y te mando el link.',
+      'Esa función viene con Tappt Pro: llevo tus gastos en una hoja dentro de tu Drive y te respondo aquí mismo. Escríbeme "quiero pro" y te mando el link.',
     otraCosa: 'Ok, dime qué tipo de documento es o mándame otra foto.',
     reclasificado: '✅ Listo, lo moví a {ruta}\n\n📄 {nombre}',
     reclasificadoPorRevisar:
@@ -69,7 +69,7 @@ const MENSAJES = {
     driveExpirado:
       'Your Google Drive connection expired or was revoked. Reconnect it here, then send me the photo again:\n{appUrl}',
     limite:
-      'You\'ve used your {limite} free documents. Upgrade to Personal to keep going without limits — reply "I want personal" and I\'ll send you the link.',
+      'You\'ve used your {limite} free documents for this period. They renew every 30 days, or activate Tappt Pro for unlimited, watermark-free use — reply "I want pro".',
     guardado: 'Done 📄\n\n*{archivo}*{paginas}\n📁 {ruta}',
     guardadoDrive: 'Your file is safe in Google Drive.',
     botonDrive: 'Open in Drive',
@@ -90,12 +90,12 @@ const MENSAJES = {
     cobroFallido:
       "I couldn't charge your renewal — looks like the card failed. I'll retry in a few days. To update it, message me \"my subscription\".",
     planTerminado:
-      'Your plan ended. Your documents remain untouched in Drive; to process more, message me "I want personal".',
+      'Your plan ended. Your documents remain untouched in Drive; for unlimited processing, message me "I want pro".',
     portalPago: 'Here you can change your card or cancel any time:\n{link}',
     sinSuscripcion: "You don't have a paid plan yet.",
     verApp: '📂 Your document: {driveLink}\n\nTo edit it, open it in Tappt:\n{appUrl}',
     gastosEsNegocio:
-      'That one comes with the Business plan: I keep your expenses in a sheet inside your Drive and answer right here. Reply "I want business" and I\'ll send you the link.',
+      'That feature comes with Tappt Pro: I keep your expenses in a sheet inside your Drive and answer right here. Reply "I want pro" and I\'ll send you the link.',
     otraCosa: "Okay — tell me what kind of document it is, or send me another photo.",
     reclasificado: '✅ Done, I moved it to {ruta}\n\n📄 {nombre}',
     reclasificadoPorRevisar:
