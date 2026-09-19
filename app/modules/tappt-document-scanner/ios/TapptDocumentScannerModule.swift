@@ -1,5 +1,6 @@
 import ExpoModulesCore
 import VisionKit
+import UIKit
 
 public final class TapptDocumentScannerModule: Module {
   private var pendingPromise: Promise?
@@ -48,8 +49,12 @@ public final class TapptDocumentScannerModule: Module {
 
       var pages: [[String: Any]] = []
       for index in 0..<scan.pageCount {
-        let image = scan.imageOfPage(at: index)
-        guard let data = image.jpegData(compressionQuality: 0.95) else {
+        // VisionKit conserva internamente todas las páginas de resolución de
+        // cámara. Crear además un JPEG al 95 % de cada original provoca picos
+        // de memoria capaces de hacer que iOS mate la app. Para PDF y OCR,
+        // 2400 px y calidad 0.82 preservan texto fino sin duplicar el sensor.
+        let image = resizedForDocument(scan.imageOfPage(at: index), maxDimension: 2400)
+        guard let data = image.jpegData(compressionQuality: 0.82) else {
           throw NSError(domain: "TapptDocumentScanner", code: 2, userInfo: [
             NSLocalizedDescriptionKey: "No se pudo convertir la página \(index + 1)"
           ])
@@ -70,6 +75,23 @@ public final class TapptDocumentScannerModule: Module {
       }
     } catch {
       finishWithError(controller, code: "ERR_SAVE_SCAN", message: error.localizedDescription)
+    }
+  }
+
+  private func resizedForDocument(_ image: UIImage, maxDimension: CGFloat) -> UIImage {
+    let largest = max(image.size.width, image.size.height)
+    guard largest > maxDimension else { return image }
+
+    let scale = maxDimension / largest
+    let target = CGSize(
+      width: max(1, floor(image.size.width * scale)),
+      height: max(1, floor(image.size.height * scale))
+    )
+    let format = UIGraphicsImageRendererFormat.default()
+    format.scale = 1
+    format.opaque = true
+    return UIGraphicsImageRenderer(size: target, format: format).image { _ in
+      image.draw(in: CGRect(origin: .zero, size: target))
     }
   }
 

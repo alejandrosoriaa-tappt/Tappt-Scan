@@ -21,6 +21,10 @@ function dimensiones(uri) {
  * volver a detectar bordes aquí podría recortar dos veces una página buena.
  */
 export async function escanearDocumentoNativo() {
+  // La pantalla de escaneo se monta dentro de una transición nativa. Si
+  // VisionKit intenta presentarse en el mismo frame, iOS puede ignorar la
+  // presentación y dejar la promesa abierta en “Abriendo escáner…”.
+  await new Promise((resolve) => setTimeout(resolve, 450));
   const resultado = await TapptDocumentScanner.scan({ maxPages: 30 });
   if (resultado.cancelled) return null;
 
