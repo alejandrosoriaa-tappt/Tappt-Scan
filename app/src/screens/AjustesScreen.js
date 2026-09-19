@@ -32,7 +32,7 @@ function Fila({ etiqueta, valor, estado }) {
   );
 }
 
-export default function AjustesScreen() {
+export default function AjustesScreen({ navigation }) {
   const { cuenta, cerrarSesion, refrescarCuenta } = useSesion();
   const { t, idioma, setIdioma, idiomas } = useIdioma();
   const [comprando, setComprando] = useState(null); // 'personal' | 'negocio' | null
@@ -106,6 +106,19 @@ export default function AjustesScreen() {
             </TouchableOpacity>
           ))}
         </View>
+
+        <TouchableOpacity
+          style={estilos.botonBienvenida}
+          onPress={() => navigation.navigate('Bienvenida')}
+          activeOpacity={0.85}
+        >
+          <Icono nombre="estrella" tamano={19} color={colores.primario} />
+          <View style={estilos.botonBienvenidaContenido}>
+            <Text style={estilos.botonBienvenidaTexto}>{t('verBienvenida')}</Text>
+            <Text style={estilos.botonBienvenidaDetalle}>{t('verBienvenidaDetalle')}</Text>
+          </View>
+          <Icono nombre="derecha" tamano={18} color={colores.textoSuave} />
+        </TouchableOpacity>
 
         <Text style={estilos.tituloSeccion}>{t('plan')}</Text>
         <View style={estilos.tarjeta}>
@@ -224,6 +237,20 @@ const estilos = StyleSheet.create({
     marginTop: espacio.md,
   },
   botonWhatsappTexto: { color: colores.primario, fontSize: 15, fontWeight: '600' },
+  botonBienvenida: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: espacio.sm,
+    backgroundColor: colores.superficie,
+    borderWidth: 1,
+    borderColor: colores.divisor,
+    borderRadius: 12,
+    padding: espacio.md,
+    marginTop: espacio.md,
+  },
+  botonBienvenidaContenido: { flex: 1 },
+  botonBienvenidaTexto: { color: colores.texto, fontSize: 15, fontWeight: '700' },
+  botonBienvenidaDetalle: { color: colores.textoSuave, fontSize: 12, lineHeight: 17, marginTop: 2 },
   planesIAP: { gap: espacio.sm, marginTop: espacio.md },
   botonPlanIAP: {
     backgroundColor: colores.primario,

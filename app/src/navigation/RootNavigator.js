@@ -224,6 +224,9 @@ export default function RootNavigator() {
       <Stack.Screen name="Escanear" component={EscanearScreen} options={{ headerShown: false }} />
       <Stack.Screen name="BorradorEscaneo" component={BorradorEscaneoScreen} options={{ headerShown: false }} />
       <Stack.Screen name="Ajustes" component={AjustesScreen} options={{ title: t('ajustes') }} />
+      <Stack.Screen name="Bienvenida" options={{ headerShown: false }}>
+        {({ navigation }) => <BienvenidaScreen onContinuar={() => navigation.goBack()} />}
+      </Stack.Screen>
     </Stack.Navigator>
   );
 }
