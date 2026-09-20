@@ -1,6 +1,6 @@
 {
   "name": "tappt-scan-app",
-  "version": "0.1.9",
+  "version": "0.2.0",
   "private": true,
   "main": "index.js",
   "scripts": {
