@@ -64,7 +64,23 @@ export default function AjustesScreen({ navigation }) {
     }
   };
 
-  if (!cuenta) return <SafeAreaView style={estilos.pantalla} />;
+  // Nunca dejes al usuario atrapado en una pantalla vacía si la cuenta no
+  // pudo cargarse. Puede ocurrir con una sesión antigua restaurada por el
+  // respaldo de Android. Cerrar sesión limpia el token local y devuelve el
+  // flujo a "Entrar con WhatsApp".
+  if (!cuenta) {
+    return (
+      <SafeAreaView style={estilos.pantalla} edges={['top']}>
+        <View style={estilos.recuperacion}>
+          <Text style={estilos.titulo}>{t('ajustes')}</Text>
+          <Text style={estilos.recuperacionTexto}>{t('sesionNoDisponible')}</Text>
+          <TouchableOpacity style={estilos.botonRecuperacion} onPress={cerrarSesion} activeOpacity={0.85}>
+            <Text style={estilos.botonRecuperacionTexto}>{t('cerrarSesion')}</Text>
+          </TouchableOpacity>
+        </View>
+      </SafeAreaView>
+    );
+  }
 
   return (
     <SafeAreaView style={estilos.pantalla} edges={['top']}>
@@ -185,6 +201,16 @@ export default function AjustesScreen({ navigation }) {
 const estilos = StyleSheet.create({
   pantalla: { flex: 1, backgroundColor: colores.fondo },
   contenido: { padding: espacio.md, paddingBottom: espacio.xl },
+  recuperacion: { flex: 1, justifyContent: 'center', padding: espacio.lg },
+  recuperacionTexto: { ...tipo.cuerpo, color: colores.textoSuave, textAlign: 'center', lineHeight: 21 },
+  botonRecuperacion: {
+    backgroundColor: colores.primario,
+    borderRadius: 12,
+    paddingVertical: espacio.md,
+    alignItems: 'center',
+    marginTop: espacio.lg,
+  },
+  botonRecuperacionTexto: { color: colores.blanco, fontSize: 16, fontWeight: '700' },
   titulo: { ...tipo.titulo, color: colores.texto, marginVertical: espacio.sm },
   tituloSeccion: {
     fontSize: 13,

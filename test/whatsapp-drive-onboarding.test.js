@@ -16,3 +16,14 @@ test('espera la cuenta antes de decidir si debe conectar Google Drive', () => {
   assert.match(navigator, /if \(cargando \|\| bienvenidaVista === null\)/);
   assert.match(navigator, /cuenta && !cuenta\.driveConectado/);
 });
+
+test('una sesión restaurada que falla autenticación regresa al acceso', () => {
+  const context = read('app/src/context/SesionContext.js');
+  const settings = read('app/src/screens/AjustesScreen.js');
+  const config = JSON.parse(read('app/app.json'));
+
+  assert.match(context, /usuario_no_encontrado', 'error_auth'/);
+  assert.match(settings, /sesionNoDisponible/);
+  assert.match(settings, /onPress=\{cerrarSesion\}/);
+  assert.equal(config.expo.android.allowBackup, false);
+});

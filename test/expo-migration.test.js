@@ -26,12 +26,12 @@ test('la cámara usa la API contextual vigente de ImageManipulator', () => {
   assert.match(camera, /saveAsync\(/);
 });
 
-test('la configuración Android de v19 aísla el runtime y no duplica permisos', () => {
+test('la configuración Android de v20 aísla el runtime y no duplica permisos', () => {
   const appConfig = JSON.parse(read('app/app.json')).expo;
   const permissions = appConfig.android.permissions;
 
-  assert.equal(appConfig.version, '0.1.9');
-  assert.equal(appConfig.android.versionCode, 19);
+  assert.equal(appConfig.version, '0.2.0');
+  assert.equal(appConfig.android.versionCode, 20);
   assert.equal(appConfig.name, 'Tappt');
   assert.equal(appConfig.ios.buildNumber, '7');
   assert.equal(appConfig.scheme, 'tapptscan');

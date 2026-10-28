@@ -19,7 +19,7 @@ export function SesionProvider({ children }) {
     } catch (err) {
       // Token vencido o revocado: se cierra la sesión en vez de dejar la
       // app en un limbo donde todo falla.
-      if (['token_invalido', 'falta_token', 'usuario_no_encontrado'].includes(err.message)) {
+      if (['token_invalido', 'falta_token', 'usuario_no_encontrado', 'error_auth'].includes(err.message)) {
         await borrarToken();
         setToken(null);
         setCuenta(null);

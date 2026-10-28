@@ -56,6 +56,7 @@ export const TEXTOS = {
       'Ahí se guardan tus documentos. Nosotros solo guardamos sus datos para que puedas buscarlos.',
     conectarDrive: 'Conectar Drive',
     cerrarSesion: 'Cerrar sesión',
+    sesionNoDisponible: 'No pudimos cargar tu cuenta. Cierra la sesión para volver a entrar con WhatsApp.',
 
     // Dashboard
     hola: 'Hola',
@@ -405,6 +406,7 @@ export const TEXTOS = {
       "That's where your documents go. We only keep their details so you can search them.",
     conectarDrive: 'Connect Drive',
     cerrarSesion: 'Sign out',
+    sesionNoDisponible: 'We could not load your account. Sign out to continue with WhatsApp.',
 
     hola: 'Hi',
     subSaludo: 'Your documents, in your own Drive.',

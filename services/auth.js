@@ -31,6 +31,13 @@ async function requireAuth(req, res, next) {
     next();
   } catch (err) {
     console.error('[auth] error validando sesión', err);
+    // Una sesión de versiones antiguas puede contener como `sub` el número
+    // de teléfono en vez del UUID actual. Postgres responde 22P02 al intentar
+    // compararlo con scan_users.id. Para la app esto es una sesión inválida,
+    // no una falla interna: el 401 hace que borre el token y vuelva al acceso.
+    if (err?.code === '22P02') {
+      return res.status(401).json({ error: 'token_invalido' });
+    }
     res.status(500).json({ error: 'error_auth' });
   }
 }

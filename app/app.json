@@ -24,6 +24,7 @@
     "android": {
       "package": "lat.tappt.scan",
       "versionCode": 20,
+      "allowBackup": false,
       "adaptiveIcon": {
         "foregroundImage": "./assets/tappt-logo.png",
         "backgroundColor": "#0FA477"
