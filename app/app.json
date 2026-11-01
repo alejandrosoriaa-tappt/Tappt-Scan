@@ -23,7 +23,7 @@
     },
     "android": {
       "package": "lat.tappt.scan",
-      "versionCode": 20,
+      "versionCode": 21,
       "allowBackup": false,
       "adaptiveIcon": {
         "foregroundImage": "./assets/tappt-logo.png",

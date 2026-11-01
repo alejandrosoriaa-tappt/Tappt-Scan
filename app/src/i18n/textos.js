@@ -314,11 +314,11 @@ export const TEXTOS = {
 
     // Límite alcanzado
     limiteTitulo: 'Usaste tus documentos gratis de este periodo',
-    limiteDetalle: 'Tus {limite} documentos gratuitos se renuevan cada 30 días. Con Tappt Pro puedes seguir ahora sin límite ni marca de agua.',
+    limiteDetalle: 'Tus {limite} documentos gratuitos se renuevan cada 30 días. Con Tappt Esencial tienes 30 al mes sin marca de agua; Pro es ilimitado.',
     ventajaIlimitado: 'Escaneos ilimitados, todos los meses.',
     ventajaFirmas: 'Edición de PDF.',
     ventajaGastos: 'Control de gastos automático.',
-    verPlanes: 'Activar Tappt Pro en Google Play',
+    verPlanes: 'Ver planes en Google Play',
     continuarEnWhatsapp: 'Continuar en WhatsApp',
     limiteNota: 'La compra se completa de forma segura mediante Google Play. Tu documento sigue aquí esperando.',
     ahoraNo: 'Ahora no',
@@ -653,11 +653,11 @@ export const TEXTOS = {
 
 
     limiteTitulo: "You've used your free documents for this period",
-    limiteDetalle: 'Your {limite} free documents renew every 30 days. Tappt Pro lets you continue now with unlimited, watermark-free use.',
+    limiteDetalle: 'Your {limite} free documents renew every 30 days. Tappt Essential includes 30 per month without a watermark; Pro is unlimited.',
     ventajaIlimitado: 'Unlimited scans, every month.',
     ventajaFirmas: 'PDF editing.',
     ventajaGastos: 'Automatic expense tracking.',
-    verPlanes: 'Activate Tappt Pro in Google Play',
+    verPlanes: 'View plans in Google Play',
     continuarEnWhatsapp: 'Continue on WhatsApp',
     limiteNota: 'Your purchase is completed securely through Google Play. Your document is still here waiting.',
     ahoraNo: 'Not now',

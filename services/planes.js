@@ -2,6 +2,7 @@ const supabase = require('./supabase');
 
 const LIMITES = {
   gratis: 15,
+  esencial: 30,
   pro: Infinity,
   // Conservados únicamente para respetar suscripciones anteriores.
   personal: Infinity,
@@ -11,6 +12,10 @@ const LIMITES = {
 // Precios por moneda. Para salir a otros países basta agregar la divisa
 // aquí — Stripe Checkout cobra en la que se le pase.
 const PRECIOS = {
+  esencial: {
+    titulo: { es: 'Tappt Esencial (1 año)', en: 'Tappt Essential (1 year)' },
+    montos: { mxn: 199, usd: 12, eur: 11 },
+  },
   pro: {
     titulo: { es: 'Tappt Pro (1 año)', en: 'Tappt Pro (1 year)' },
     montos: { mxn: 490, usd: 29, eur: 28 },
@@ -30,7 +35,7 @@ function planVigente(usuario) {
   // Los planes históricos mantienen lo que ya pagaron, pero comercialmente
   // desde V19 existe una sola membresía.
   if (usuario.plan === 'personal' || usuario.plan === 'negocio') return 'pro';
-  return usuario.plan === 'pro' ? 'pro' : 'gratis';
+  return usuario.plan === 'esencial' || usuario.plan === 'pro' ? usuario.plan : 'gratis';
 }
 
 function limiteDe(plan) {

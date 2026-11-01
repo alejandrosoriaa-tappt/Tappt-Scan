@@ -11,7 +11,14 @@ import { TEXTOS } from '../i18n/textos';
 import { colores, espacio, tipo } from '../theme';
 import { iapDisponible, comprasIAP } from '../lib/compras';
 
-const PLANES = { gratis: 'Gratis', pro: 'Tappt Pro', personal: 'Tappt Pro', negocio: 'Tappt Pro' };
+const PLANES = {
+  gratis: 'Gratis',
+  esencial: 'Tappt Esencial',
+  pro: 'Tappt Pro',
+  personal: 'Tappt Pro',
+  negocio: 'Tappt Pro',
+};
+const PRECIOS_PLAN = { esencial: '$199 MXN/año', pro: '$490 MXN/año' };
 const VERSION_APP = Constants.expoConfig?.version || '0.1.0';
 const VERSION_BUILD = Platform.select({
   android: Constants.platform?.android?.versionCode,
@@ -157,7 +164,7 @@ export default function AjustesScreen({ navigation }) {
 
         {iapDisponible && cuenta.plan === 'gratis' ? (
           <View style={estilos.planesIAP}>
-            {['pro'].map((plan) => (
+            {['esencial', 'pro'].map((plan) => (
               <TouchableOpacity
                 key={plan}
                 style={estilos.botonPlanIAP}
@@ -168,7 +175,10 @@ export default function AjustesScreen({ navigation }) {
                 {comprando === plan ? (
                   <ActivityIndicator color={colores.primario} />
                 ) : (
-                  <Text style={estilos.botonPlanIAPTexto}>{t('suscribirseA', { plan: PLANES[plan] })}</Text>
+                  <>
+                    <Text style={estilos.botonPlanIAPTexto}>{t('suscribirseA', { plan: PLANES[plan] })}</Text>
+                    <Text style={estilos.botonPlanIAPPrecio}>{PRECIOS_PLAN[plan]}</Text>
+                  </>
                 )}
               </TouchableOpacity>
             ))}
@@ -285,6 +295,7 @@ const estilos = StyleSheet.create({
     alignItems: 'center',
   },
   botonPlanIAPTexto: { color: '#FFFFFF', fontSize: 15, fontWeight: '600' },
+  botonPlanIAPPrecio: { color: 'rgba(255,255,255,0.85)', fontSize: 12, marginTop: 3 },
   salir: { color: colores.peligro, fontSize: 14, textAlign: 'center', marginTop: espacio.lg },
   nota: {
     fontSize: 12,
