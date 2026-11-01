@@ -14,6 +14,7 @@ import { api } from './api';
 // coincidir EXACTO con los productos dados de alta en App Store Connect
 // y Play Console, o la compra no aparece ahí para comprarse.
 export const PRODUCTOS_IAP = {
+  esencial: 'lat.tappt.scan.esencial.anual',
   pro: 'lat.tappt.scan.pro.anual',
 };
 

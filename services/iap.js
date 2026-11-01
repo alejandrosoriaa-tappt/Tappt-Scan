@@ -12,6 +12,7 @@ const { google } = require('googleapis');
  * App Store Connect / Play Console — si cambian ahí, cambian aquí.
  */
 const PRODUCTOS = {
+  'lat.tappt.scan.esencial.anual': 'esencial',
   'lat.tappt.scan.pro.anual': 'pro',
   // Se siguen reconociendo para restaurar compras históricas, pero ya no se
   // ofrecen a usuarios nuevos.
