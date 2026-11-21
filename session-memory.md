@@ -76,3 +76,37 @@
 - El cambio funcional quedó en `033610e` en la rama nativa y se llevó a `main` como `bb30312`. Railway respondió saludable y la ruta nueva respondió `401 falta_token`, confirmando que el endpoint quedó desplegado.
 - APK Android v3 enviada a EAS: build `7b654b68-81a7-4c09-9c2d-f5792ea85b31`, URL `https://expo.dev/accounts/tapptscan-team/projects/tappt-scan/builds/7b654b68-81a7-4c09-9c2d-f5792ea85b31`.
 - Pendiente: esperar `FINISHED`, instalar la APK v3 y validar que las miniaturas aparezcan después de guardar, al volver a Documentos y en Inicio; confirmar comportamiento con PDF multipágina e imagen individual.
+
+# 2026-11-21 — Login por SMS en iOS (riesgo de rechazo de Apple) + build 8 pendiente de subir a TestFlight
+
+## Por qué existe esto
+Apple ya rechazó MuralEx (otro producto del ecosistema) por exigir WhatsApp como único método de alta -- guía 4.8 (no se puede obligar a instalar otra app para registrarse). TapptScan/Tappt en iOS tenía el MISMO riesgo, pero peor: WhatsApp era el único método de acceso, sin alternativa. Se implementó un segundo camino exclusivo de iOS: login por SMS (6 dígitos, proveedor SMS Masivos), sin tocar WhatsApp en Android/Web.
+
+## Qué ya quedó hecho y mezclado a `main`
+- Backend: `services/smsMasivos.js`, `services/otpSms.js`, rutas `POST /api/auth/sms/iniciar` y `POST /api/auth/sms/verificar` en `routes/auth.js`, tabla `scan_otp_retos` y columnas `scan_users.telefono_sms` / `scan_users.nombre` (migración ya corrida en Supabase, confirmada "Success. No rows returned").
+- App iOS: `app/src/screens/LoginScreen.js` ahora muestra en iOS un formulario de nombre+teléfono (SMS) en vez de "Entrar con WhatsApp"; Android/Web no cambiaron.
+- Variables ya puestas en Railway (producción, servicio Tappt-Scan): existen `SMS_MASIVOS_API_KEY`, `TAPPT_APP_REVIEW_PHONE` y `TAPPT_APP_REVIEW_CODE` (cuenta reservada para que Apple revise sin mandar SMS real). Los valores viven SOLO en Railway -- consultar con `railway variables` si se necesitan, nunca copiarlos a este archivo, a un commit, ni exponerlos fuera del campo User name/Password de App Review Information en App Store Connect.
+- Todo esto va en el PR que mezcla `sms-login-sobre-main` a `main` (ya mergeado).
+- `app/app.json` -> `ios.buildNumber` subido de 7 a 8 (ya commiteado en `main`), listo para el build nuevo.
+
+## Pendiente -- lo que Codex necesita hacer ahora
+1. En `app/` ejecutar el build de iOS con EAS, perfil `production` (es el que usa distribución "store", el mismo de siempre para TestFlight):
+   ```
+   NODE_EXTRA_CA_CERTS=/etc/ssl/cert.pem npx eas-cli build --platform ios --profile production
+   ```
+   (El `NODE_EXTRA_CA_CERTS` es obligatorio en esta Mac: Node no encuentra el CA bundle del sistema sin eso y EAS falla con error TLS.)
+2. Va a pedir login de Apple. Confirmar "sí" a loguearse. Antes de escribir el Apple ID, revisar/limpiar el Llavero de macOS (buscar entradas "expo"/"apple"/"EAS") -- quedó una entrada corrupta de un intento fallido anterior (un login a medio escribir guardó texto incorrecto como si fuera el Apple ID/password, y eso provocó que Apple bloqueara brevemente la cuenta con el error `-20209`; ya se confirmó que la cuenta NO sigue bloqueada, pero conviene no repetir el error).
+3. Si pregunta "Generate a new Apple Distribution Certificate?" responder que SÍ (el intento anterior respondió "no" y eso llevó a pedir un archivo P12 que no existe localmente -- mejor dejar que EAS genere y guarde el certificado).
+4. Si pregunta por un Provisioning Profile nuevo, también responder que sí / dejar que lo genere EAS.
+5. Cuando el build termine (`FINISHED`), NO enviarlo a revisión de Apple todavía. Solo:
+   - Confirmar que quedó disponible en TestFlight (grupo de pruebas internas).
+   - Avisar a Alejandro con el link del build en expo.dev y en App Store Connect/TestFlight.
+6. Alejandro probará en su iPhone (actualizando desde TestFlight, no reinstalando el build viejo) el flujo de SMS real con su número.
+7. Instrucción permanente y explícita de Alejandro: NO reenviar esta versión a revisión de Apple (App Store Review) hasta recibir su autorización final. Subir a TestFlight para pruebas internas sí está autorizado; enviar a "Submit for Review" no.
+
+## Checklist pendiente antes de autorizar el envío a revisión (ninguno hecho todavía)
+- Probar el flujo de SMS en un iPhone real sin WhatsApp instalado.
+- Probar desde cero la cuenta reservada de Apple y confirmar que el backend NO manda SMS real para ese número (ver variables en Railway).
+- Confirmar que cerrar sesión y volver a entrar funciona con el nuevo flujo.
+- Confirmar que borrar cuenta desde la app sigue funcionando con usuarios creados por SMS.
+- Llenar App Review Information en App Store Connect: usuario/contraseña = teléfono reservado / código fijo de Railway (nunca por API ni en el cliente), y nota explicando que los usuarios normales entran por SMS y no necesitan WhatsApp.
