@@ -162,6 +162,13 @@ export const api = {
   iniciarSesion: () => request('/api/auth/iniciar', { method: 'POST' }),
   estadoSesion: (codigo) => request(`/api/auth/estado/${codigo}`),
 
+  // Acceso alterno por SMS (solo iOS, ver LoginScreen). Ninguno de estos
+  // dos lleva token todavía.
+  iniciarSesionSms: (nombre, telefono) =>
+    request('/api/auth/sms/iniciar', { method: 'POST', body: JSON.stringify({ nombre, telefono }) }),
+  verificarSesionSms: (telefono, codigo) =>
+    request('/api/auth/sms/verificar', { method: 'POST', body: JSON.stringify({ telefono, codigo }) }),
+
   cuenta: () => request('/api/cuenta'),
   preferencias: (cambios) =>
     request('/api/cuenta/preferencias', { method: 'PUT', body: JSON.stringify(cambios) }),
