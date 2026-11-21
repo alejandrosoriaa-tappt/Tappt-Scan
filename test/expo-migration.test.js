@@ -33,7 +33,7 @@ test('la configuración Android de v20 aísla el runtime y no duplica permisos',
   assert.equal(appConfig.version, '0.2.0');
   assert.equal(appConfig.android.versionCode, 20);
   assert.equal(appConfig.name, 'Tappt');
-  assert.equal(appConfig.ios.buildNumber, '7');
+  assert.equal(appConfig.ios.buildNumber, '9');
   assert.equal(appConfig.scheme, 'tapptscan');
   assert.deepEqual(appConfig.android.runtimeVersion, { policy: 'appVersion' });
   assert.deepEqual(permissions, [...new Set(permissions)]);
