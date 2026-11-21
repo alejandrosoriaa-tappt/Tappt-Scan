@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import {
   View,
   Text,
+  TextInput,
   TouchableOpacity,
   StyleSheet,
   ActivityIndicator,
@@ -33,14 +34,175 @@ function abrirEnlace(url) {
 }
 
 /**
+ * Acceso por SMS, exclusivo de iOS.
+ *
+ * Apple rechaza una app cuyo único acceso obligue a instalar otra app
+ * (guía 4.8) — así se rechazó el login de WhatsApp en MuralEx. Aquí el
+ * riesgo es mayor porque WhatsApp era el ÚNICO login que existía, así que
+ * en iOS este es el camino de entrada; Android y la web app conservan el
+ * flujo de WhatsApp tal cual.
+ */
+function LoginSms() {
+  const { t } = useIdioma();
+  const { entrarConToken } = useSesion();
+
+  const [paso, setPaso] = useState('telefono'); // 'telefono' | 'codigo'
+  const [nombre, setNombre] = useState('');
+  const [telefono, setTelefono] = useState('');
+  const [codigo, setCodigo] = useState('');
+  const [cargando, setCargando] = useState(false);
+  const [error, setError] = useState(null);
+
+  const enviarCodigo = async () => {
+    setError(null);
+    setCargando(true);
+    try {
+      await api.iniciarSesionSms(nombre.trim(), telefono.trim());
+      setPaso('codigo');
+    } catch (err) {
+      if (err.message === 'telefono_invalido') setError(t('smsErrorTelefonoInvalido'));
+      else if (err.message === 'demasiados_intentos') setError(t('smsErrorDemasiadosIntentos'));
+      else setError(t('smsErrorGenerico'));
+    } finally {
+      setCargando(false);
+    }
+  };
+
+  const verificarCodigo = async () => {
+    setError(null);
+    setCargando(true);
+    try {
+      const resultado = await api.verificarSesionSms(telefono.trim(), codigo.trim());
+      if (resultado.estado === 'listo') {
+        entrarConToken(resultado.token);
+      } else if (resultado.estado === 'codigo_incorrecto') {
+        setError(t('smsErrorCodigoIncorrecto', { intentos: resultado.intentosRestantes }));
+      } else if (resultado.estado === 'vencido' || resultado.estado === 'sin_reto') {
+        setError(t('smsErrorVencido'));
+      } else {
+        setError(t('smsErrorGenerico'));
+      }
+    } catch {
+      setError(t('smsErrorGenerico'));
+    } finally {
+      setCargando(false);
+    }
+  };
+
+  if (paso === 'codigo') {
+    return (
+      <View style={estilos.espera}>
+        <Text style={estilos.esperaTitulo}>{t('smsEsperandoTitulo')}</Text>
+        <Text style={estilos.esperaDetalle}>{t('smsEsperandoDetalle', { telefono })}</Text>
+
+        <TextInput
+          style={estilos.input}
+          value={codigo}
+          onChangeText={setCodigo}
+          placeholder={t('smsCodigoPlaceholder')}
+          placeholderTextColor={colores.textoSuave}
+          keyboardType="number-pad"
+          maxLength={6}
+          autoFocus
+        />
+
+        {error ? <Text style={estilos.error}>{error}</Text> : null}
+
+        <TouchableOpacity
+          style={[estilos.boton, estilos.botonSms]}
+          onPress={verificarCodigo}
+          disabled={cargando || codigo.trim().length !== 6}
+          activeOpacity={0.85}
+        >
+          {cargando ? <ActivityIndicator color={colores.blanco} /> : <Text style={estilos.botonTexto}>{t('smsVerificar')}</Text>}
+        </TouchableOpacity>
+
+        <TouchableOpacity onPress={enviarCodigo} disabled={cargando}>
+          <Text style={estilos.enlace}>{t('smsReenviar')}</Text>
+        </TouchableOpacity>
+        <TouchableOpacity onPress={() => { setPaso('telefono'); setCodigo(''); setError(null); }}>
+          <Text style={estilos.enlace}>{t('smsCambiarTelefono')}</Text>
+        </TouchableOpacity>
+      </View>
+    );
+  }
+
+  return (
+    <View>
+      <TextInput
+        style={estilos.input}
+        value={nombre}
+        onChangeText={setNombre}
+        placeholder={t('smsNombrePlaceholder')}
+        placeholderTextColor={colores.textoSuave}
+        autoCapitalize="words"
+      />
+      <TextInput
+        style={estilos.input}
+        value={telefono}
+        onChangeText={setTelefono}
+        placeholder={t('smsTelefonoPlaceholder')}
+        placeholderTextColor={colores.textoSuave}
+        keyboardType="phone-pad"
+        maxLength={10}
+      />
+
+      {error ? <Text style={estilos.error}>{error}</Text> : null}
+
+      <TouchableOpacity
+        style={[estilos.boton, estilos.botonSms]}
+        onPress={enviarCodigo}
+        disabled={cargando || telefono.trim().length !== 10}
+        activeOpacity={0.85}
+      >
+        {cargando ? (
+          <ActivityIndicator color={colores.blanco} />
+        ) : (
+          <Text style={estilos.botonTexto}>{t('smsEnviarCodigo')}</Text>
+        )}
+      </TouchableOpacity>
+
+      <View style={estilos.privacidad}>
+        <IconoChip nombre="escudo" fondo={colores.primarioSuave} trazo={colores.primario} tamano={34} />
+        <Text style={estilos.privacidadTexto}>{t('smsConsentimiento')}</Text>
+      </View>
+    </View>
+  );
+}
+
+/**
  * Acceso sin correo ni contraseña.
  *
  * WhatsApp no deja escribirle primero a quien no te ha escrito, salvo con
  * plantilla aprobada. Así que se invierte: la app abre WhatsApp con el
  * mensaje ya redactado y el usuario solo toca "enviar". Menos pasos que
  * teclear un código, y sin trámites con Meta.
+ *
+ * iOS no usa este flujo (ver `LoginSms` arriba): Apple no acepta un login
+ * que obligue a tener WhatsApp instalado.
  */
 export default function LoginScreen() {
+  const { t } = useIdioma();
+
+  if (Platform.OS === 'ios') {
+    return (
+      <SafeAreaView style={estilos.pantalla}>
+        <View style={estilos.contenido}>
+          <View style={estilos.marca}>
+            <Image source={require('../../assets/tappt-logo.png')} style={estilos.logoImagen} resizeMode="contain" />
+            <Text style={estilos.nombreMarca}>Tappt</Text>
+            <Text style={estilos.promesa}>{t('promesa')}</Text>
+          </View>
+          <LoginSms />
+        </View>
+      </SafeAreaView>
+    );
+  }
+
+  return <LoginScreenWhatsapp />;
+}
+
+function LoginScreenWhatsapp() {
   const { t } = useIdioma();
   const { entrarConToken } = useSesion();
 
@@ -232,5 +394,18 @@ const estilos = StyleSheet.create({
     color: colores.primario,
     marginTop: espacio.xs,
   },
-  enlace: { ...tipo.cuerpo, color: colores.primario, marginTop: espacio.lg },
+  enlace: { ...tipo.cuerpo, color: colores.primario, marginTop: espacio.lg, textAlign: 'center' },
+
+  input: {
+    backgroundColor: colores.superficie,
+    borderRadius: radio.lg,
+    paddingVertical: espacio.md,
+    paddingHorizontal: espacio.md,
+    fontSize: 16,
+    color: colores.texto,
+    marginBottom: espacio.md,
+    ...sombra,
+  },
+  botonSms: { marginTop: espacio.sm },
+  error: { ...tipo.secundario, color: colores.error || '#DC2626', marginBottom: espacio.md, textAlign: 'center' },
 });

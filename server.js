@@ -24,6 +24,10 @@ process.on('unhandledRejection', (razon) => console.error('[proceso] promesa rec
 process.on('uncaughtException', (err) => console.error('[proceso] excepción no capturada', err));
 
 const app = express();
+// Railway sirve detrás de un proxy: sin esto, req.ip es siempre el del
+// proxy y el límite de reenvío de SMS por IP (services/otpSms.js) golpea
+// a todos los usuarios como si fueran uno solo.
+app.set('trust proxy', 1);
 app.use('/api/pagos/webhook', express.raw({ type: 'application/json' }));
 app.use('/webhook', express.raw({ type: 'application/json' }));
 app.use(express.json({ limit: '25mb' }));
