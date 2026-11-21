@@ -217,4 +217,27 @@ create table if not exists scan_firmas (
 );
 
 create index if not exists idx_scan_firmas_user on scan_firmas(user_id, created_at desc);
+
+-- -------------------------------------------------- acceso por SMS (iOS)
+-- Apple rechazó el flujo de WhatsApp en MuralEx por exigir instalar otra
+-- app para darse de alta (guía 4.8 / inicio de sesión de terceros), así
+-- que iOS necesita un segundo camino de acceso que no dependa de
+-- WhatsApp: código de 6 dígitos por SMS (proveedor SMS Masivos). Ver
+-- `services/otpSms.js`.
+alter table scan_users add column if not exists telefono_sms text unique;
+alter table scan_users add column if not exists nombre text;
+
+create table if not exists scan_otp_retos (
+  id uuid primary key default gen_random_uuid(),
+  telefono text not null,
+  codigo text not null,
+  intentos integer not null default 0,
+  estado text not null default 'pendiente'
+    check (estado in ('pendiente', 'verificado', 'consumido', 'invalido')),
+  expires_at timestamptz not null,
+  created_at timestamptz not null default now()
+);
+
+create index if not exists idx_scan_otp_retos_telefono on scan_otp_retos(telefono, created_at desc);
+alter table scan_otp_retos enable row level security;
 alter table scan_firmas enable row level security;

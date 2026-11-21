@@ -22,6 +22,10 @@ process.on('unhandledRejection', (razon) => console.error('[proceso] promesa rec
 process.on('uncaughtException', (err) => console.error('[proceso] excepción no capturada', err));
 
 const app = express();
+// Railway sirve detrás de un proxy: sin esto, req.ip es siempre el del
+// proxy y el límite de reenvío de SMS por IP (services/otpSms.js) golpea
+// a todos los usuarios como si fueran uno solo.
+app.set('trust proxy', 1);
 app.use('/api/pagos/webhook', express.raw({ type: 'application/json' }));
 app.use('/webhook', express.raw({ type: 'application/json' }));
 app.use(express.json({ limit: '25mb' }));
@@ -29,7 +33,16 @@ app.get('/health', (_req, res) => {
   const estado = scanner.estadoDetector();
   res.json({ ok: true, service: 'tappt-scan', docquad: estado, scanner: estado });
 });
-app.use(express.static(path.join(__dirname, 'public')));
+const publicDir = path.join(__dirname, 'public');
+const appDist = path.join(__dirname, 'app', 'dist');
+
+// Google OAuth exige que la portada describa el producto y el uso de datos
+// sin pedir acceso. La app autenticada vive aparte en /app.
+app.get('/', (req, res, next) => {
+  if (req.query.scannerDebug === '1') return next();
+  res.sendFile(path.join(publicDir, 'inicio.html'));
+});
+app.use(express.static(publicDir));
 app.use('/webhook', webhookRouter);
 app.use('/api/auth', authRouter);
 app.use('/api/cuenta', cuentaRouter);
@@ -39,7 +52,6 @@ app.use('/api/drive', driveRouter);
 app.use('/api/pagos', pagosRouter);
 app.use('/api/firmas', firmasRouter);
 
-const appDist = path.join(__dirname, 'app', 'dist');
 app.get('/', (req, res, next) => {
   if (req.query.scannerDebug !== '1') return next();
   const clave = crypto.randomBytes(18).toString('hex');
@@ -88,6 +100,7 @@ app.get('/', (req, res, next) => {
     res.type('html').send(html.replace('</body>', script + '\n</body>'));
   });
 });
+app.get('/app', (_req, res) => res.sendFile(path.join(appDist, 'index.html')));
 app.use(express.static(appDist));
 app.get('*', (_req, res) => res.sendFile(path.join(appDist, 'index.html')));
 
