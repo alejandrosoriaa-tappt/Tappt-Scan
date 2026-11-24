@@ -30,6 +30,31 @@ const VENTANA_REENVIO_MS = 60 * 1000;
 const ultimoEnvioPorTelefono = new Map();
 const ultimoEnvioPorIp = new Map();
 
+// Cuenta reintentos por teléfono para escalar de canal: SMS Masivos
+// confirmó que el operador filtra como spam los reenvíos repetidos de SMS
+// al mismo número, así que a partir del 3er intento se manda por WhatsApp
+// y del 4to en adelante por voz. Se resetea sola tras VENTANA_INTENTOS_MS
+// de inactividad (sesión nueva = cuenta nueva).
+const VENTANA_INTENTOS_MS = 30 * 60 * 1000;
+const intentosPorTelefono = new Map();
+
+function canalParaIntento(numero) {
+  if (numero <= 2) return 'sms';
+  if (numero === 3) return 'whatsapp';
+  return 'voice';
+}
+
+function siguienteIntento(telefono52) {
+  const ahora = Date.now();
+  for (const [clave, { momento }] of intentosPorTelefono) {
+    if (ahora - momento > VENTANA_INTENTOS_MS) intentosPorTelefono.delete(clave);
+  }
+  const previo = intentosPorTelefono.get(telefono52);
+  const numero = previo && ahora - previo.momento <= VENTANA_INTENTOS_MS ? previo.numero + 1 : 1;
+  intentosPorTelefono.set(telefono52, { numero, momento: ahora });
+  return numero;
+}
+
 // Nombre capturado en el paso 1, a la espera de que el reto se verifique
 // en el paso 2 y se use para dar de alta la cuenta. Vive solo en memoria
 // del proceso — si el server reinicia entre un paso y otro, el usuario
@@ -117,8 +142,10 @@ async function iniciar(nombre, telefonoCrudo, ip) {
   if (error) throw error;
 
   if (!esReservado) {
+    const numeroIntento = siguienteIntento(telefono52);
+    const canal = canalParaIntento(numeroIntento);
     try {
-      await smsMasivos.enviarCodigo(telefono10, codigo);
+      await smsMasivos.enviarCodigo(telefono10, codigo, canal);
     } catch (err) {
       await supabase
         .from('scan_otp_retos')

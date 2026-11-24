@@ -16,8 +16,13 @@ function apiKey() {
  * Envía el código ya generado por el backend (`code_custom`): SMS Masivos
  * nunca decide el código, solo lo entrega. `code_rotate` evita que
  * reenvíe un código viejo si el reto sigue vigente.
+ *
+ * `channel` por default es 'sms'; `otpSms.js` lo escala a 'whatsapp'/'voice'
+ * en reintentos repetidos, porque SMS Masivos confirmó que el operador
+ * filtra como spam los reenvíos de SMS al mismo número (~98% de entrega
+ * en el primer intento, pero cae en reintentos).
  */
-async function enviarCodigo(telefono10, codigo) {
+async function enviarCodigo(telefono10, codigo, channel = 'sms') {
   const respuesta = await fetch(ENDPOINT, {
     method: 'POST',
     headers: {
@@ -27,7 +32,7 @@ async function enviarCodigo(telefono10, codigo) {
     body: JSON.stringify({
       country_code: '52',
       phone_number: telefono10,
-      channel: 'sms',
+      channel,
       company: 'Tappt',
       message: 'Tu codigo de {{company}} es {{code}}. No lo compartas.',
       code_custom: codigo,
