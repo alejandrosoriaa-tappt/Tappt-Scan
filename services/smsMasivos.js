@@ -35,9 +35,12 @@ async function enviarCodigo(telefono10, codigo) {
     }),
   });
 
-  if (!respuesta.ok) {
+  const resultado = await respuesta.json().catch(() => null);
+  if (!respuesta.ok || resultado?.success !== true) {
     // No se registra el cuerpo de la respuesta: podría traer el código.
-    throw new Error(`sms_masivos_rechazo_${respuesta.status}`);
+    const detalle = typeof resultado?.error === 'string' && /^[a-z0-9_]+$/.test(resultado.error)
+      ? resultado.error : 'respuesta_invalida';
+    throw new Error(`sms_masivos_rechazo_${respuesta.status}_${detalle}`);
   }
 
   return true;
